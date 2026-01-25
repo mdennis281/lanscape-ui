@@ -95,11 +95,16 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
           <div className="device-section">
             <div className="device-section-title error">Errors</div>
             <div className="errors-list">
-              {device.caught_errors.map((err, idx) => (
-                <div className="error-item" key={idx}>
-                  {err.basic}
-                </div>
-              ))}
+              {device.caught_errors.map((err, idx) => {
+                // Handle both string format and object format
+                const errorMessage = typeof err === 'string' ? err : err.basic;
+                return (
+                  <div className="error-item" key={idx}>
+                    <i className="fa-solid fa-circle-exclamation"></i>
+                    <span>{errorMessage}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

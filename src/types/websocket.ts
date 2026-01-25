@@ -177,7 +177,8 @@ export interface DeviceResult {
   stage?: string;
   ports_scanned?: number;
   services?: Record<string, number[]>;
-  caught_errors?: Array<{ basic: string; traceback?: string }>;
+  // caught_errors can be plain strings or objects with basic/traceback
+  caught_errors?: Array<string | { basic: string; traceback?: string }>;
 }
 
 export interface PortResult {
