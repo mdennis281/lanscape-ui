@@ -1,0 +1,260 @@
+/**
+ * Startup Screen Styles
+ */
+
+.startup-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--body-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.startup-container {
+  max-width: 480px;
+  width: 100%;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Header / Brand */
+.startup-header {
+  margin-bottom: 3rem;
+}
+
+.startup-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.startup-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 122, 255, 0.3));
+}
+
+.startup-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+}
+
+.startup-subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Progress Section */
+.startup-progress-section {
+  margin-bottom: 2rem;
+}
+
+.startup-status {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  min-height: 1.5rem;
+}
+
+.startup-progress-bar {
+  height: 6px;
+  background: var(--input-bg);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.startup-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-accent), var(--secondary-accent));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.startup-progress-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Error Display */
+.startup-error {
+  background: rgba(255, 69, 58, 0.15);
+  border: 1px solid var(--danger-accent);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  color: var(--danger-accent);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.startup-error i {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.startup-error span {
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+/* Action Buttons */
+.startup-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.startup-btn {
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.startup-btn-primary {
+  background: var(--primary-accent);
+  color: white;
+}
+
+.startup-btn-primary:hover {
+  background: var(--primary-accent-hover);
+}
+
+.startup-btn-secondary {
+  background: var(--secondary-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.startup-btn-secondary:hover {
+  background: var(--primary-bg-accent);
+}
+
+.startup-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.startup-btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--secondary-bg);
+}
+
+/* Status Log */
+.startup-log-details {
+  text-align: left;
+}
+
+.startup-log-summary {
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  background: var(--secondary-bg);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  user-select: none;
+}
+
+.startup-log-summary:hover {
+  background: var(--primary-bg-accent);
+  color: var(--text-primary);
+}
+
+.startup-log-summary::-webkit-details-marker {
+  display: none;
+}
+
+.startup-log-summary::before {
+  content: '▶';
+  font-size: 0.7rem;
+  transition: transform 0.2s ease;
+}
+
+.startup-log-details[open] .startup-log-summary::before {
+  transform: rotate(90deg);
+}
+
+.startup-log {
+  margin-top: 0.5rem;
+  background: var(--secondary-bg);
+  border-radius: 8px;
+  padding: 0.75rem;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 0.8rem;
+}
+
+.startup-log-entry {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.startup-log-entry:last-child {
+  border-bottom: none;
+}
+
+.startup-log-time {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.startup-log-message {
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+
+.startup-log-info .startup-log-message {
+  color: var(--text-secondary);
+}
+
+.startup-log-error .startup-log-message {
+  color: var(--danger-accent);
+}
+
+.startup-log-success .startup-log-message {
+  color: var(--secondary-accent);
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.startup-status {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* When progress is 100%, stop pulsing */
+.startup-progress-fill[style*="100%"] + .startup-progress-text,
+.startup-progress-section:has(.startup-progress-fill[style*="100%"]) .startup-status {
+  animation: none;
+}

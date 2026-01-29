@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -31,6 +32,17 @@ export default defineConfig({
       }
     })
   ],
+  // Base path - use relative for Electron file:// protocol compatibility
+  base: './',
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html')
+      }
+    }
+  },
   server: {
     port: 3000,
     open: true,

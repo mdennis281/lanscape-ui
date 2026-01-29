@@ -6,3 +6,4 @@ export { Modal } from './Modal';
 export { SettingsModal } from './Settings';
 export { AboutModal } from './About';
 export { Footer } from './Footer';
+export { StartupScreen } from './Startup';

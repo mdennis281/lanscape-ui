@@ -7,18 +7,23 @@ import {
   DeviceModal,
   SettingsModal, 
   AboutModal, 
-  Footer 
+  Footer,
+  StartupScreen
 } from './components';
 import { OdometerDebug } from './components/Overview/OdometerDebug';
 import { createWebSocketService } from './services';
 import { useScanStore } from './store';
 import { getWebSocketURL } from './utils';
 import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs } from './types';
+import './types/electron'; // Import electron types for global Window augmentation
 import 'react-tooltip/dist/react-tooltip.css';
 import './styles/main.css';
 
 // Check for debug mode
 const isOdometerDebug = new URLSearchParams(window.location.search).get('debug') === 'odometer';
+
+// Check if running in Electron
+const isElectron = !!window.electronAPI;
 
 function App() {
   // If debug mode, show debug UI
@@ -30,6 +35,8 @@ function App() {
 }
 
 function MainApp() {
+  // Show startup screen when running in Electron
+  const [showStartup, setShowStartup] = useState(isElectron);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   
@@ -56,6 +63,11 @@ function MainApp() {
   }, [handleEvent]);
 
   useEffect(() => {
+    // Don't connect to WebSocket until startup is complete
+    if (showStartup) {
+      return;
+    }
+
     const wsUrl = getWebSocketURL();
     console.log('Connecting to WebSocket:', wsUrl);
     
@@ -139,20 +151,41 @@ function MainApp() {
       cancelled = true;
       ws.disconnect();
     };
-  }, [setConnectionStatus, setAppInfo, setConfig, setSubnets, setDefaultConfigs, setSubnetInput, onEvent]);
+  }, [setConnectionStatus, setAppInfo, setConfig, setSubnets, setDefaultConfigs, setSubnetInput, onEvent, showStartup]);
 
   const handleDeviceClick = (device: DeviceResult) => {
     setSelectedDevice(device);
   };
 
+  const handleStartupReady = useCallback(() => {
+    setShowStartup(false);
+  }, []);
+
+  // Show startup screen while Python backend is initializing (Electron only)
+  if (showStartup) {
+    return <StartupScreen onReady={handleStartupReady} />;
+  }
+
   // Show loading state until WebSocket is connected and data is loaded
   if (isLoading) {
     return (
       <div className="app-container app-loading">
-        <div className="loading-spinner">
-          <h1>LANscape</h1>
-          <p>Connecting to server...</p>
-          {connectionStatus === 'connecting' && <div className="spinner" />}
+        <div className="loading-screen">
+          <div className="loading-header">
+            <div className="loading-logo">
+              <img src="./android-chrome-192x192.png" alt="LANscape" className="loading-logo-img" />
+            </div>
+            <h1 className="loading-title">LANscape</h1>
+            <p className="loading-subtitle">Local Network Scanner</p>
+          </div>
+          <div className="loading-progress">
+            <p className="loading-status">Connecting to server...</p>
+            {connectionStatus === 'connecting' && (
+              <div className="loading-bar">
+                <div className="loading-bar-fill loading-bar-indeterminate" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -162,11 +195,20 @@ function MainApp() {
   if (loadError) {
     return (
       <div className="app-container app-error">
-        <div className="error-message">
-          <h1>Connection Error</h1>
-          <p>{loadError}</p>
-          <button onClick={() => window.location.reload()}>
-            Retry
+        <div className="loading-screen">
+          <div className="loading-header">
+            <div className="loading-logo">
+              <img src="./android-chrome-192x192.png" alt="LANscape" className="loading-logo-img" />
+            </div>
+            <h1 className="loading-title">LANscape</h1>
+            <p className="loading-subtitle">Local Network Scanner</p>
+          </div>
+          <div className="loading-error">
+            <i className="fas fa-exclamation-triangle"></i>
+            <span>{loadError}</span>
+          </div>
+          <button className="loading-btn" onClick={() => window.location.reload()}>
+            <i className="fas fa-redo"></i> Retry
           </button>
         </div>
       </div>

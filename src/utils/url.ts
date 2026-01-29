@@ -2,11 +2,71 @@
  * Utility functions for parsing query parameters and configuring WebSocket URL
  */
 
+import '../types/electron'; // Import electron types for global Window augmentation
+
+// Cache the port once resolved
+let cachedPort: number | null = null;
+
 /**
  * Parse query parameters from the current URL
  */
 export function parseQueryParams(): URLSearchParams {
   return new URLSearchParams(window.location.search);
+}
+
+/**
+ * Get the WebSocket port - from Electron if available, otherwise from URL/env
+ */
+export async function getWebSocketPort(): Promise<number> {
+  // Return cached port if available
+  if (cachedPort !== null) {
+    return cachedPort;
+  }
+
+  // If running in Electron, get the port from the main process
+  if (window.electronAPI) {
+    try {
+      cachedPort = await window.electronAPI.getWsPort();
+      console.log('Got WebSocket port from Electron:', cachedPort);
+      return cachedPort;
+    } catch (error) {
+      console.error('Failed to get port from Electron:', error);
+    }
+  }
+
+  // Parse from URL query parameter
+  const params = parseQueryParams();
+  const wsServer = params.get('ws-server');
+  if (wsServer) {
+    try {
+      const url = wsServer.startsWith('ws://') || wsServer.startsWith('wss://')
+        ? wsServer
+        : `ws://${wsServer}`;
+      const parsed = new URL(url);
+      cachedPort = parseInt(parsed.port, 10) || 8766;
+      return cachedPort;
+    } catch {
+      // Invalid URL, fall through to default
+    }
+  }
+
+  // Fall back to environment variable or default
+  const envUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8766';
+  try {
+    const parsed = new URL(envUrl);
+    cachedPort = parseInt(parsed.port, 10) || 8766;
+  } catch {
+    cachedPort = 8766;
+  }
+  
+  return cachedPort;
+}
+
+/**
+ * Set the cached port (used by startup screen when receiving port from Electron)
+ */
+export function setWebSocketPort(port: number): void {
+  cachedPort = port;
 }
 
 /**
@@ -17,9 +77,10 @@ export function parseQueryParams(): URLSearchParams {
  * - ?ws-server=192.168.1.100:8766
  * - ?ws-server=example.com:8766
  * 
+ * @param port - Optional port override (used when port is known from Electron)
  * @returns WebSocket URL string
  */
-export function getWebSocketURL(): string {
+export function getWebSocketURL(port?: number): string {
   const params = parseQueryParams();
   const wsServer = params.get('ws-server');
   
@@ -33,6 +94,12 @@ export function getWebSocketURL(): string {
       // Add ws:// protocol if not specified
       url = `ws://${wsServer}`;
     }
+  } else if (port !== undefined) {
+    // Use the provided port (from Electron)
+    url = `ws://localhost:${port}`;
+  } else if (cachedPort !== null) {
+    // Use cached port
+    url = `ws://localhost:${cachedPort}`;
   } else {
     // Fall back to environment variable or default
     url = import.meta.env.VITE_WS_URL || 'ws://localhost:8766';

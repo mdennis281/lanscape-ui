@@ -32,7 +32,15 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
       }
     >
       <div className="text-center mb-4">
-        <i className="fa-solid fa-network-wired" style={{ fontSize: '48px', color: 'var(--primary-accent)' }}></i>
+        <img 
+          src="./android-chrome-192x192.png" 
+          alt="LANscape" 
+          style={{ 
+            width: '64px', 
+            height: '64px', 
+            filter: 'drop-shadow(0 2px 8px rgba(0, 122, 255, 0.3))' 
+          }} 
+        />
         <h3 className="mt-2">{appInfo.name}</h3>
         <p className="text-muted">Version {appInfo.version}</p>
       </div>
