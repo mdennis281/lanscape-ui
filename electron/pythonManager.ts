@@ -13,7 +13,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // LANscape version to install - update this when releasing new versions
-export const LANSCAPE_VERSION = '==2.4.0b1';
+export const LANSCAPE_VERSION = '==2.4.0b2';
 
 // For development: set to local lanscape path to install from source
 // Set to null for production (installs from PyPI)
@@ -139,8 +139,6 @@ export class PythonManager extends EventEmitter {
    * Install or upgrade LANscape in the virtual environment
    */
   private async installLanscape(): Promise<void> {
-    this.emit('status', 'Installing LANscape...');
-
     const pip = this.getPipPath();
     
     // Use dev path if available, otherwise install from PyPI
@@ -224,16 +222,28 @@ export class PythonManager extends EventEmitter {
       // Check if venv exists
       if (!this.venvExists()) {
         await this.createVenv();
-      } else {
-        this.emit('status', 'Python environment found');
-      }
-
-      // Check if LANscape is installed
-      const version = await this.getLanscapeVersion();
-      if (!version) {
+        // New venv means we need to install
+        this.emit('status', 'Installing LANscape core...');
         await this.installLanscape();
       } else {
-        this.emit('status', `LANscape v${version} ready`);
+        this.emit('status', 'Python environment found');
+        
+        // Check if LANscape is installed
+        const version = await this.getLanscapeVersion();
+        if (!version) {
+          this.emit('status', 'Installing LANscape core...');
+          await this.installLanscape();
+        } else {
+          // Already installed - show "Starting" message
+          this.emit('status', `Starting LANscape core (v${version})...`);
+          
+          // In dev mode, silently reinstall to pick up changes
+          // but don't change the UI status (already says "Starting")
+          if (LANSCAPE_DEV_PATH && fs.existsSync(LANSCAPE_DEV_PATH)) {
+            console.log('Dev mode: reinstalling to pick up changes...');
+            await this.installLanscape();
+          }
+        }
       }
 
       this.initialized = true;
@@ -245,23 +255,25 @@ export class PythonManager extends EventEmitter {
   }
 
   /**
-   * Start the LANscape WebSocket server
+   * Start the LANscape WebSocket server.
+   * Let Python auto-select an available port to avoid race conditions.
+   * The actual port will be parsed from Python's output.
    */
-  async startWebSocketServer(port: number = 8766): Promise<void> {
+  async startWebSocketServer(): Promise<number> {
     if (this.wsProcess) {
       console.log('WebSocket server already running');
-      return;
+      return this.wsPort;
     }
 
-    this.wsPort = port;
     const python = this.getPythonPath();
 
     this.emit('status', 'Starting WebSocket server...');
 
     return new Promise((resolve, reject) => {
+      // Don't pass --ws-port, let Python auto-select an available port
       this.wsProcess = spawn(
         python,
-        ['-m', 'lanscape', '--ws-server', '--ws-port', String(port)],
+        ['-m', 'lanscape', '--ws-server'],
         {
           shell: true,
           stdio: ['ignore', 'pipe', 'pipe'],
@@ -270,24 +282,37 @@ export class PythonManager extends EventEmitter {
 
       let startupTimeout: NodeJS.Timeout | null = null;
 
-      this.wsProcess.stdout?.on('data', (data) => {
+      // Parse output from both stdout and stderr (Python logs to stderr)
+      const handleOutput = (data: Buffer) => {
         const output = data.toString();
-        console.log('[WS Server]:', output.trim());
+        
+        // Parse the port from "Starting WebSocket server on port XXXX"
+        const portMatch = output.match(/Starting WebSocket server on port (\d+)/);
+        if (portMatch) {
+          this.wsPort = parseInt(portMatch[1], 10);
+          console.log(`[WS Server]: Detected port: ${this.wsPort}`);
+        }
         
         // Check if server is ready
-        if (output.includes('Starting WebSocket server') || 
-            output.includes('WebSocket server started')) {
+        if (output.includes('WebSocket server started')) {
           if (startupTimeout) {
             clearTimeout(startupTimeout);
           }
           this.serverRunning = true;
           this.emit('status', 'WebSocket server running');
-          resolve();
+          console.log(`[WS Server]: Server ready on port ${this.wsPort}`);
+          resolve(this.wsPort);
         }
+      };
+
+      this.wsProcess.stdout?.on('data', (data) => {
+        console.log('[WS Server]:', data.toString().trim());
+        handleOutput(data);
       });
 
       this.wsProcess.stderr?.on('data', (data) => {
         console.error('[WS Server Error]:', data.toString().trim());
+        handleOutput(data);
       });
 
       this.wsProcess.on('close', (code) => {
@@ -308,7 +333,8 @@ export class PythonManager extends EventEmitter {
       startupTimeout = setTimeout(() => {
         this.serverRunning = true;
         this.emit('status', 'WebSocket server running');
-        resolve();
+        console.log(`[WS Server]: Timeout reached, assuming port ${this.wsPort}`);
+        resolve(this.wsPort);
       }, 5000);
     });
   }
@@ -353,18 +379,18 @@ export class PythonManager extends EventEmitter {
   /**
    * Restart the WebSocket server
    */
-  async restartWebSocketServer(): Promise<void> {
+  async restartWebSocketServer(): Promise<number> {
     await this.stopWebSocketServer();
-    await this.startWebSocketServer(this.wsPort);
+    return this.startWebSocketServer();
   }
 
   /**
    * Reinstall LANscape (useful for updates)
    */
-  async reinstallLanscape(): Promise<void> {
+  async reinstallLanscape(): Promise<number> {
     await this.stopWebSocketServer();
     await this.installLanscape();
-    await this.startWebSocketServer(this.wsPort);
+    return this.startWebSocketServer();
   }
 
   /**

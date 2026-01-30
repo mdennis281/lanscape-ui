@@ -48,6 +48,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('python-ready', handler);
   },
 
+  // Listen for WebSocket port ready event (sent after Python selects a port)
+  onWsPortReady: (callback: (port: number) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, port: number) => callback(port);
+    ipcRenderer.on('ws-port-ready', handler);
+    return () => ipcRenderer.removeListener('ws-port-ready', handler);
+  },
+
   // Platform info
   platform: process.platform,
 });
@@ -68,6 +75,7 @@ declare global {
       onPythonStatus: (callback: (status: string) => void) => () => void;
       onPythonError: (callback: (error: string) => void) => () => void;
       onPythonReady: (callback: () => void) => () => void;
+      onWsPortReady: (callback: (port: number) => void) => () => void;
       platform: NodeJS.Platform;
     };
   }

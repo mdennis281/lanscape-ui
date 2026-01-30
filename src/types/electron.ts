@@ -19,6 +19,7 @@ export interface ElectronAPI {
   onPythonStatus: (callback: (status: string) => void) => () => void;
   onPythonError: (callback: (error: string) => void) => () => void;
   onPythonReady: (callback: () => void) => () => void;
+  onWsPortReady: (callback: (port: number) => void) => () => void;
   platform: 'aix' | 'android' | 'darwin' | 'freebsd' | 'haiku' | 'linux' | 'openbsd' | 'sunos' | 'win32' | 'cygwin' | 'netbsd';
 }
 

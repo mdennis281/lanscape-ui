@@ -33,9 +33,9 @@ export function StartupScreen({ onReady, onSkip }: StartupScreenProps) {
     const statusLower = status.toLowerCase();
     if (statusLower.includes('creating python')) return 10;
     if (statusLower.includes('environment found')) return 20;
-    if (statusLower.includes('installing lanscape')) return 30;
-    if (statusLower.includes('lanscape v')) return 60;
-    if (statusLower.includes('starting websocket')) return 80;
+    if (statusLower.includes('installing lanscape core')) return 30;
+    if (statusLower.includes('starting lanscape core')) return 50;
+    if (statusLower.includes('starting websocket')) return 70;
     if (statusLower.includes('websocket server running')) return 100;
     return progress; // Keep current progress if unknown
   };
@@ -50,15 +50,19 @@ export function StartupScreen({ onReady, onSkip }: StartupScreenProps) {
       return;
     }
 
-    // Immediately fetch and cache the WebSocket port
-    electronAPI.getWsPort().then((port) => {
-      console.log('WebSocket port from Electron:', port);
-      setWebSocketPort(port);
-      addLogEntry(`Using WebSocket port: ${port}`, 'info');
-    });
+    // Track whether the port has been received
+    let portReceived = false;
 
     // Add initial log entry
     addLogEntry('Starting LANscape backend...', 'info');
+
+    // Listen for the WebSocket port (sent after Python selects an available port)
+    const unsubPort = electronAPI.onWsPortReady((port: number) => {
+      console.log('WebSocket port from Python:', port);
+      setWebSocketPort(port);
+      portReceived = true;
+      addLogEntry(`Using WebSocket port: ${port}`, 'info');
+    });
 
     // Listen for status updates
     const unsubStatus = electronAPI.onPythonStatus((status: string) => {
@@ -81,20 +85,26 @@ export function StartupScreen({ onReady, onSkip }: StartupScreenProps) {
       setProgress(100);
       addLogEntry('Backend ready!', 'success');
       setIsReady(true);
-      // Auto-proceed after a short delay
-      setTimeout(() => {
-        onReady();
-      }, 500);
+      // The port should already be received via onWsPortReady before onPythonReady
+      // But wait a moment to ensure port is set, then auto-proceed
+      const waitForPort = () => {
+        if (portReceived) {
+          setTimeout(() => {
+            onReady();
+          }, 500);
+        } else {
+          // Port not yet received, wait a bit and retry
+          setTimeout(waitForPort, 100);
+        }
+      };
+      waitForPort();
     });
 
-    // Check if already initialized
-    electronAPI.getPythonStatus().then((status) => {
-      // Also cache the port from status
-      if (status.port) {
-        setWebSocketPort(status.port);
-      }
-      if (status.serverRunning) {
+    // Check if already initialized (e.g., if window was reloaded)
+    electronAPI.getPythonStatus().then(async (status) => {
+      if (status.serverRunning && status.port) {
         console.log('Server already running on port', status.port);
+        setWebSocketPort(status.port);
         setProgress(100);
         addLogEntry('Backend already running', 'success');
         setIsReady(true);
@@ -103,6 +113,7 @@ export function StartupScreen({ onReady, onSkip }: StartupScreenProps) {
     });
 
     return () => {
+      unsubPort();
       unsubStatus();
       unsubError();
       unsubReady();

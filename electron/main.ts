@@ -8,7 +8,6 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { PythonManager, LANSCAPE_VERSION } from './pythonManager';
-import { findAvailablePort } from './portFinder';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 try {
@@ -22,7 +21,7 @@ try {
 
 let mainWindow: BrowserWindow | null = null;
 let pythonManager: PythonManager | null = null;
-let wsPort: number = 8766; // Will be set after finding available port
+let wsPort: number = 8766; // Will be set by Python after it selects an available port
 
 // Determine if we're in development mode
 // Check if dist/index.html exists - if it does, use production mode even when not packaged
@@ -100,8 +99,12 @@ async function initializePython(): Promise<void> {
 
   try {
     await pythonManager.initialize();
-    // Use the pre-determined port
-    await pythonManager.startWebSocketServer(wsPort);
+    // Let Python auto-select an available port to avoid race conditions
+    // Python will report the port it chose via stdout
+    wsPort = await pythonManager.startWebSocketServer();
+    console.log(`Python WebSocket server running on port ${wsPort}`);
+    // Notify the frontend of the actual port
+    mainWindow?.webContents.send('ws-port-ready', wsPort);
   } catch (error) {
     console.error('Failed to initialize Python environment:', error);
     mainWindow?.webContents.send('python-error', String(error));
@@ -150,23 +153,13 @@ function setupIpcHandlers(): void {
 
 // App lifecycle handlers
 app.whenReady().then(async () => {
-  // FIRST: Find an available port before anything else
-  try {
-    wsPort = await findAvailablePort(8766);
-    console.log(`Using WebSocket port: ${wsPort}`);
-  } catch (error) {
-    console.error('Failed to find available port:', error);
-    // Fall back to default port
-    wsPort = 8766;
-  }
-
-  // Set up IPC handlers (port is now available)
+  // Set up IPC handlers
   setupIpcHandlers();
   
-  // Create window (frontend can now query the port)
+  // Create window
   await createWindow();
   
-  // Initialize Python with the selected port
+  // Initialize Python - it will auto-select an available port
   await initializePython();
 
   app.on('activate', async () => {
