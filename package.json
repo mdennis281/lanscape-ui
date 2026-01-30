@@ -69,7 +69,7 @@
       "category": "public.app-category.utilities"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": ["AppImage", "deb", "rpm", "tar.gz"],
       "icon": "public/android-chrome-512x512.png",
       "category": "Network"
     },
