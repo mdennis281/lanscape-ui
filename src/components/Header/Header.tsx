@@ -139,7 +139,7 @@ export function Header() {
             {isLoading && <span className="spinner"></span>}
             {!isLoading && (
               <>
-                <i className={`fa-solid ${isScanning ? 'fa-stop' : 'fa-play'}`}></i>
+                <i className={`fa-solid ${isScanning ? 'fa-circle-stop' : 'fa-circle-play'}`}></i>
                 <span>{isScanning ? 'Stop' : 'Scan'}</span>
               </>
             )}

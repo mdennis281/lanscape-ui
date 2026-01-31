@@ -92,7 +92,7 @@ export function ErrorsModal({ isOpen, onClose }: ErrorsModalProps) {
         <div className="errors-list">
           {scanErrors.length === 0 ? (
             <div className="errors-empty">
-              <i className="fa-solid fa-check-circle text-success" />
+              <i className="fa-regular fa-circle-check text-success" />
               <span>No errors recorded</span>
             </div>
           ) : (

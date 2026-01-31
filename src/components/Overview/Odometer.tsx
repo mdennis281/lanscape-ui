@@ -318,15 +318,35 @@ export function Odometer({ value, digits, className = '' }: OdometerProps) {
 }
 
 // Time display with MM:SS format - animates total seconds, extracts digits inline
-export function OdometerTime({ seconds, className = '' }: { seconds: number; className?: string }) {
+// resetKey: when this value changes, instantly reset to 0 instead of animating
+export function OdometerTime({ seconds, className = '', resetKey }: { seconds: number; className?: string; resetKey?: string | number }) {
   const [displaySeconds, setDisplaySeconds] = useState(Math.floor(Math.max(0, seconds)));
   const [digitOffsets, setDigitOffsets] = useState([0, 0, 0, 0]); // m10, m1, s10, s1
   const targetRef = useRef(Math.floor(Math.max(0, seconds)));
   const currentRef = useRef(Math.floor(Math.max(0, seconds)));
   const animatingRef = useRef(false);
   const frameRef = useRef<number | null>(null);
+  const lastResetKeyRef = useRef(resetKey);
 
   const { BASE_SPEED, MAX_SPEED, ACCEL_FACTOR, SNAP_THRESHOLD } = TIME_WHEEL_CONFIG;
+
+  // Handle instant reset when resetKey changes
+  useEffect(() => {
+    if (resetKey !== undefined && resetKey !== lastResetKeyRef.current) {
+      lastResetKeyRef.current = resetKey;
+      // Cancel any ongoing animation
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+      animatingRef.current = false;
+      // Instantly reset to 0
+      currentRef.current = 0;
+      targetRef.current = 0;
+      setDisplaySeconds(0);
+      setDigitOffsets([0, 0, 0, 0]);
+    }
+  }, [resetKey]);
 
   useEffect(() => {
     const targetSecs = Math.floor(Math.max(0, seconds));

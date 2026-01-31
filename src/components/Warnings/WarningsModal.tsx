@@ -101,7 +101,7 @@ export function WarningsModal({ isOpen, onClose }: WarningsModalProps) {
         <div className="warnings-list">
           {scanWarnings.length === 0 ? (
             <div className="warnings-empty">
-              <i className="fa-solid fa-check-circle text-success" />
+              <i className="fa-regular fa-circle-check text-success" />
               <span>No warnings recorded</span>
             </div>
           ) : (

@@ -11,9 +11,17 @@ interface DeviceTableProps {
 const ANIMATION_DURATION = 500; // ms - how long before we remove the "new" class
 const STAGGER_DELAY = 30; // ms between each row
 
+// Convert IP address to numeric value for proper sorting
+function ipToNumber(ip: string): number {
+  const parts = ip.split('.').map(Number);
+  return ((parts[0] || 0) << 24) + ((parts[1] || 0) << 16) + ((parts[2] || 0) << 8) + (parts[3] || 0);
+}
+
 export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
   const devices = useScanStore((state) => state.devices);
+  const scanStage = useScanStore((state) => state.status?.stage || '');
   const [filter, setFilter] = useState('');
+  const [portsExpanded, setPortsExpanded] = useState(false);
   
   // Track which device IPs are "new" (recently added) with their animation delay
   const [newDevices, setNewDevices] = useState<Map<string, number>>(new Map());
@@ -73,15 +81,20 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
   }, [devices.length]);
 
   const filteredDevices = useMemo(() => {
-    if (!filter.trim()) return devices;
+    let result = devices;
     
-    const searchTerm = filter.toLowerCase();
-    return devices.filter((device) => 
-      device.ip.toLowerCase().includes(searchTerm) ||
-      device.hostname?.toLowerCase().includes(searchTerm) ||
-      device.mac_addr?.toLowerCase().includes(searchTerm) ||
-      device.manufacturer?.toLowerCase().includes(searchTerm)
-    );
+    if (filter.trim()) {
+      const searchTerm = filter.toLowerCase();
+      result = devices.filter((device) => 
+        device.ip.toLowerCase().includes(searchTerm) ||
+        device.hostname?.toLowerCase().includes(searchTerm) ||
+        device.mac_addr?.toLowerCase().includes(searchTerm) ||
+        device.manufacturer?.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    // Sort by IP address (numeric by octets)
+    return [...result].sort((a, b) => ipToNumber(a.ip) - ipToNumber(b.ip));
   }, [devices, filter]);
 
   return (
@@ -101,7 +114,7 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
 
       {filteredDevices.length === 0 ? (
         <div className="empty-state">
-          <i className="fa-solid fa-radar"></i>
+          <i className="fa-solid fa-satellite-dish"></i>
           <h3>No devices found</h3>
           <p>
             {devices.length === 0
@@ -118,13 +131,27 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
               <th className="hostname-cell">Hostname</th>
               <th>MAC Address</th>
               <th className="vendor-cell">Vendor</th>
-              <th>Ports</th>
+              <th className="ports-header">
+                Ports
+                <button 
+                  className="ports-toggle-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPortsExpanded(!portsExpanded);
+                  }}
+                  data-tooltip-id="tooltip"
+                  data-tooltip-content={portsExpanded ? 'Collapse ports' : 'Expand ports'}
+                >
+                  <i className={`fa-solid fa-${portsExpanded ? 'compress' : 'expand'}`}></i>
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
             {filteredDevices.map((device) => {
               const delay = newDevices.get(device.ip);
               const isNew = delay !== undefined;
+              const portsSorted = device.ports?.slice().sort((a, b) => a - b) || [];
               
               return (
                 <tr 
@@ -140,15 +167,25 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
                   <td className="hostname-cell">{device.hostname || '—'}</td>
                   <td className="mac-cell">{device.mac_addr || '—'}</td>
                   <td className="vendor-cell">{device.manufacturer || '—'}</td>
-                  <td>
-                    {device.ports && device.ports.length > 0 ? (
-                      <span 
-                        className="text-primary ports-cell"
-                        data-tooltip-id="tooltip"
-                        data-tooltip-content={device.ports.sort((a, b) => a - b).join(', ')}
-                      >
-                        {device.ports.length} open
-                      </span>
+                  <td className={portsExpanded ? 'ports-expanded' : ''}>
+                    {/* Show dash if port scanning hasn't started yet */}
+                    {!scanStage.toLowerCase().includes('port') && 
+                     !scanStage.toLowerCase().includes('service') && 
+                     scanStage !== 'complete' && 
+                     scanStage !== 'terminated' ? (
+                      <span className="ports-cell">—</span>
+                    ) : portsSorted.length > 0 ? (
+                      portsExpanded ? (
+                        <span className="ports-list">{portsSorted.join(', ')}</span>
+                      ) : (
+                        <span 
+                          className="text-primary ports-cell"
+                          data-tooltip-id="tooltip"
+                          data-tooltip-content={portsSorted.join(', ')}
+                        >
+                          {portsSorted.length} open
+                        </span>
+                      )
                     ) : (
                       <span className="ports-cell">0 open</span>
                     )}

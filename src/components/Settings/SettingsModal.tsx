@@ -11,19 +11,58 @@ interface SettingsModalProps {
 
 type Preset = 'fast' | 'balanced' | 'accurate';
 
-// Lookup type options
-const LOOKUP_TYPES: { value: LookupType; label: string }[] = [
-  { value: 'ICMP', label: 'ICMP (Ping)' },
-  { value: 'ARP_LOOKUP', label: 'ARP Lookup' },
-  { value: 'ICMP_THEN_ARP', label: 'ICMP then ARP Cache' },
-  { value: 'POKE_THEN_ARP', label: 'Poke then ARP Cache' },
+// Help icon component for tooltips
+function HelpTip({ text }: { text: string }) {
+  return (
+    <i 
+      className="fa-regular fa-circle-question help-tip"
+      data-tooltip-id="tooltip"
+      data-tooltip-content={text}
+    />
+  );
+}
+
+// Lookup type options with descriptions
+const LOOKUP_TYPES: { value: LookupType; label: string; help: string }[] = [
+  { 
+    value: 'ICMP', 
+    label: 'ICMP (Ping)',
+    help: 'Send ICMP echo requests (ping) to detect if devices are online. Works on most networks but may be blocked by firewalls.'
+  },
+  { 
+    value: 'ARP_LOOKUP', 
+    label: 'ARP Lookup',
+    help: 'Send ARP requests to discover devices. Most reliable for local networks but requires admin/root privileges. Also retrieves MAC addresses.'
+  },
+  { 
+    value: 'ICMP_THEN_ARP', 
+    label: 'ICMP then ARP Cache',
+    help: 'Ping the device first, then check the local ARP cache for MAC address. Good balance of reliability and speed without requiring admin privileges.'
+  },
+  { 
+    value: 'POKE_THEN_ARP', 
+    label: 'Poke then ARP Cache',
+    help: 'Send a TCP SYN packet to common ports to trigger an ARP entry, then read from ARP cache.'
+  },
 ];
 
-// Service scan strategies
-const SERVICE_STRATEGIES = [
-  { value: 'LAZY', label: 'Lazy - Few probes, fastest' },
-  { value: 'BASIC', label: 'Basic - Common probes' },
-  { value: 'AGGRESSIVE', label: 'Aggressive - All probes' },
+// Service scan strategies with descriptions
+const SERVICE_STRATEGIES: { value: string; label: string; help: string }[] = [
+  { 
+    value: 'LAZY', 
+    label: 'Lazy - Few probes, fastest',
+    help: 'Tries only a few common service probes. Fastest but may miss some services.'
+  },
+  { 
+    value: 'BASIC', 
+    label: 'Basic - Common probes',
+    help: 'Uses common probes plus port-specific probes based on well-known port assignments.'
+  },
+  { 
+    value: 'AGGRESSIVE', 
+    label: 'Aggressive - All probes',
+    help: 'Tries all known probes in parallel. Most thorough but slowest and generates more traffic.'
+  },
 ];
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
@@ -159,10 +198,16 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
       {/* Device Detection */}
       <div className="settings-section">
-        <div className="settings-section-title">Device Detection</div>
+        <div className="settings-section-title">
+          Device Detection
+          <HelpTip text="Configure how LANscape discovers devices on your network. Multiple methods can be selected - they run in order until a device is found." />
+        </div>
         
         <div className="form-group">
-          <label className="form-label">Lookup Type</label>
+          <label className="form-label">
+            Lookup Type
+            <HelpTip text="Methods used to detect if a device is online. Select one or more - they will be tried in order." />
+          </label>
           <div className="checkbox-group">
             {LOOKUP_TYPES.map((type) => {
               const isArpType = type.value === 'ARP_LOOKUP';
@@ -172,8 +217,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <label 
                   key={type.value} 
                   className={`form-checkbox ${disabled ? 'disabled' : ''}`}
-                  data-tooltip-id={disabled ? 'tooltip' : undefined}
-                  data-tooltip-content={disabled ? 'ARP lookup not supported on this system' : undefined}
+                  data-tooltip-id="tooltip"
+                  data-tooltip-content={disabled ? 'ARP lookup not supported on this system (requires admin/root)' : type.help}
                 >
                   <input
                     type="checkbox"
@@ -189,7 +234,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Device Lookup Threads</label>
+          <label className="form-label">
+            Device Lookup Threads
+            <HelpTip text="Number of concurrent threads for device discovery. Higher values scan faster but use more system resources and network bandwidth." />
+          </label>
           <input
             type="number"
             className="form-input form-input-sm"
@@ -206,9 +254,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="settings-section settings-subsection">
           <div className="settings-section-title">
             Device Detection <span className="text-muted">/</span> Ping Settings
+            <HelpTip text="Configure ICMP ping behavior for device discovery. More attempts increase reliability but slow down scanning." />
           </div>
           <div className="form-group">
-            <label className="form-label">Ping Count / Device</label>
+            <label className="form-label">
+              Ping Count / Device
+              <HelpTip text="Total pings = Ping Count × Retries. More pings are more reliable but slower." />
+            </label>
             <div className="calc-row">
               <div className="calc-field">
                 <span className="calc-label">Ping Request Count</span>
@@ -220,7 +272,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   value={localConfig.ping_config?.ping_count || 1}
                   onChange={(e) => handleNestedChange('ping_config', 'ping_count', parseInt(e.target.value) || 1)}
                   data-tooltip-id="tooltip"
-                  data-tooltip-content="Ping Count per Attempt"
+                  data-tooltip-content="Number of ICMP packets sent per attempt"
                 />
               </div>
               <span className="calc-op">×</span>
@@ -234,7 +286,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   value={localConfig.ping_config?.attempts || 2}
                   onChange={(e) => handleNestedChange('ping_config', 'attempts', parseInt(e.target.value) || 2)}
                   data-tooltip-id="tooltip"
-                  data-tooltip-content="Ping Attempts"
+                  data-tooltip-content="Number of times to retry if no response"
                 />
               </div>
               <span className="calc-op">=</span>
@@ -246,14 +298,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   value={totalPingAttempts}
                   disabled
                   data-tooltip-id="tooltip"
-                  data-tooltip-content="Maximum pings per device"
+                  data-tooltip-content="Maximum total pings per device"
                 />
               </div>
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Timeout (sec)</label>
+              <label className="form-label">
+                Timeout (sec)
+                <HelpTip text="How long to wait for a ping response before considering it failed." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -265,7 +320,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Retry Delay (sec)</label>
+              <label className="form-label">
+                Retry Delay (sec)
+                <HelpTip text="Time to wait between retry attempts. Allows network congestion to clear." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -285,10 +343,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="settings-section settings-subsection">
           <div className="settings-section-title">
             Device Detection <span className="text-muted">/</span> ARP Settings
+            <HelpTip text="Configure ARP (Address Resolution Protocol) scanning. ARP is very reliable on local networks and also retrieves MAC addresses." />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Attempts</label>
+              <label className="form-label">
+                Attempts
+                <HelpTip text="Number of ARP requests to send per device. More attempts are more reliable on congested networks." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -299,7 +361,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Timeout (sec)</label>
+              <label className="form-label">
+                Timeout (sec)
+                <HelpTip text="How long to wait for an ARP response. Local network responses are usually under 100ms." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -319,10 +384,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="settings-section settings-subsection">
           <div className="settings-section-title">
             Device Detection <span className="text-muted">/</span> ARP Cache Settings
+            <HelpTip text="Configure how the system reads from the local ARP cache. After pinging or poking a device, its MAC address appears in the cache." />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Attempts</label>
+              <label className="form-label">
+                Attempts
+                <HelpTip text="Number of times to check the ARP cache. The entry may take a moment to appear." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -333,7 +402,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Wait Before (sec)</label>
+              <label className="form-label">
+                Wait Before (sec)
+                <HelpTip text="Time to wait before checking the cache. Gives the ARP entry time to be created after the initial probe." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -353,10 +425,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="settings-section settings-subsection">
           <div className="settings-section-title">
             Device Detection <span className="text-muted">/</span> Poke Settings
+            <HelpTip text="Configure TCP 'poke' behavior. A poke sends TCP SYN packets to common ports to trigger an ARP cache entry, useful when ICMP ping is blocked." />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Attempts</label>
+              <label className="form-label">
+                Attempts
+                <HelpTip text="Number of poke attempts per device. Each attempt tries multiple common ports." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -367,7 +443,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Timeout (sec)</label>
+              <label className="form-label">
+                Timeout (sec)
+                <HelpTip text="How long to wait for TCP connection attempts. Doesn't need a successful connection - just needs to trigger ARP." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -384,10 +463,16 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
       {/* Port Testing */}
       <div className="settings-section">
-        <div className="settings-section-title">Port Testing</div>
+        <div className="settings-section-title">
+          Port Testing
+          <HelpTip text="Configure how ports are scanned on discovered devices. Port scanning checks which network services are available on each device." />
+        </div>
         
         <div className="form-group">
-          <label className="form-label">Concurrent Threads</label>
+          <label className="form-label">
+            Concurrent Threads
+            <HelpTip text="Total concurrent port tests = Device Threads × Port Threads. Higher values scan faster but use more resources." />
+          </label>
           <div className="calc-row">
             <div className="calc-field">
               <span className="calc-label">Device Threads</span>
@@ -399,7 +484,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 value={localConfig.t_cnt_port_scan || 4}
                 onChange={(e) => handleChange('t_cnt_port_scan', parseInt(e.target.value) || 4)}
                 data-tooltip-id="tooltip"
-                data-tooltip-content="Device Scan Threads"
+                data-tooltip-content="Number of devices to scan ports on simultaneously"
               />
             </div>
             <span className="calc-op">×</span>
@@ -413,7 +498,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 value={localConfig.t_cnt_port_test || 16}
                 onChange={(e) => handleChange('t_cnt_port_test', parseInt(e.target.value) || 16)}
                 data-tooltip-id="tooltip"
-                data-tooltip-content="Port Test Threads"
+                data-tooltip-content="Number of ports to test simultaneously per device"
               />
             </div>
             <span className="calc-op">=</span>
@@ -425,14 +510,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 value={totalPortTests}
                 disabled
                 data-tooltip-id="tooltip"
-                data-tooltip-content="Total concurrent port tests"
+                data-tooltip-content="Total concurrent port connection attempts across all devices"
               />
             </div>
           </div>
         </div>
         
         <div className="form-group">
-          <label className="form-label">Port List</label>
+          <label className="form-label">
+            Port List
+            <HelpTip text="Predefined list of ports to scan. Larger lists find more services but take longer to scan." />
+          </label>
           <select
             className="form-input form-select"
             value={localConfig.port_list || 'medium'}
@@ -448,7 +536,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Port Timeout (sec)</label>
+            <label className="form-label">
+              Port Timeout (sec)
+              <HelpTip text="How long to wait for a port connection. Lower values are faster but may miss slow-responding services." />
+            </label>
             <input
               type="number"
               className="form-input"
@@ -460,7 +551,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Retries</label>
+            <label className="form-label">
+              Retries
+              <HelpTip text="Number of times to retry a failed port connection. Useful on unreliable networks." />
+            </label>
             <input
               type="number"
               className="form-input"
@@ -471,7 +565,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Retry Delay (sec)</label>
+            <label className="form-label">
+              Retry Delay (sec)
+              <HelpTip text="Time to wait between port retry attempts." />
+            </label>
             <input
               type="number"
               className="form-input"
@@ -488,22 +585,37 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       {/* Service Scanning - shown when task_scan_port_services enabled */}
       {localConfig.task_scan_port_services && (
         <div className="settings-section settings-subsection">
-          <div className="settings-section-title">Service Scanning</div>
+          <div className="settings-section-title">
+            Service Scanning
+            <HelpTip text="After finding open ports, service scanning sends protocol-specific probes to identify what service is running (e.g., HTTP, SSH, MySQL)." />
+          </div>
           <div className="form-group">
-            <label className="form-label">Strategy</label>
+            <label className="form-label">
+              Strategy
+              <HelpTip text="Controls how many probes are sent to identify services. More probes = better identification but slower scanning." />
+            </label>
             <select
               className="form-input form-select"
               value={localConfig.service_scan_config?.lookup_type || 'BASIC'}
               onChange={(e) => handleNestedChange('service_scan_config', 'lookup_type', e.target.value)}
             >
               {SERVICE_STRATEGIES.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option 
+                  key={s.value} 
+                  value={s.value}
+                  title={s.help}
+                >
+                  {s.label}
+                </option>
               ))}
             </select>
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Timeout (sec)</label>
+              <label className="form-label">
+                Timeout (sec)
+                <HelpTip text="How long to wait for a service to respond to a probe. Some services may be slow to respond." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -515,7 +627,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Max Concurrent Probes</label>
+              <label className="form-label">
+                Max Concurrent Probes
+                <HelpTip text="Maximum number of service probes to run in parallel per port. Higher values are faster but may overwhelm some services." />
+              </label>
               <input
                 type="number"
                 className="form-input"
@@ -526,40 +641,30 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               />
             </div>
           </div>
-          <small className="form-hint">
-            Attempts service identification on open ports using selected strategy.
-          </small>
         </div>
       )}
 
       {/* Stages (Task Toggles) */}
       <div className="settings-section">
-        <div className="settings-section-title">Stages</div>
-        <label 
-          className="form-checkbox disabled"
-          data-tooltip-id="tooltip"
-          data-tooltip-content="Find Devices using ARP or Ping (always on)"
-        >
+        <div className="settings-section-title">
+          Stages
+          <HelpTip text="Control which detection stages run during a scan. Each stage adds more information but increases scan time." />
+        </div>
+        <label className="form-checkbox disabled">
           <input type="checkbox" checked disabled />
           <span>Find Devices</span>
+          <HelpTip text="Discover devices on the network using Ping, ARP, ARP Cache, and Poke methods. Always enabled as the core discovery stage." />
         </label>
-        <label 
-          className="form-checkbox"
-          data-tooltip-id="tooltip"
-          data-tooltip-content="Find open ports on devices"
-        >
+        <label className="form-checkbox">
           <input
             type="checkbox"
             checked={localConfig.task_scan_ports ?? true}
             onChange={(e) => handleChange('task_scan_ports', e.target.checked)}
           />
           <span>Scan Ports</span>
+          <HelpTip text="Test common ports on discovered devices to find open services. Uses the ports configured in Port Testing section." />
         </label>
-        <label 
-          className="form-checkbox"
-          data-tooltip-id="tooltip"
-          data-tooltip-content="Determine services running on open ports"
-        >
+        <label className="form-checkbox">
           <input
             type="checkbox"
             checked={localConfig.task_scan_port_services ?? true}
@@ -567,6 +672,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             disabled={!localConfig.task_scan_ports}
           />
           <span>Scan Port Services</span>
+          <HelpTip text="Identify what service is running on open ports (HTTP, SSH, MySQL, etc). Requires Scan Ports to be enabled." />
         </label>
       </div>
     </Modal>

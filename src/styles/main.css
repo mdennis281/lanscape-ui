@@ -130,7 +130,7 @@ html, body, #root {
 .header-logo {
   display: flex;
   align-items: center;
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
@@ -676,6 +676,7 @@ html, body, #root {
   text-align: center;
   opacity: 0.7;
   vertical-align: baseline;
+  margin-right: 2px;
 }
 
 /* Hide old overview styles */
@@ -754,6 +755,7 @@ html, body, #root {
   letter-spacing: 0.5px;
   background: var(--table-header-bg);
   border-bottom: 1px solid var(--card-border);
+  vertical-align: middle;
 }
 
 .device-table td {
@@ -791,6 +793,40 @@ html, body, #root {
 }
 
 .device-table .mac-cell {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Ports column header with toggle */
+.device-table .ports-header {
+  white-space: nowrap;
+}
+
+.ports-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-muted);
+  padding: 2px 6px;
+  margin-left: 8px;
+  cursor: pointer;
+  font-size: 10px;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.ports-toggle-btn:hover {
+  color: var(--primary-accent);
+  border-color: var(--primary-accent);
+  background: rgba(10, 132, 255, 0.1);
+}
+
+/* Ports list when expanded */
+.ports-list {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-secondary);
@@ -1188,11 +1224,40 @@ html, body, #root {
 }
 
 .form-label {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: 6px;
+}
+
+/* Help tip icon */
+.help-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: help;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: all var(--transition-fast);
+}
+
+.help-tip:hover {
+  color: var(--primary-accent);
+  opacity: 1;
+}
+
+.settings-section-title .help-tip {
+  margin-left: 6px;
+}
+
+.form-label .help-tip,
+.form-checkbox .help-tip {
+  margin-left: 4px;
 }
 
 .form-input {
@@ -1595,7 +1660,7 @@ html, body, #root {
   }
 
   .header-logo {
-    font-size: 35px;
+    font-size: 25px;
   }
 
   .subnet-form {

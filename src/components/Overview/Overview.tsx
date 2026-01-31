@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useScanStore } from '../../store';
 import { Odometer, OdometerTime, OdometerTimePlaceholder } from './Odometer';
 
@@ -21,6 +22,18 @@ export function Overview() {
   const remaining = status?.remaining ?? 0;
   const stage = status?.stage ?? 'idle';
   const progress = status?.progress ?? 0;
+
+  // Track scan start to reset odometer instantly
+  const [scanResetKey, setScanResetKey] = useState(0);
+  const wasRunningRef = useRef(isRunning);
+
+  useEffect(() => {
+    // Detect when a new scan starts (transition from not running to running)
+    if (isRunning && !wasRunningRef.current) {
+      setScanResetKey((prev) => prev + 1);
+    }
+    wasRunningRef.current = isRunning;
+  }, [isRunning]);
 
   const pctComplete = progress * 100;
   const showRemaining = pctComplete >= 10;
@@ -51,12 +64,12 @@ export function Overview() {
         {/* Time */}
         <div className="scan-stat">
           <i className="fa-regular fa-clock scan-stat-icon" />
-          <OdometerTime seconds={runtime} className="scan-stat-value" />
+          <OdometerTime seconds={runtime} className="scan-stat-value" resetKey={scanResetKey} />
           {isRunning && (
             <>
               <span className="scan-stat-sep">/</span>
               {showRemaining ? (
-                <OdometerTime seconds={remaining} className="scan-stat-value muted" />
+                <OdometerTime seconds={remaining} className="scan-stat-value muted" resetKey={scanResetKey} />
               ) : (
                 <OdometerTimePlaceholder className="scan-stat-value" />
               )}
@@ -91,7 +104,7 @@ export function Overview() {
             onKeyDown={(e) => e.key === 'Enter' && setShowWarnings(true)}
             title="View scan warnings"
           >
-            <i className="fa-solid fa-exclamation-circle scan-stat-icon" />
+            <i className="fa-solid fa-circle-exclamation scan-stat-icon" />
             <span className="warning-count">{warningCount}</span>
           </div>
         )}
@@ -99,8 +112,8 @@ export function Overview() {
         {/* Stage */}
         <div className={`scan-stat stage ${stage === 'complete' ? 'success' : ''} ${isRunning ? 'active' : ''}`}>
           {isRunning && <i className="fa-solid fa-circle-notch fa-spin scan-stat-icon" />}
-          {stage === 'complete' && <i className="fa-solid fa-check scan-stat-icon" />}
-          {!isRunning && stage !== 'complete' && <i className="fa-solid fa-minus scan-stat-icon" />}
+          {stage === 'complete' && <i className="fa-regular fa-circle-check scan-stat-icon" />}
+          {!isRunning && stage !== 'complete' && <i className="fa-regular fa-circle scan-stat-icon" />}
           <span className="scan-stat-stage">{stage}</span>
         </div>
       </div>

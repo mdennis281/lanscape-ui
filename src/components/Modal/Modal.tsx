@@ -24,7 +24,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'medium
         <div className="modal-header">
           <h2 className="modal-title">{title}</h2>
           <button className="modal-close" onClick={onClose}>
-            <i className="fa-solid fa-xmark"></i>
+            <i className="fa-regular fa-circle-xmark"></i>
           </button>
         </div>
         <div className="modal-body">{children}</div>
