@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 
 import { Modal } from '../Modal';
 import { useScanStore } from '../../store';
-import { getCurrentWSServer, updateQueryParam } from '../../utils';
 import type { ScanConfig, LookupType } from '../../types';
 
 interface SettingsModalProps {
@@ -36,13 +35,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   
   const [localConfig, setLocalConfig] = useState<ScanConfig>({});
   const [activePreset, setActivePreset] = useState<Preset | null>(null);
-  const [wsServer, setWsServer] = useState('');
 
   useEffect(() => {
     if (config) {
       setLocalConfig(config);
     }
-    setWsServer(getCurrentWSServer());
   }, [config, isOpen]);
 
   const handlePreset = (preset: Preset) => {
@@ -95,13 +92,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   };
 
-  const handleWSServerChange = () => {
-    if (wsServer.trim()) {
-      updateQueryParam('ws-server', wsServer.trim());
-      window.location.reload();
-    }
-  };
-
   // Compute total thread counts for display
   const totalPortTests = (localConfig.t_cnt_port_scan || 4) * (localConfig.t_cnt_port_test || 16);
   const totalPingAttempts = (localConfig.ping_config?.attempts || 2) * (localConfig.ping_config?.ping_count || 1);
@@ -133,31 +123,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </>
       }
     >
-      {/* WebSocket Connection */}
-      <div className="settings-section">
-        <div className="settings-section-title">WebSocket Connection</div>
-        <div className="form-group">
-          <label className="form-label">WebSocket Server</label>
-          <div className="form-row-inline">
-            <input
-              type="text"
-              className="form-input"
-              placeholder="localhost:8766"
-              value={wsServer}
-              onChange={(e) => setWsServer(e.target.value)}
-            />
-            <button 
-              className="btn btn-secondary btn-sm" 
-              onClick={handleWSServerChange}
-              disabled={!wsServer.trim()}
-            >
-              Connect
-            </button>
-          </div>
-          <small className="form-hint">Change WebSocket server (will reload page)</small>
-        </div>
-      </div>
-
       {/* Presets */}
       <div className="settings-section">
         <div className="settings-section-title">Presets</div>

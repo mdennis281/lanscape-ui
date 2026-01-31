@@ -9,6 +9,7 @@ import {
   AboutModal,
   ErrorsModal,
   WarningsModal,
+  ConnectionModal,
   Footer,
   StartupScreen
 } from './components';
@@ -61,6 +62,8 @@ function MainApp() {
     setShowErrors,
     showWarnings,
     setShowWarnings,
+    showConnection,
+    setShowConnection,
     setSubnetInput,
   } = useScanStore();
 
@@ -251,6 +254,11 @@ function MainApp() {
       <WarningsModal
         isOpen={showWarnings}
         onClose={() => setShowWarnings(false)}
+      />
+
+      <ConnectionModal
+        isOpen={showConnection}
+        onClose={() => setShowConnection(false)}
       />
       
       {selectedDevice && (

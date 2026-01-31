@@ -7,5 +7,6 @@ export { SettingsModal } from './Settings';
 export { AboutModal } from './About';
 export { ErrorsModal } from './Errors';
 export { WarningsModal } from './Warnings';
+export { ConnectionModal } from './Connection';
 export { Footer } from './Footer';
 export { StartupScreen } from './Startup';

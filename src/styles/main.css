@@ -1515,6 +1515,44 @@ html, body, #root {
   color: var(--primary-accent);
 }
 
+/* Connection Modal */
+.connection-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.connection-status-section {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.connection-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.connection-status-row + .connection-status-row {
+  border-top: 1px solid var(--card-border);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.connection-status-label {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.connection-status-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
 /* Utility classes */
 .text-center { text-align: center; }
 .text-right { text-align: right; }

@@ -79,6 +79,8 @@ interface ScanState {
   setShowErrors: (show: boolean) => void;
   showWarnings: boolean;
   setShowWarnings: (show: boolean) => void;
+  showConnection: boolean;
+  setShowConnection: (show: boolean) => void;
 
   // Subnet input
   subnetInput: string;
@@ -157,6 +159,8 @@ export const useScanStore = create<ScanState>((set, get) => ({
   setShowErrors: (showErrors) => set({ showErrors }),
   showWarnings: false,
   setShowWarnings: (showWarnings) => set({ showWarnings }),
+  showConnection: false,
+  setShowConnection: (showConnection) => set({ showConnection }),
 
   // Scan-level errors
   scanErrors: [],

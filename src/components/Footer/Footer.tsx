@@ -5,6 +5,7 @@ export function Footer() {
   const appInfo = useScanStore((state) => state.appInfo);
   const connectionStatus = useScanStore((state) => state.connectionStatus);
   const setShowAbout = useScanStore((state) => state.setShowAbout);
+  const setShowConnection = useScanStore((state) => state.setShowConnection);
 
   const wsServer = getCurrentWSServer();
   const statusLabels: Record<string, string> = {
@@ -20,13 +21,14 @@ export function Footer() {
         <span>LANscape {appInfo?.version || ''}</span>
       </div>
       <div className="footer-right">
-        <div
-          className="footer-status"
+        <button
+          className="footer-status footer-icon-btn"
+          onClick={() => setShowConnection(true)}
           data-tooltip-id="tooltip"
           data-tooltip-content={`${statusLabels[connectionStatus]} (${wsServer})`}
         >
           <span className={`status-dot ${connectionStatus} ${connectionStatus === 'connecting' ? 'pulse' : ''}`}></span>
-        </div>
+        </button>
         <button
           className="footer-icon-btn"
           onClick={() => setShowAbout(true)}
