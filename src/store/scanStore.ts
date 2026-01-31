@@ -11,7 +11,8 @@ import type {
   WSEvent,
   SubnetInfo,
   DefaultConfigs,
-  PortListSummary
+  PortListSummary,
+  ScanErrorInfo
 } from '../types';
 import type { ConnectionStatus } from '../services/websocket';
 
@@ -56,6 +57,11 @@ interface ScanState {
   removeDevice: (ip: string) => void;
   clearDevices: () => void;
 
+  // Scan-level errors
+  scanErrors: ScanErrorInfo[];
+  setScanErrors: (errors: ScanErrorInfo[]) => void;
+  clearScanErrors: () => void;
+
   // UI state
   selectedDevice: DeviceResult | null;
   setSelectedDevice: (device: DeviceResult | null) => void;
@@ -63,6 +69,8 @@ interface ScanState {
   setShowSettings: (show: boolean) => void;
   showAbout: boolean;
   setShowAbout: (show: boolean) => void;
+  showErrors: boolean;
+  setShowErrors: (show: boolean) => void;
 
   // Subnet input
   subnetInput: string;
@@ -137,6 +145,13 @@ export const useScanStore = create<ScanState>((set, get) => ({
   setShowSettings: (showSettings) => set({ showSettings }),
   showAbout: false,
   setShowAbout: (showAbout) => set({ showAbout }),
+  showErrors: false,
+  setShowErrors: (showErrors) => set({ showErrors }),
+
+  // Scan-level errors
+  scanErrors: [],
+  setScanErrors: (scanErrors) => set({ scanErrors }),
+  clearScanErrors: () => set({ scanErrors: [] }),
 
   // Subnet input
   subnetInput: '',
@@ -154,6 +169,8 @@ export const useScanStore = create<ScanState>((set, get) => ({
       
       switch (action) {
         case 'started':
+          // Clear previous scan errors when a new scan starts
+          set({ scanErrors: [] });
           if (eventData?.status) {
             set({ status: eventData.status as ScanStatus });
           }
@@ -219,8 +236,7 @@ export const useScanStore = create<ScanState>((set, get) => ({
         case 'update':
         case 'delta':
           // Handle delta updates from server
-          // Server metadata format from ScannerResults.export():
-          // { running, stage, run_time, devices_scanned, devices_total, start_time, percent_complete, ... }
+          // Server sends: { devices: [...], metadata: {...}, has_changes: bool }
           const delta = eventData as {
             devices?: DeviceResult[];
             metadata?: {
@@ -231,24 +247,43 @@ export const useScanStore = create<ScanState>((set, get) => ({
               devices_total?: number;
               devices_alive?: number;
               percent_complete?: number;
+              errors?: ScanErrorInfo[];
+              // Nested metadata from ScanResults structure
+              metadata?: {
+                running?: boolean;
+                stage?: string;
+                run_time?: number;
+                devices_scanned?: number;
+                devices_total?: number;
+                devices_alive?: number;
+                percent_complete?: number;
+                errors?: ScanErrorInfo[];
+              };
             };
             has_changes?: boolean;
           } | undefined;
+
+          // Handle both flat and nested metadata structures
+          // The delta tracker sends metadata that may have a nested metadata field
+          const outerMeta = delta?.metadata;
+          const innerMeta = outerMeta?.metadata;
+          // Use inner if available (nested structure), otherwise use outer (flat structure)
+          const scanMeta = innerMeta ?? outerMeta;
 
           if (delta?.devices) {
             for (const device of delta.devices) {
               get().updateDevice(device);
             }
           }
-          if (delta?.metadata) {
+          if (scanMeta) {
             const currentStatus = get().status;
             const currentDevices = get().devices;
-            const scanned = delta.metadata.devices_scanned ?? currentStatus?.scanned_hosts ?? 0;
-            const total = delta.metadata.devices_total ?? currentStatus?.total_hosts ?? 0;
-            const runtimeSec = delta.metadata.run_time ?? currentStatus?.runtime ?? 0;
+            const scanned = scanMeta.devices_scanned ?? currentStatus?.scanned_hosts ?? 0;
+            const total = scanMeta.devices_total ?? currentStatus?.total_hosts ?? 0;
+            const runtimeSec = scanMeta.run_time ?? currentStatus?.runtime ?? 0;
             
             // Use backend's calculated percent_complete (considers port scanning threads, etc.)
-            const pctComplete = delta.metadata.percent_complete ?? 0;
+            const pctComplete = scanMeta.percent_complete ?? 0;
             const remainingSec = pctComplete > 0
               ? (runtimeSec * (100 - pctComplete)) / pctComplete
               : 0;
@@ -256,17 +291,23 @@ export const useScanStore = create<ScanState>((set, get) => ({
             set({ 
               status: {
                 ...currentStatus,
-                is_running: delta.metadata.running ?? currentStatus?.is_running ?? false,
-                stage: delta.metadata.stage ?? currentStatus?.stage ?? 'Idle',
+                is_running: scanMeta.running ?? currentStatus?.is_running ?? false,
+                stage: scanMeta.stage ?? currentStatus?.stage ?? 'Idle',
                 runtime: runtimeSec,
                 scanned_hosts: scanned,
                 total_hosts: total,
                 // found_hosts is the count of alive devices
-                found_hosts: delta.metadata.devices_alive ?? currentDevices.length,
+                found_hosts: scanMeta.devices_alive ?? currentDevices.length,
                 progress: pctComplete / 100, // Store as 0-1
                 remaining: remainingSec,
               } as ScanStatus
             });
+
+            // Update scan-level errors if present
+            if (scanMeta.errors && scanMeta.errors.length > 0) {
+              console.log('Scan errors received:', JSON.stringify(scanMeta.errors, null, 2));
+              set({ scanErrors: scanMeta.errors });
+            }
           }
           break;
 

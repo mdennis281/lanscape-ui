@@ -9,6 +9,8 @@ function digitCount(n: number): number {
 
 export function Overview() {
   const status = useScanStore((state) => state.status);
+  const scanErrors = useScanStore((state) => state.scanErrors);
+  const setShowErrors = useScanStore((state) => state.setShowErrors);
 
   const isRunning = status?.is_running ?? false;
   const scannedHosts = status?.scanned_hosts ?? 0;
@@ -20,6 +22,7 @@ export function Overview() {
 
   const pctComplete = progress * 100;
   const showRemaining = pctComplete >= 10;
+  const errorCount = scanErrors.length;
   
   // Use total hosts to determine digit count (so scanned aligns properly)
   const hostDigits = Math.max(digitCount(totalHosts), 1);
@@ -59,6 +62,21 @@ export function Overview() {
         </div>
 
         <div className="scan-stat-spacer" />
+
+        {/* Error indicator - shown when there are scan-level errors */}
+        {errorCount > 0 && (
+          <div 
+            className="scan-stat error-indicator"
+            onClick={() => setShowErrors(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && setShowErrors(true)}
+            title="View scan errors"
+          >
+            <i className="fa-solid fa-triangle-exclamation scan-stat-icon" />
+            <span className="error-count">{errorCount}</span>
+          </div>
+        )}
 
         {/* Stage */}
         <div className={`scan-stat stage ${stage === 'complete' ? 'success' : ''} ${isRunning ? 'active' : ''}`}>

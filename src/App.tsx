@@ -6,7 +6,8 @@ import {
   DeviceTable, 
   DeviceModal,
   SettingsModal, 
-  AboutModal, 
+  AboutModal,
+  ErrorsModal,
   Footer,
   StartupScreen
 } from './components';
@@ -55,6 +56,8 @@ function MainApp() {
     setShowSettings,
     showAbout,
     setShowAbout,
+    showErrors,
+    setShowErrors,
     setSubnetInput,
   } = useScanStore();
 
@@ -235,6 +238,11 @@ function MainApp() {
       <AboutModal 
         isOpen={showAbout} 
         onClose={() => setShowAbout(false)} 
+      />
+      
+      <ErrorsModal 
+        isOpen={showErrors} 
+        onClose={() => setShowErrors(false)} 
       />
       
       {selectedDevice && (

@@ -153,6 +153,12 @@ export interface ScanConfig {
   service_scan_config?: ServiceScanConfig;
 }
 
+// Scan-level error info from ScanErrorInfo model
+export interface ScanErrorInfo {
+  basic: string;
+  traceback?: string;
+}
+
 export interface ScanSummary {
   scan_id: string;
   running: boolean;
@@ -164,6 +170,24 @@ export interface ScanSummary {
     scanned: number;
     alive: number;
   };
+}
+
+// Scan metadata from the new Pydantic model structure
+export interface ScanMetadata {
+  scan_id: string;
+  subnet: string;
+  port_list: string;
+  running: boolean;
+  stage: string;
+  percent_complete: number;
+  devices_total: number;
+  devices_scanned: number;
+  devices_alive: number;
+  port_list_length: number;
+  start_time: number;
+  end_time?: number;
+  run_time: number;
+  errors: ScanErrorInfo[];
 }
 
 export interface DeviceResult {
