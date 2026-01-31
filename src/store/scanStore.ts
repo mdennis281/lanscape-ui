@@ -201,9 +201,10 @@ export const useScanStore = create<ScanState>((set, get) => ({
           });
           break;
 
-        case 'complete': {
-          // Handle completion - server sends delta format with metadata
-          const completeDelta = eventData as {
+        case 'complete':
+        case 'terminated': {
+          // Handle completion or termination - server sends delta format with metadata
+          const finishedDelta = eventData as {
             devices?: DeviceResult[];
             metadata?: {
               running?: boolean;
@@ -216,32 +217,35 @@ export const useScanStore = create<ScanState>((set, get) => ({
           } | undefined;
 
           // Update any final device changes
-          if (completeDelta?.devices) {
-            for (const device of completeDelta.devices) {
+          if (finishedDelta?.devices) {
+            for (const device of finishedDelta.devices) {
               get().updateDevice(device);
             }
           }
 
-          // Mark all devices as complete (in case some didn't get final update)
+          // Determine the final stage from metadata or event type
+          const finalStage = finishedDelta?.metadata?.stage ?? action;
+
+          // Mark all devices with the final stage
           const allDevices = get().devices.map(d => ({
             ...d,
-            stage: 'complete'
+            stage: finalStage
           }));
           set({ devices: allDevices });
 
-          // Update status to complete
+          // Update status with actual stage from server
           const currentStatus = get().status;
-          const meta = completeDelta?.metadata;
+          const meta = finishedDelta?.metadata;
           set({ 
             status: {
               ...currentStatus,
               is_running: false,
-              stage: 'complete',
+              stage: finalStage,
               runtime: meta?.run_time ?? currentStatus?.runtime ?? 0,
               scanned_hosts: meta?.devices_scanned ?? currentStatus?.scanned_hosts ?? 0,
               total_hosts: meta?.devices_total ?? currentStatus?.total_hosts ?? 0,
               found_hosts: meta?.devices_alive ?? allDevices.length,
-              progress: 1, // 100%
+              progress: action === 'complete' ? 1 : currentStatus?.progress ?? 0,
               remaining: 0,
             } as ScanStatus
           });
