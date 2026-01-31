@@ -219,6 +219,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   className={`form-checkbox ${disabled ? 'disabled' : ''}`}
                   data-tooltip-id="tooltip"
                   data-tooltip-content={disabled ? 'ARP lookup not supported on this system (requires admin/root)' : type.help}
+                  data-tooltip-place="right"
                 >
                   <input
                     type="checkbox"

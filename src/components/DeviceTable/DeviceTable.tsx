@@ -186,9 +186,7 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
                           {portsSorted.length} open
                         </span>
                       )
-                    ) : (
-                      <span className="ports-cell">0 open</span>
-                    )}
+                    ) : null}
                   </td>
                 </tr>
               );

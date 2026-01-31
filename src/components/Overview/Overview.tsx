@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useScanStore } from '../../store';
-import { Odometer, OdometerTime, OdometerTimePlaceholder } from './Odometer';
+import { Odometer, OdometerTime } from './Odometer';
 
 // Calculate number of digits needed to display a number
 function digitCount(n: number): number {
@@ -65,14 +65,10 @@ export function Overview() {
         <div className="scan-stat">
           <i className="fa-regular fa-clock scan-stat-icon" />
           <OdometerTime seconds={runtime} className="scan-stat-value" resetKey={scanResetKey} />
-          {isRunning && (
+          {isRunning && showRemaining && (
             <>
               <span className="scan-stat-sep">/</span>
-              {showRemaining ? (
-                <OdometerTime seconds={remaining} className="scan-stat-value muted" resetKey={scanResetKey} />
-              ) : (
-                <OdometerTimePlaceholder className="scan-stat-value" />
-              )}
+              <OdometerTime seconds={remaining} className="scan-stat-value muted" resetKey={scanResetKey} />
             </>
           )}
         </div>

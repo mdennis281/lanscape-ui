@@ -1898,13 +1898,22 @@ html, body, #root {
   border: 1px solid var(--border-color) !important;
   border-radius: 6px !important;
   font-size: 13px !important;
-  padding: 6px 10px !important;
+  padding: 8px 12px !important;
   box-shadow: var(--shadow-md) !important;
   z-index: 10000 !important;
+  max-width: 350px !important;
+  white-space: normal !important;
+  line-height: 1.4 !important;
+  text-align: left !important;
 }
 
 .react-tooltip-arrow {
   border-color: var(--secondary-bg) !important;
+}
+
+/* Checkbox tooltips should appear to the right */
+.form-checkbox[data-tooltip-id] {
+  position: relative;
 }
 
 /* ============================================
