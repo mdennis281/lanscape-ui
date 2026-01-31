@@ -159,6 +159,16 @@ export interface ScanErrorInfo {
   traceback?: string;
 }
 
+// Scan-level warning info for resource constraints
+export interface ScanWarningInfo {
+  type: string;
+  message: string;
+  old_multiplier?: number;
+  new_multiplier?: number;
+  decrease_percent?: number;
+  timestamp?: number;
+}
+
 export interface ScanSummary {
   scan_id: string;
   running: boolean;
@@ -188,6 +198,7 @@ export interface ScanMetadata {
   end_time?: number;
   run_time: number;
   errors: ScanErrorInfo[];
+  warnings?: ScanWarningInfo[];
 }
 
 export interface DeviceResult {

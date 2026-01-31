@@ -12,7 +12,8 @@ import type {
   SubnetInfo,
   DefaultConfigs,
   PortListSummary,
-  ScanErrorInfo
+  ScanErrorInfo,
+  ScanWarningInfo
 } from '../types';
 import type { ConnectionStatus } from '../services/websocket';
 
@@ -62,6 +63,11 @@ interface ScanState {
   setScanErrors: (errors: ScanErrorInfo[]) => void;
   clearScanErrors: () => void;
 
+  // Scan-level warnings
+  scanWarnings: ScanWarningInfo[];
+  setScanWarnings: (warnings: ScanWarningInfo[]) => void;
+  clearScanWarnings: () => void;
+
   // UI state
   selectedDevice: DeviceResult | null;
   setSelectedDevice: (device: DeviceResult | null) => void;
@@ -71,6 +77,8 @@ interface ScanState {
   setShowAbout: (show: boolean) => void;
   showErrors: boolean;
   setShowErrors: (show: boolean) => void;
+  showWarnings: boolean;
+  setShowWarnings: (show: boolean) => void;
 
   // Subnet input
   subnetInput: string;
@@ -147,11 +155,18 @@ export const useScanStore = create<ScanState>((set, get) => ({
   setShowAbout: (showAbout) => set({ showAbout }),
   showErrors: false,
   setShowErrors: (showErrors) => set({ showErrors }),
+  showWarnings: false,
+  setShowWarnings: (showWarnings) => set({ showWarnings }),
 
   // Scan-level errors
   scanErrors: [],
   setScanErrors: (scanErrors) => set({ scanErrors }),
   clearScanErrors: () => set({ scanErrors: [] }),
+
+  // Scan-level warnings
+  scanWarnings: [],
+  setScanWarnings: (scanWarnings) => set({ scanWarnings }),
+  clearScanWarnings: () => set({ scanWarnings: [] }),
 
   // Subnet input
   subnetInput: '',
@@ -169,8 +184,8 @@ export const useScanStore = create<ScanState>((set, get) => ({
       
       switch (action) {
         case 'started':
-          // Clear previous scan errors when a new scan starts
-          set({ scanErrors: [] });
+          // Clear previous scan errors and warnings when a new scan starts
+          set({ scanErrors: [], scanWarnings: [] });
           if (eventData?.status) {
             set({ status: eventData.status as ScanStatus });
           }
@@ -248,6 +263,7 @@ export const useScanStore = create<ScanState>((set, get) => ({
               devices_alive?: number;
               percent_complete?: number;
               errors?: ScanErrorInfo[];
+              warnings?: ScanWarningInfo[];
               // Nested metadata from ScanResults structure
               metadata?: {
                 running?: boolean;
@@ -258,6 +274,7 @@ export const useScanStore = create<ScanState>((set, get) => ({
                 devices_alive?: number;
                 percent_complete?: number;
                 errors?: ScanErrorInfo[];
+                warnings?: ScanWarningInfo[];
               };
             };
             has_changes?: boolean;
@@ -307,6 +324,11 @@ export const useScanStore = create<ScanState>((set, get) => ({
             if (scanMeta.errors && scanMeta.errors.length > 0) {
               console.log('Scan errors received:', JSON.stringify(scanMeta.errors, null, 2));
               set({ scanErrors: scanMeta.errors });
+            }
+
+            // Update scan-level warnings if present
+            if (scanMeta.warnings && scanMeta.warnings.length > 0) {
+              set({ scanWarnings: scanMeta.warnings as ScanWarningInfo[] });
             }
           }
           break;

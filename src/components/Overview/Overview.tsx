@@ -10,7 +10,9 @@ function digitCount(n: number): number {
 export function Overview() {
   const status = useScanStore((state) => state.status);
   const scanErrors = useScanStore((state) => state.scanErrors);
+  const scanWarnings = useScanStore((state) => state.scanWarnings);
   const setShowErrors = useScanStore((state) => state.setShowErrors);
+  const setShowWarnings = useScanStore((state) => state.setShowWarnings);
 
   const isRunning = status?.is_running ?? false;
   const scannedHosts = status?.scanned_hosts ?? 0;
@@ -23,6 +25,7 @@ export function Overview() {
   const pctComplete = progress * 100;
   const showRemaining = pctComplete >= 10;
   const errorCount = scanErrors.length;
+  const warningCount = scanWarnings.length;
   
   // Use total hosts to determine digit count (so scanned aligns properly)
   const hostDigits = Math.max(digitCount(totalHosts), 1);
@@ -75,6 +78,21 @@ export function Overview() {
           >
             <i className="fa-solid fa-triangle-exclamation scan-stat-icon" />
             <span className="error-count">{errorCount}</span>
+          </div>
+        )}
+
+        {/* Warning indicator - shown when there are scan-level warnings */}
+        {warningCount > 0 && (
+          <div 
+            className="scan-stat warning-indicator"
+            onClick={() => setShowWarnings(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && setShowWarnings(true)}
+            title="View scan warnings"
+          >
+            <i className="fa-solid fa-exclamation-circle scan-stat-icon" />
+            <span className="warning-count">{warningCount}</span>
           </div>
         )}
 

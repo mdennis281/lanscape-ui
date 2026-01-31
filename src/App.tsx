@@ -8,6 +8,7 @@ import {
   SettingsModal, 
   AboutModal,
   ErrorsModal,
+  WarningsModal,
   Footer,
   StartupScreen
 } from './components';
@@ -58,6 +59,8 @@ function MainApp() {
     setShowAbout,
     showErrors,
     setShowErrors,
+    showWarnings,
+    setShowWarnings,
     setSubnetInput,
   } = useScanStore();
 
@@ -243,6 +246,11 @@ function MainApp() {
       <ErrorsModal 
         isOpen={showErrors} 
         onClose={() => setShowErrors(false)} 
+      />
+
+      <WarningsModal
+        isOpen={showWarnings}
+        onClose={() => setShowWarnings(false)}
       />
       
       {selectedDevice && (
