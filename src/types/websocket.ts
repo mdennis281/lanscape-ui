@@ -208,6 +208,7 @@ export interface ServiceInfo {
   response?: string | null;
   probes_sent?: number;
   probes_received?: number;
+  is_tls?: boolean;
 }
 
 export interface DeviceResult {
