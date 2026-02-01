@@ -201,6 +201,15 @@ export interface ScanMetadata {
   warnings?: ScanWarningInfo[];
 }
 
+export interface ServiceInfo {
+  port: number;
+  service: string;
+  request?: string | null;
+  response?: string | null;
+  probes_sent?: number;
+  probes_received?: number;
+}
+
 export interface DeviceResult {
   ip: string;
   alive?: boolean;
@@ -212,6 +221,7 @@ export interface DeviceResult {
   stage?: string;
   ports_scanned?: number;
   services?: Record<string, number[]>;
+  service_info?: ServiceInfo[];
   // caught_errors can be plain strings or objects with basic/traceback
   caught_errors?: Array<string | { basic: string; traceback?: string }>;
 }
