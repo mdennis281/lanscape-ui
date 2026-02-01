@@ -186,7 +186,16 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
                           {portsSorted.length} open
                         </span>
                       )
-                    ) : null}
+                    ) : (
+                      <span 
+                        className="ports-cell text-muted" 
+                        style={{ opacity: 0.4 }}
+                        data-tooltip-id="tooltip"
+                        data-tooltip-content="No ports found"
+                      >
+                        <i className="fa-regular fa-empty-set"></i>
+                      </span>
+                    )}
                   </td>
                 </tr>
               );
