@@ -13,7 +13,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // LANscape version to install - update this when releasing new versions
-export const LANSCAPE_VERSION = '==2.4.0b3';
+export const LANSCAPE_VERSION = '==2.4.0';
 
 // For development: set to local lanscape path to install from source
 // Set to null for production (installs from PyPI)
