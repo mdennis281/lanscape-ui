@@ -3,7 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "description": "LANscape Desktop - Local Network Scanner",
-  "author": "Michael",
+  "author": {
+    "name": "Michael Dennis",
+    "email": "lanscape@dipduo.com"
+  },
   "license": "MIT",
   "type": "module",
   "main": "dist-electron/main.cjs",

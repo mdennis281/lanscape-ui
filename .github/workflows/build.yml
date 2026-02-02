@@ -32,7 +32,7 @@ jobs:
             artifact_name: windows
 
           # macOS Intel
-          - os: macos-13
+          - os: macos-15
             platform: mac
             artifact_name: macos-intel
 
