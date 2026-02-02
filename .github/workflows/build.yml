@@ -73,7 +73,7 @@ jobs:
 
       # macOS build (Intel)
       - name: Build macOS executables (Intel)
-        if: matrix.platform == 'mac' && matrix.os == 'macos-13'
+        if: matrix.platform == 'mac' && matrix.os == 'macos-15'
         run: npx electron-builder --mac dmg zip --x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
