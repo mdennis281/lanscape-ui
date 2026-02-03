@@ -57,7 +57,7 @@ jobs:
         with:
           repository: mdennis281/LANscape
           ref:  feature/standalone-build # v${{ env.LANSCAPE_VERSION }}
-          path: py-net-scan
+          path: lanscape-backend
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -66,7 +66,7 @@ jobs:
 
       - name: Build LANscape backend
         run: |
-          cd LANscape
+          cd lanscape-backend
           pip install pyinstaller
           pip install -e .
           python -m PyInstaller lanscape.spec
