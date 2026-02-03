@@ -32,3 +32,8 @@ python-env
 # Build artifacts
 out
 *.tsbuildinfo
+
+# Backend binaries (built in CI)
+backend/win/
+backend/mac/
+backend/linux/

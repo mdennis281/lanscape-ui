@@ -61,6 +61,13 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "backend/${os}/",
+        "to": ".",
+        "filter": ["lanscape-backend*"]
+      }
+    ],
     "win": {
       "target": ["nsis", "portable"],
       "icon": "public/android-chrome-512x512.png",

@@ -2,7 +2,8 @@
  * Python environment manager for LANscape Electron app.
  * 
  * Handles:
- * - Creating/managing a Python virtual environment
+ * - Using bundled standalone executable (production)
+ * - Creating/managing a Python virtual environment (development)
  * - Installing LANscape package with version pinning
  * - Starting/stopping the WebSocket server
  */
@@ -11,6 +12,7 @@ import { EventEmitter } from 'events';
 import { spawn, ChildProcess, execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { app } from 'electron';
 
 // LANscape version to install - update this when releasing new versions
 export const LANSCAPE_VERSION = '==2.4.0';
@@ -18,6 +20,28 @@ export const LANSCAPE_VERSION = '==2.4.0';
 // For development: set to local lanscape path to install from source
 // Set to null for production (installs from PyPI)
 export const LANSCAPE_DEV_PATH: string | null = 'C:\\Users\\Michael\\projects\\py-net-scan';
+
+/**
+ * Check if we're running as a packaged app
+ */
+function isPackaged(): boolean {
+  return app.isPackaged;
+}
+
+/**
+ * Get the path to the bundled backend executable
+ */
+function getBundledBackendPath(): string {
+  const resourcesPath = process.resourcesPath;
+  
+  if (process.platform === 'win32') {
+    return path.join(resourcesPath, 'lanscape-backend.exe');
+  } else if (process.platform === 'darwin') {
+    return path.join(resourcesPath, 'lanscape-backend');
+  } else {
+    return path.join(resourcesPath, 'lanscape-backend');
+  }
+}
 
 export class PythonManager extends EventEmitter {
   private envPath: string;
@@ -214,34 +238,41 @@ export class PythonManager extends EventEmitter {
   }
 
   /**
-   * Initialize the Python environment
-   * Creates venv if needed and installs LANscape
+   * Initialize the Python environment.
+   * In packaged mode, verifies the bundled executable exists.
+   * In dev mode, creates venv if needed and installs LANscape.
    */
   async initialize(): Promise<void> {
     try {
-      // Check if venv exists
-      if (!this.venvExists()) {
-        await this.createVenv();
-        // New venv means we need to install
-        this.emit('status', 'Installing LANscape core...');
-        await this.installLanscape();
+      if (isPackaged()) {
+        // Packaged app: use bundled executable
+        const backendPath = getBundledBackendPath();
+        if (!fs.existsSync(backendPath)) {
+          throw new Error(`Bundled backend not found: ${backendPath}`);
+        }
+        this.emit('status', 'LANscape backend ready');
+        console.log(`Using bundled backend: ${backendPath}`);
       } else {
-        this.emit('status', 'Python environment found');
-        
-        // Check if LANscape is installed
-        const version = await this.getLanscapeVersion();
-        if (!version) {
+        // Development mode: use Python venv
+        if (!this.venvExists()) {
+          await this.createVenv();
           this.emit('status', 'Installing LANscape core...');
           await this.installLanscape();
         } else {
-          // Already installed - show "Starting" message
-          this.emit('status', `Starting LANscape core (v${version})...`);
+          this.emit('status', 'Python environment found');
           
-          // In dev mode, silently reinstall to pick up changes
-          // but don't change the UI status (already says "Starting")
-          if (LANSCAPE_DEV_PATH && fs.existsSync(LANSCAPE_DEV_PATH)) {
-            console.log('Dev mode: reinstalling to pick up changes...');
+          const version = await this.getLanscapeVersion();
+          if (!version) {
+            this.emit('status', 'Installing LANscape core...');
             await this.installLanscape();
+          } else {
+            this.emit('status', `Starting LANscape core (v${version})...`);
+            
+            // In dev mode, silently reinstall to pick up changes
+            if (LANSCAPE_DEV_PATH && fs.existsSync(LANSCAPE_DEV_PATH)) {
+              console.log('Dev mode: reinstalling to pick up changes...');
+              await this.installLanscape();
+            }
           }
         }
       }
@@ -255,9 +286,31 @@ export class PythonManager extends EventEmitter {
   }
 
   /**
+   * Get the command and args for starting the WebSocket server.
+   * Uses bundled executable in packaged mode, Python venv in dev mode.
+   */
+  private getServerCommand(): { command: string; args: string[]; shell: boolean } {
+    if (isPackaged()) {
+      const backendPath = getBundledBackendPath();
+      return {
+        command: backendPath,
+        args: ['--ws-server'],
+        shell: false,  // No shell needed for direct executable
+      };
+    } else {
+      const python = this.getPythonPath();
+      return {
+        command: python,
+        args: ['-m', 'lanscape', '--ws-server'],
+        shell: true,
+      };
+    }
+  }
+
+  /**
    * Start the LANscape WebSocket server.
-   * Let Python auto-select an available port to avoid race conditions.
-   * The actual port will be parsed from Python's output.
+   * Let the backend auto-select an available port to avoid race conditions.
+   * The actual port will be parsed from the output.
    */
   async startWebSocketServer(): Promise<number> {
     if (this.wsProcess) {
@@ -265,20 +318,16 @@ export class PythonManager extends EventEmitter {
       return this.wsPort;
     }
 
-    const python = this.getPythonPath();
+    const { command, args, shell } = this.getServerCommand();
+    console.log(`Starting server: ${command} ${args.join(' ')}`);
 
     this.emit('status', 'Starting WebSocket server...');
 
     return new Promise((resolve, reject) => {
-      // Don't pass --ws-port, let Python auto-select an available port
-      this.wsProcess = spawn(
-        python,
-        ['-m', 'lanscape', '--ws-server'],
-        {
-          shell: true,
-          stdio: ['ignore', 'pipe', 'pipe'],
-        }
-      );
+      this.wsProcess = spawn(command, args, {
+        shell,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
 
       let startupTimeout: NodeJS.Timeout | null = null;
 

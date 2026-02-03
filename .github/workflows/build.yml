@@ -19,6 +19,8 @@ concurrency:
 
 env:
   NODE_VERSION: '20'
+  PYTHON_VERSION: '3.12'
+  LANSCAPE_VERSION: '2.4.0'
 
 jobs:
   build:
@@ -30,27 +32,47 @@ jobs:
           - os: windows-latest
             platform: win
             artifact_name: windows
-
-          # macOS Intel
-          - os: macos-15
-            platform: mac
-            artifact_name: macos-intel
+            backend_ext: '.exe'
 
           # macOS Apple Silicon
           - os: macos-latest
             platform: mac
             artifact_name: macos-arm64
+            backend_ext: ''
 
           # Linux
           - os: ubuntu-latest
             platform: linux
             artifact_name: linux
+            backend_ext: ''
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Checkout LANscape backend
+        uses: actions/checkout@v4
+        with:
+          repository: mdennis281/py-net-scan
+          ref:  feature/standalone-build # v${{ env.LANSCAPE_VERSION }}
+          path: py-net-scan
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build LANscape backend
+        run: |
+          cd py-net-scan
+          pip install pyinstaller
+          pip install -e .
+          python -m PyInstaller lanscape.spec
+          mkdir -p ../backend/${{ matrix.platform }}
+          cp dist/lanscape-backend${{ matrix.backend_ext }} ../backend/${{ matrix.platform }}/
+        shell: bash
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -68,13 +90,6 @@ jobs:
       - name: Build Windows executables
         if: matrix.platform == 'win'
         run: npx electron-builder --win nsis portable
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # macOS build (Intel)
-      - name: Build macOS executables (Intel)
-        if: matrix.platform == 'mac' && matrix.os == 'macos-15'
-        run: npx electron-builder --mac dmg zip --x64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
