@@ -53,6 +53,7 @@
     "build":  {
                   "appId":  "com.lanscape.desktop",
                   "productName":  "LANscape",
+                  "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
                   "directories":  {
                                       "output":  "release",
                                       "buildResources":  "build"
@@ -78,6 +79,14 @@
                               "icon":  "public/android-chrome-512x512.png",
                               "signAndEditExecutable":  false
                           },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "allowToChangeInstallationDirectory":  true,
+                               "artifactName": "${productName}-${version}-${os}-Setup.${ext}"
+                           },
+                  "portable": {
+                               "artifactName": "${productName}-${version}-${os}-Portable.${ext}"
+                           },
                   "mac":  {
                               "target":  [
                                              "dmg",
@@ -96,9 +105,17 @@
                                 "icon":  "public/android-chrome-512x512.png",
                                 "category":  "Network"
                             },
-                  "nsis":  {
-                               "oneClick":  false,
-                               "allowToChangeInstallationDirectory":  true
+                  "dmg": {
+                               "artifactName": "${productName}-${version}-macOS-${arch}.${ext}"
+                           },
+                  "appImage": {
+                               "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
+                           },
+                  "deb": {
+                               "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
+                           },
+                  "rpm": {
+                               "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
                            }
               }
 }

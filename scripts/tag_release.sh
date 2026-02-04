@@ -25,7 +25,7 @@ npm version "$VERSION" --no-git-tag-version
 
 # Commit the version change
 git add package.json
-git commit -m "chore: bump version to $VERSION"
+git commit -m "Finalize version: $VERSION"
 
 # Create and push tag
 git tag "$TAG"
