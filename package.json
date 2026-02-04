@@ -1,7 +1,7 @@
 {
     "name":  "lanscape-ui",
     "private":  true,
-    "version":  "0.0.4",
+    "version":  "0.0.5",
     "description":  "LANscape Desktop - Local Network Scanner",
     "author":  {
                    "name":  "Michael Dennis",
@@ -53,7 +53,7 @@
     "build":  {
                   "appId":  "com.lanscape.desktop",
                   "productName":  "LANscape",
-                  "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+                  "artifactName":  "${productName}-${version}-${os}-${arch}.${ext}",
                   "directories":  {
                                       "output":  "release",
                                       "buildResources":  "build"
@@ -82,11 +82,11 @@
                   "nsis":  {
                                "oneClick":  false,
                                "allowToChangeInstallationDirectory":  true,
-                               "artifactName": "${productName}-${version}-${os}-Setup.${ext}"
+                               "artifactName":  "${productName}-${version}-${os}-Setup.${ext}"
                            },
-                  "portable": {
-                               "artifactName": "${productName}-${version}-${os}-Portable.${ext}"
-                           },
+                  "portable":  {
+                                   "artifactName":  "${productName}-${version}-${os}-Portable.${ext}"
+                               },
                   "mac":  {
                               "target":  [
                                              "dmg",
@@ -105,17 +105,17 @@
                                 "icon":  "public/android-chrome-512x512.png",
                                 "category":  "Network"
                             },
-                  "dmg": {
-                               "artifactName": "${productName}-${version}-macOS-${arch}.${ext}"
-                           },
-                  "appImage": {
-                               "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
-                           },
-                  "deb": {
-                               "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
-                           },
-                  "rpm": {
-                               "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
-                           }
+                  "dmg":  {
+                              "artifactName":  "${productName}-${version}-macOS-${arch}.${ext}"
+                          },
+                  "appImage":  {
+                                   "artifactName":  "${productName}-${version}-linux-${arch}.${ext}"
+                               },
+                  "deb":  {
+                              "artifactName":  "${productName}-${version}-linux-${arch}.${ext}"
+                          },
+                  "rpm":  {
+                              "artifactName":  "${productName}-${version}-linux-${arch}.${ext}"
+                          }
               }
 }
