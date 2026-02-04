@@ -17,7 +17,9 @@ if ($Version -match "-(alpha|beta|rc)") {
 Write-Host "Updating package.json version to $Version..."
 $packageJson = Get-Content -Path "package.json" -Raw | ConvertFrom-Json
 $packageJson.version = $Version
-$packageJson | ConvertTo-Json -Depth 100 | Set-Content -Path "package.json" -Encoding UTF8
+$jsonContent = $packageJson | ConvertTo-Json -Depth 100
+# Write without BOM (UTF8 without BOM is required for JSON files)
+[System.IO.File]::WriteAllText("$PWD\package.json", $jsonContent, [System.Text.UTF8Encoding]::new($false))
 
 # Commit the version change
 git add package.json
