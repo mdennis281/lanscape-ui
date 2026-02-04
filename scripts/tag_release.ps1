@@ -23,7 +23,7 @@ $jsonContent = $packageJson | ConvertTo-Json -Depth 100
 
 # Commit the version change
 git add package.json
-git commit -m "chore: bump version to $Version"
+git commit -m "Finalize version: $Version"
 
 # Create and push tag
 git tag $tag
