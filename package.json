@@ -1,91 +1,104 @@
-{
-  "name": "lanscape-ui",
-  "private": true,
-  "version": "1.0.0",
-  "description": "LANscape Desktop - Local Network Scanner",
-  "author": {
-    "name": "Michael Dennis",
-    "email": "lanscape@dipduo.com"
-  },
-  "license": "MIT",
-  "type": "module",
-  "main": "dist-electron/main.cjs",
-  "scripts": {
-    "dev": "vite",
-    "dev:electron": "vite & electron .",
-    "build": "tsc -b && vite build && npm run build:electron",
-    "build:electron": "tsc -p tsconfig.electron.json && node scripts/rename-cjs.js",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "electron": "npm run build:electron && electron .",
-    "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:linux": "npm run build && electron-builder --linux"
-  },
-  "dependencies": {
-    "@tanstack/react-query": "^5.90.19",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^7.12.0",
-    "react-tooltip": "^5.30.0",
-    "zustand": "^5.0.10"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-basic-ssl": "^2.1.4",
-    "@vitejs/plugin-react": "^5.1.1",
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4",
-    "vite-plugin-pwa": "^1.2.0"
-  },
-  "build": {
-    "appId": "com.lanscape.desktop",
-    "productName": "LANscape",
-    "directories": {
-      "output": "release",
-      "buildResources": "build"
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "backend/${os}/",
-        "to": ".",
-        "filter": ["lanscape-backend*"]
-      }
-    ],
-    "win": {
-      "target": ["nsis", "portable"],
-      "icon": "public/android-chrome-512x512.png",
-      "signAndEditExecutable": false
-    },
-    "mac": {
-      "target": ["dmg", "zip"],
-      "icon": "public/android-chrome-512x512.png",
-      "category": "public.app-category.utilities"
-    },
-    "linux": {
-      "target": ["AppImage", "deb", "rpm", "tar.gz"],
-      "icon": "public/android-chrome-512x512.png",
-      "category": "Network"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
-  }
+﻿{
+    "name":  "lanscape-ui",
+    "private":  true,
+    "version":  "0.0.1",
+    "description":  "LANscape Desktop - Local Network Scanner",
+    "author":  {
+                   "name":  "Michael Dennis",
+                   "email":  "lanscape@dipduo.com"
+               },
+    "license":  "MIT",
+    "type":  "module",
+    "main":  "dist-electron/main.cjs",
+    "scripts":  {
+                    "dev":  "vite",
+                    "dev:electron":  "vite \u0026 electron .",
+                    "build":  "tsc -b \u0026\u0026 vite build \u0026\u0026 npm run build:electron",
+                    "build:electron":  "tsc -p tsconfig.electron.json \u0026\u0026 node scripts/rename-cjs.js",
+                    "lint":  "eslint .",
+                    "preview":  "vite preview",
+                    "electron":  "npm run build:electron \u0026\u0026 electron .",
+                    "pack":  "npm run build \u0026\u0026 electron-builder --dir",
+                    "dist":  "npm run build \u0026\u0026 electron-builder",
+                    "dist:win":  "npm run build \u0026\u0026 electron-builder --win",
+                    "dist:mac":  "npm run build \u0026\u0026 electron-builder --mac",
+                    "dist:linux":  "npm run build \u0026\u0026 electron-builder --linux"
+                },
+    "dependencies":  {
+                         "@tanstack/react-query":  "^5.90.19",
+                         "react":  "^19.2.0",
+                         "react-dom":  "^19.2.0",
+                         "react-router-dom":  "^7.12.0",
+                         "react-tooltip":  "^5.30.0",
+                         "zustand":  "^5.0.10"
+                     },
+    "devDependencies":  {
+                            "@eslint/js":  "^9.39.1",
+                            "@types/node":  "^24.10.1",
+                            "@types/react":  "^19.2.5",
+                            "@types/react-dom":  "^19.2.3",
+                            "@vitejs/plugin-basic-ssl":  "^2.1.4",
+                            "@vitejs/plugin-react":  "^5.1.1",
+                            "electron":  "^33.0.0",
+                            "electron-builder":  "^25.0.0",
+                            "eslint":  "^9.39.1",
+                            "eslint-plugin-react-hooks":  "^7.0.1",
+                            "eslint-plugin-react-refresh":  "^0.4.24",
+                            "globals":  "^16.5.0",
+                            "typescript":  "~5.9.3",
+                            "typescript-eslint":  "^8.46.4",
+                            "vite":  "^7.2.4",
+                            "vite-plugin-pwa":  "^1.2.0"
+                        },
+    "build":  {
+                  "appId":  "com.lanscape.desktop",
+                  "productName":  "LANscape",
+                  "directories":  {
+                                      "output":  "release",
+                                      "buildResources":  "build"
+                                  },
+                  "files":  [
+                                "dist/**/*",
+                                "dist-electron/**/*"
+                            ],
+                  "extraResources":  [
+                                         {
+                                             "from":  "backend/${os}/",
+                                             "to":  ".",
+                                             "filter":  [
+                                                            "lanscape-backend*"
+                                                        ]
+                                         }
+                                     ],
+                  "win":  {
+                              "target":  [
+                                             "nsis",
+                                             "portable"
+                                         ],
+                              "icon":  "public/android-chrome-512x512.png",
+                              "signAndEditExecutable":  false
+                          },
+                  "mac":  {
+                              "target":  [
+                                             "dmg",
+                                             "zip"
+                                         ],
+                              "icon":  "public/android-chrome-512x512.png",
+                              "category":  "public.app-category.utilities"
+                          },
+                  "linux":  {
+                                "target":  [
+                                               "AppImage",
+                                               "deb",
+                                               "rpm",
+                                               "tar.gz"
+                                           ],
+                                "icon":  "public/android-chrome-512x512.png",
+                                "category":  "Network"
+                            },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "allowToChangeInstallationDirectory":  true
+                           }
+              }
 }
