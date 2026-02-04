@@ -3,7 +3,8 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'releases/*'
+      - 'pre-releases/*'
   workflow_dispatch:
     inputs:
       create_release:
@@ -149,7 +150,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.create_release == 'true'
+    if: startsWith(github.ref, 'refs/tags/releases/') || startsWith(github.ref, 'refs/tags/pre-releases/') || github.event.inputs.create_release == 'true'
     
     permissions:
       contents: write
@@ -168,24 +169,40 @@ jobs:
           echo "Downloaded artifacts:"
           find artifacts -type f -name "*" | head -50
 
-      - name: Get version from tag or package.json
+      - name: Extract version and release info
         id: version
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION="${{ github.ref_name }}"
-          else
-            VERSION="v$(node -p "require('./package.json').version")"
+          TAG_NAME="${{ github.ref_name }}"
+          echo "Processing tag: $TAG_NAME"
+          
+          # Remove prefix to get clean version
+          CLEAN_VERSION="${TAG_NAME#releases/}"
+          CLEAN_VERSION="${CLEAN_VERSION#pre-releases/}"
+          
+          # If not a tag push, get from package.json
+          if [ -z "$CLEAN_VERSION" ] || [ "$CLEAN_VERSION" == "$TAG_NAME" ]; then
+            CLEAN_VERSION="$(node -p "require('./package.json').version")"
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
+          
+          echo "version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+          echo "Clean version: $CLEAN_VERSION"
+          
+          # Determine if prerelease (contains -beta, -alpha, -rc)
+          if [[ "$CLEAN_VERSION" =~ -(alpha|beta|rc) ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "Prerelease: true"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "Prerelease: false"
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: LANscape ${{ steps.version.outputs.version }}
-          draft: true
-          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          tag_name: v${{ steps.version.outputs.version }}
+          name: LANscape v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
           generate_release_notes: true
           files: |
             artifacts/**/*.exe
@@ -202,13 +219,13 @@ jobs:
         run: |
           echo "## 🎉 Release Created!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Prerelease:** ${{ steps.version.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Artifacts:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Platform | Files |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Windows | \`.exe\` (Installer + Portable) |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS Intel | \`.dmg\`, \`.zip\` |" >> $GITHUB_STEP_SUMMARY
           echo "| macOS ARM | \`.dmg\`, \`.zip\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Linux | \`.AppImage\`, \`.deb\`, \`.rpm\`, \`.tar.gz\` |" >> $GITHUB_STEP_SUMMARY
