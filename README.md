@@ -1,195 +1,100 @@
-# LANscape React UI# React + TypeScript + Vite
+# LANscape Desktop
 
+A cross-platform desktop application for scanning and monitoring local network devices. Built with Electron and React, LANscape Desktop provides a modern interface for the [LANscape](https://github.com/mdennis281/LANscape) network scanning library.
 
+## How It Works
 
-A modern React-based frontend for LANscape network scanner, connecting via WebSocket for real-time updates.This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+LANscape Desktop bundles the LANscape Python backend as a standalone executable. When the application starts, it launches the backend process which handles all network scanning operations. The frontend communicates with the backend over WebSocket, receiving real-time updates as devices are discovered on the network.
 
+The scanning process:
+1. Backend performs ARP scans to discover active hosts
+2. Open ports are detected via TCP connection attempts
+3. Service identification probes known ports for banners and signatures
+4. Results stream to the frontend in real-time via WebSocket
 
+## Backend
 
-## FeaturesCurrently, two official plugins are available:
+The network scanning functionality comes from the [LANscape PyPI package](https://pypi.org/project/lanscape/). This is a Python library that provides:
 
+- ARP-based host discovery
+- TCP port scanning with configurable ranges
+- Service identification using protocol probes
+- MAC address vendor lookup
+- Hostname resolution via mDNS and NetBIOS
 
+For desktop distribution, the Python backend is compiled into a standalone executable using PyInstaller. This allows the app to run without requiring Python to be installed on the user's system.
 
-- **Real-time scanning**: Watch devices appear as they're discovered- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+Source: https://github.com/mdennis281/LANscape
 
-- **Delta updates**: Efficient updates - only changed data is transmitted- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-- **Responsive design**: Works on desktop and mobile
-
-- **PWA support**: Installable as a Progressive Web App## React Compiler
-
-- **Dark theme**: Sleek dark interface matching the original Flask UI
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Getting Started
-
-## Expanding the ESLint configuration
+## Building
 
 ### Prerequisites
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Node.js 20+
+- npm
 
-- Node.js 18+
-
-- LANscape WebSocket server running on port 8766```js
-
-export default defineConfig([
-
-### Installation  globalIgnores(['dist']),
-
-  {
-
-```bash    files: ['**/*.{ts,tsx}'],
-
-# Install dependencies    extends: [
-
-npm install      // Other configs...
-
-
-
-# Start development server      // Remove tseslint.configs.recommended and replace with this
-
-npm run dev      tseslint.configs.recommendedTypeChecked,
-
-```      // Alternatively, use this for stricter rules
-
-      tseslint.configs.strictTypeChecked,
-
-### Configuration      // Optionally, add this for stylistic rules
-
-      tseslint.configs.stylisticTypeChecked,
-
-Create a `.env` file (or copy `.env.example`) to configure:
-
-      // Other configs...
-
-```env    ],
-
-# WebSocket server URL    languageOptions: {
-
-VITE_WS_URL=ws://localhost:8766      parserOptions: {
-
-```        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-
-        tsconfigRootDir: import.meta.dirname,
-
-### Building for Production      },
-
-      // other options...
-
-```bash    },
-
-npm run build  },
-
-```])
-
-```
-
-The built files will be in the `dist/` directory.
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-## Architecture
-
-```js
-
-### Project Structure// eslint.config.js
-
-import reactX from 'eslint-plugin-react-x'
-
-```import reactDom from 'eslint-plugin-react-dom'
-
-src/
-
-├── components/       # React componentsexport default defineConfig([
-
-│   ├── Header/       # Top navigation with subnet input  globalIgnores(['dist']),
-
-│   ├── Overview/     # Status cards (devices, runtime, stage)  {
-
-│   ├── DeviceTable/  # Device listing with filtering    files: ['**/*.{ts,tsx}'],
-
-│   ├── DeviceModal/  # Device details with port scanning    extends: [
-
-│   ├── Settings/     # Scan configuration modal      // Other configs...
-
-│   ├── About/        # App info modal      // Enable lint rules for React
-
-│   ├── Modal/        # Reusable modal component      reactX.configs['recommended-typescript'],
-
-│   └── Footer/       # App footer      // Enable lint rules for React DOM
-
-├── services/         # WebSocket service layer      reactDom.configs.recommended,
-
-├── store/            # Zustand state management    ],
-
-├── types/            # TypeScript type definitions    languageOptions: {
-
-└── styles/           # CSS styles      parserOptions: {
-
-```        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-
-        tsconfigRootDir: import.meta.dirname,
-
-### State Management      },
-
-      // other options...
-
-Uses [Zustand](https://github.com/pmndrs/zustand) for lightweight global state:    },
-
-  },
-
-- Connection status])
-
-- Scan configuration```
-
-- Scan status & results
-- UI state (modals, selection)
-
-### WebSocket Protocol
-
-Connects to LANscape WebSocket server using JSON protocol:
-
-- **Requests**: `{ type: "request", handler, action, data }`
-- **Responses**: `{ type: "response", handler, action, success, data }`
-- **Events**: `{ type: "event", handler, event, data }`
-- **Errors**: `{ type: "error", handler, action, code, message }`
-
-### Available WebSocket Actions
-
-#### Scan Handler
-- `start_scan` - Start a network scan
-- `stop_scan` - Stop running scan
-- `get_results` - Get current scan results
-- `get_status` - Get scan status
-- `get_config` / `set_config` - Manage scan configuration
-- `subscribe` / `unsubscribe` - Real-time delta updates
-
-#### Port Handler
-- `scan_ports` - Scan ports on a specific IP
-- `get_common_ports` - Get list of common ports
-
-#### Tools Handler
-- `get_app_info` - Get application info
-- `get_version` - Get current version
-- `check_updates` - Check for updates
-- `parse_cidr` - Parse CIDR notation
-- `lookup_mac` - MAC address vendor lookup
-- `dns_lookup` - DNS resolution
-
-## Development
-
-### Type Checking
+### Development
 
 ```bash
-npx tsc --noEmit
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Run Electron in development
+npm run electron
 ```
 
-### Linting
+### Production Build
 
 ```bash
-npm run lint
+# Build for current platform
+npm run dist
+
+# Build for specific platform
+npm run dist:win
+npm run dist:mac
+npm run dist:linux
+```
+
+Output files are placed in the `release/` directory.
+
+## Project Structure
+
+```
+lanscape-ui/
+  electron/          # Electron main process
+    main.ts          # Application entry point
+    preload.ts       # Preload script for IPC
+    pythonManager.ts # Backend process management
+    portFinder.ts    # Dynamic port allocation
+  src/               # React frontend
+    components/      # UI components
+    services/        # API and WebSocket clients
+    store/           # State management
+    types/           # TypeScript definitions
+  backend/           # Platform-specific backend binaries
+    win/
+    mac/
+    linux/
+```
+
+## Releases
+
+Releases are built automatically via GitHub Actions when a version tag is pushed. The workflow builds for Windows, macOS (Apple Silicon), and Linux, then publishes the artifacts as a GitHub release.
+
+To create a release:
+
+```powershell
+# Run the release task in VS Code, or:
+./scripts/tag_release.ps1 1.0.0
+```
+
+For pre-releases, use semver suffixes:
+
+```powershell
+./scripts/tag_release.ps1 1.0.0-beta.1
 ```
 
 ## License
