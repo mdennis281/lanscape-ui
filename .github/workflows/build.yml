@@ -75,7 +75,7 @@ jobs:
           pip install -e .
           python -m PyInstaller lanscape.spec
           mkdir -p ../backend/${{ matrix.platform }}
-          cp dist/lanscape-backend${{ matrix.backend_ext }} ../backend/${{ matrix.platform }}/
+          cp -r dist/lanscape-backend ../backend/${{ matrix.platform }}/
         shell: bash
 
       - name: Setup Node.js
