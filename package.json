@@ -1,7 +1,7 @@
 {
     "name":  "lanscape-ui",
     "private":  true,
-    "version":  "0.0.7",
+    "version":  "0.0.8",
     "description":  "LANscape Desktop - Local Network Scanner",
     "author":  {
                    "name":  "Michael Dennis",
