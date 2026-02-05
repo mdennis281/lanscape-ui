@@ -29,17 +29,18 @@ function isPackaged(): boolean {
 }
 
 /**
- * Get the path to the bundled backend executable
+ * Get the path to the bundled backend executable.
+ * Uses onedir mode for fast startup (no extraction needed).
  */
 function getBundledBackendPath(): string {
   const resourcesPath = process.resourcesPath;
   
   if (process.platform === 'win32') {
-    return path.join(resourcesPath, 'lanscape-backend.exe');
+    return path.join(resourcesPath, 'lanscape-backend', 'lanscape-backend.exe');
   } else if (process.platform === 'darwin') {
-    return path.join(resourcesPath, 'lanscape-backend');
+    return path.join(resourcesPath, 'lanscape-backend', 'lanscape-backend');
   } else {
-    return path.join(resourcesPath, 'lanscape-backend');
+    return path.join(resourcesPath, 'lanscape-backend', 'lanscape-backend');
   }
 }
 

@@ -64,10 +64,10 @@
                             ],
                   "extraResources":  [
                                          {
-                                             "from":  "backend/${os}/",
-                                             "to":  ".",
+                                             "from":  "backend/${os}/lanscape-backend/",
+                                             "to":  "lanscape-backend/",
                                              "filter":  [
-                                                            "lanscape-backend*"
+                                                            "**/*"
                                                         ]
                                          }
                                      ],
