@@ -19,6 +19,24 @@ try {
   // electron-squirrel-startup not installed, ignore
 }
 
+// Single instance lock - prevent multiple app windows
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  // Another instance is already running, quit this one
+  app.quit();
+} else {
+  // We got the lock, set up handler for when another instance tries to open
+  app.on('second-instance', () => {
+    // Focus the existing window when user tries to open another instance
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+    }
+  });
+}
+
 let mainWindow: BrowserWindow | null = null;
 let pythonManager: PythonManager | null = null;
 let wsPort: number = 8766; // Will be set by Python after it selects an available port
@@ -81,6 +99,9 @@ async function createWindow(): Promise<void> {
  * Initialize the Python environment and start the WebSocket server
  */
 async function initializePython(): Promise<void> {
+  // Send immediate status so the UI knows we're starting
+  mainWindow?.webContents.send('python-status', 'Initializing backend...');
+  
   const envPath = getAppDataPath();
   pythonManager = new PythonManager(envPath, LANSCAPE_VERSION);
 
@@ -153,14 +174,17 @@ function setupIpcHandlers(): void {
 
 // App lifecycle handlers
 app.whenReady().then(async () => {
-  // Set up IPC handlers
+  // Set up IPC handlers first
   setupIpcHandlers();
   
-  // Create window
+  // Create and show window immediately for fast perceived startup
   await createWindow();
   
-  // Initialize Python - it will auto-select an available port
-  await initializePython();
+  // Initialize Python in the background - don't block the UI
+  // The StartupScreen component will show loading status to the user
+  initializePython().catch((error) => {
+    console.error('Python initialization failed:', error);
+  });
 
   app.on('activate', async () => {
     // On macOS, re-create window when dock icon is clicked

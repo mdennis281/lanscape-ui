@@ -23,19 +23,21 @@ interface StatusLogEntry {
 
 export function StartupScreen({ onReady, onSkip }: StartupScreenProps) {
   const [statusLog, setStatusLog] = useState<StatusLogEntry[]>([]);
-  const [currentStatus, setCurrentStatus] = useState('Initializing...');
+  const [currentStatus, setCurrentStatus] = useState('Starting up...');
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(5); // Start with small progress to show activity
 
   // Map status messages to progress percentages
   const getProgressFromStatus = (status: string): number => {
     const statusLower = status.toLowerCase();
-    if (statusLower.includes('creating python')) return 10;
-    if (statusLower.includes('environment found')) return 20;
-    if (statusLower.includes('installing lanscape core')) return 30;
-    if (statusLower.includes('starting lanscape core')) return 50;
-    if (statusLower.includes('starting websocket')) return 70;
+    if (statusLower.includes('initializing backend')) return 10;
+    if (statusLower.includes('backend ready')) return 20;
+    if (statusLower.includes('creating python')) return 15;
+    if (statusLower.includes('environment found')) return 25;
+    if (statusLower.includes('installing lanscape core')) return 35;
+    if (statusLower.includes('starting lanscape core')) return 55;
+    if (statusLower.includes('starting websocket')) return 75;
     if (statusLower.includes('websocket server running')) return 100;
     return progress; // Keep current progress if unknown
   };
