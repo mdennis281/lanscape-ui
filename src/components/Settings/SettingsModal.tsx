@@ -218,7 +218,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   key={type.value} 
                   className={`form-checkbox ${disabled ? 'disabled' : ''}`}
                   data-tooltip-id="tooltip"
-                  data-tooltip-content={disabled ? 'ARP lookup not supported on this system (requires admin/root)' : type.help}
+                  data-tooltip-content={disabled ? 'ARP lookup not supported on this system - click ? for more info' : type.help}
                   data-tooltip-place="right"
                 >
                   <input
@@ -228,6 +228,19 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     disabled={disabled}
                   />
                   <span>{type.label}</span>
+                  {disabled && (
+                    <i 
+                      className="fa-solid fa-circle-question arp-help-icon"
+                      data-tooltip-id="tooltip"
+                      data-tooltip-content="Click for more info on ARP issues"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.open('https://github.com/mdennis281/LANscape/blob/main/docs/arp-issues.md', '_blank');
+                      }}
+                      style={{ marginLeft: '0.5rem', cursor: 'pointer', color: 'var(--warning-accent)' }}
+                    />
+                  )}
                 </label>
               );
             })}
