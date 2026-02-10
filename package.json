@@ -71,6 +71,10 @@
                                              "filter":  [
                                                             "**/*"
                                                         ]
+                                         },
+                                         {
+                                             "from":  "public/favicon.ico",
+                                             "to":  "icon.ico"
                                          }
                                      ],
                   "win":  {
@@ -78,7 +82,7 @@
                                              "nsis",
                                              "portable"
                                          ],
-                              "icon":  "public/android-chrome-512x512.png",
+                              "icon":  "public/favicon.ico",
                               "signAndEditExecutable":  false
                           },
                   "nsis":  {

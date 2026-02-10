@@ -58,13 +58,18 @@ function getAppDataPath(): string {
  * Create the main application window
  */
 async function createWindow(): Promise<void> {
+  // Resolve icon path - works in both dev and production
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.ico')
+    : path.join(__dirname, '../public/favicon.ico');
+  
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 800,
     minHeight: 600,
     title: 'LANscape',
-    icon: path.join(__dirname, '../public/favicon.ico'),
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
