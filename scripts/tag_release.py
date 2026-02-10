@@ -53,7 +53,7 @@ def main() -> None:
     package_data['version'] = version
 
     with open(package_json_path, 'w', encoding='utf-8') as f:
-        json.dump(package_data, f, indent=4)
+        json.dump(package_data, f, indent=2)
         f.write('\n')  # Trailing newline
 
     # Commit the version change
