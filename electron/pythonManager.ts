@@ -17,9 +17,10 @@ import { app } from 'electron';
 // LANscape version to install - update this when releasing new versions
 export const LANSCAPE_VERSION = '==2.4.0';
 
-// For development: set to local lanscape path to install from source
-// Set to null for production (installs from PyPI)
-export const LANSCAPE_DEV_PATH: string | null = 'C:\\Users\\Michael\\projects\\py-net-scan';
+// For development: set LANSCAPE_DEV_PATH env var to local lanscape path
+// e.g., LANSCAPE_DEV_PATH=C:\Users\Michael\projects\py-net-scan
+// When set, installs from source instead of PyPI
+export const LANSCAPE_DEV_PATH: string | null = process.env.LANSCAPE_DEV_PATH || null;
 
 /**
  * Check if we're running as a packaged app

@@ -13,6 +13,8 @@
     "scripts":  {
                     "dev":  "vite",
                     "dev:electron":  "vite \u0026 electron .",
+                    "dev:local":  "set LANSCAPE_DEV_PATH=C:\\Users\\Michael\\projects\\py-net-scan&& npm run dev:electron",
+                    "electron:local":  "set LANSCAPE_DEV_PATH=C:\\Users\\Michael\\projects\\py-net-scan&& npm run electron",
                     "build":  "tsc -b \u0026\u0026 vite build \u0026\u0026 npm run build:electron",
                     "build:electron":  "tsc -p tsconfig.electron.json \u0026\u0026 node scripts/rename-cjs.js",
                     "lint":  "eslint .",
