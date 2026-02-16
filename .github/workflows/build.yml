@@ -90,6 +90,22 @@ jobs:
       - name: Build application
         run: npm run build
 
+      # Upload webapp build for standalone use (only on Linux to avoid duplicates)
+      - name: Create webapp distribution
+        if: matrix.platform == 'linux'
+        run: |
+          cd dist
+          zip -r ../webapp-dist.zip .
+
+      - name: Upload webapp artifact
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-dist
+          path: webapp-dist.zip
+          if-no-files-found: error
+          retention-days: 30
+
       # Windows build
       - name: Build Windows executables
         if: matrix.platform == 'win'
@@ -212,6 +228,7 @@ jobs:
             artifacts/**/*.deb
             artifacts/**/*.rpm
             artifacts/**/*.tar.gz
+            artifacts/**/webapp-dist.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
