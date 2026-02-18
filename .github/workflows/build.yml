@@ -5,6 +5,8 @@ on:
     tags:
       - 'releases/*'
       - 'pre-releases/*'
+  repository_dispatch:
+    types: [backend-release]
   workflow_dispatch:
     inputs:
       create_release:
@@ -12,10 +14,23 @@ on:
         required: false
         default: false
         type: boolean
+      ui_branch:
+        description: 'Branch to build from (default: current)'
+        required: false
+        type: string
+      backend_version:
+        description: 'Backend version to build against'
+        required: false
+        type: string
+      webapp_only:
+        description: 'Skip Electron builds (webapp-dist.zip only)'
+        required: false
+        default: false
+        type: boolean
 
 # Cancel in-progress runs for the same branch
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.client_payload.backend_version || '' }}
   cancel-in-progress: true
 
 permissions:
@@ -27,7 +42,52 @@ env:
   LANSCAPE_VERSION: '2.4.0'
 
 jobs:
+  # Determine build parameters from the trigger source
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      ui_branch: ${{ steps.params.outputs.ui_branch }}
+      backend_version: ${{ steps.params.outputs.backend_version }}
+      is_prerelease: ${{ steps.params.outputs.is_prerelease }}
+      webapp_only: ${{ steps.params.outputs.webapp_only }}
+      should_release: ${{ steps.params.outputs.should_release }}
+    steps:
+      - name: Determine build parameters
+        id: params
+        run: |
+          EVENT="${{ github.event_name }}"
+          echo "Trigger event: $EVENT"
+
+          if [ "$EVENT" = "repository_dispatch" ]; then
+            echo "ui_branch=${{ github.event.client_payload.ui_branch || 'main' }}" >> $GITHUB_OUTPUT
+            echo "backend_version=${{ github.event.client_payload.backend_version }}" >> $GITHUB_OUTPUT
+            echo "is_prerelease=${{ github.event.client_payload.is_prerelease || 'false' }}" >> $GITHUB_OUTPUT
+            echo "webapp_only=${{ github.event.client_payload.electron != 'true' }}" >> $GITHUB_OUTPUT
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          elif [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "ui_branch=${{ inputs.ui_branch || github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "backend_version=${{ inputs.backend_version || '' }}" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "webapp_only=${{ inputs.webapp_only || 'false' }}" >> $GITHUB_OUTPUT
+            echo "should_release=${{ inputs.create_release || 'false' }}" >> $GITHUB_OUTPUT
+          else
+            # Tag push
+            echo "ui_branch=" >> $GITHUB_OUTPUT
+            echo "backend_version=" >> $GITHUB_OUTPUT
+            TAG_NAME="${{ github.ref_name }}"
+            CLEAN_VERSION="${TAG_NAME#releases/}"
+            CLEAN_VERSION="${CLEAN_VERSION#pre-releases/}"
+            if [[ "$CLEAN_VERSION" =~ -(alpha|beta|rc) ]]; then
+              echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            else
+              echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            fi
+            echo "webapp_only=false" >> $GITHUB_OUTPUT
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
   build:
+    needs: config
     strategy:
       fail-fast: false
       matrix:
@@ -51,12 +111,17 @@ jobs:
             backend_ext: ''
 
     runs-on: ${{ matrix.os }}
+    # Skip non-linux platforms for webapp-only builds
+    if: ${{ needs.config.outputs.webapp_only != 'true' || matrix.platform == 'linux' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.config.outputs.ui_branch || github.ref }}
 
       - name: Checkout LANscape backend
+        if: ${{ needs.config.outputs.webapp_only != 'true' }}
         uses: actions/checkout@v4
         with:
           repository: mdennis281/LANscape
@@ -64,11 +129,13 @@ jobs:
           path: lanscape-backend
 
       - name: Setup Python
+        if: ${{ needs.config.outputs.webapp_only != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Build LANscape backend
+        if: ${{ needs.config.outputs.webapp_only != 'true' }}
         run: |
           cd lanscape-backend
           pip install pyinstaller
@@ -108,28 +175,28 @@ jobs:
 
       # Windows build
       - name: Build Windows executables
-        if: matrix.platform == 'win'
+        if: matrix.platform == 'win' && needs.config.outputs.webapp_only != 'true'
         run: npx electron-builder --win nsis portable
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # macOS build (Apple Silicon)
       - name: Build macOS executables (Apple Silicon)
-        if: matrix.platform == 'mac' && matrix.os == 'macos-latest'
+        if: matrix.platform == 'mac' && matrix.os == 'macos-latest' && needs.config.outputs.webapp_only != 'true'
         run: npx electron-builder --mac dmg zip --arm64
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Linux build
       - name: Build Linux executables
-        if: matrix.platform == 'linux'
+        if: matrix.platform == 'linux' && needs.config.outputs.webapp_only != 'true'
         run: npx electron-builder --linux AppImage deb rpm tar.gz
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Upload Windows artifacts
       - name: Upload Windows artifacts
-        if: matrix.platform == 'win'
+        if: matrix.platform == 'win' && needs.config.outputs.webapp_only != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
@@ -139,7 +206,7 @@ jobs:
 
       # Upload macOS artifacts
       - name: Upload macOS artifacts
-        if: matrix.platform == 'mac'
+        if: matrix.platform == 'mac' && needs.config.outputs.webapp_only != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
@@ -151,7 +218,7 @@ jobs:
 
       # Upload Linux artifacts
       - name: Upload Linux artifacts
-        if: matrix.platform == 'linux'
+        if: matrix.platform == 'linux' && needs.config.outputs.webapp_only != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
@@ -164,9 +231,9 @@ jobs:
           retention-days: 30
 
   release:
-    needs: build
+    needs: [config, build]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/releases/') || startsWith(github.ref, 'refs/tags/pre-releases/') || github.event.inputs.create_release == 'true'
+    if: ${{ needs.config.outputs.should_release == 'true' }}
     
     permissions:
       contents: write
@@ -174,6 +241,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.config.outputs.ui_branch || github.ref }}
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -188,38 +257,61 @@ jobs:
       - name: Extract version and release info
         id: version
         run: |
-          TAG_NAME="${{ github.ref_name }}"
-          echo "Processing tag: $TAG_NAME"
+          EVENT="${{ github.event_name }}"
           
-          # Remove prefix to get clean version
-          CLEAN_VERSION="${TAG_NAME#releases/}"
-          CLEAN_VERSION="${CLEAN_VERSION#pre-releases/}"
-          
-          # If not a tag push, get from package.json
-          if [ -z "$CLEAN_VERSION" ] || [ "$CLEAN_VERSION" == "$TAG_NAME" ]; then
-            CLEAN_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$EVENT" = "repository_dispatch" ]; then
+            # Use backend version for the tag
+            BACKEND_VERSION="${{ github.event.client_payload.backend_version }}"
+            UI_VERSION="$(node -p "require('./package.json').version")"
+            CLEAN_VERSION="${UI_VERSION}"
+            IS_PRERELEASE="${{ needs.config.outputs.is_prerelease }}"
+            TAG_NAME="webapp/${BACKEND_VERSION}"
+          else
+            TAG_NAME="${{ github.ref_name }}"
+            echo "Processing tag: $TAG_NAME"
+            
+            # Remove prefix to get clean version
+            CLEAN_VERSION="${TAG_NAME#releases/}"
+            CLEAN_VERSION="${CLEAN_VERSION#pre-releases/}"
+            
+            # If not a tag push, get from package.json
+            if [ -z "$CLEAN_VERSION" ] || [ "$CLEAN_VERSION" == "$TAG_NAME" ]; then
+              CLEAN_VERSION="$(node -p "require('./package.json').version")"
+            fi
+            
+            IS_PRERELEASE="${{ needs.config.outputs.is_prerelease }}"
+            BACKEND_VERSION=""
           fi
           
           echo "version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "backend_version=$BACKEND_VERSION" >> $GITHUB_OUTPUT
           echo "Clean version: $CLEAN_VERSION"
-          
-          # Determine if prerelease (contains -beta, -alpha, -rc)
-          if [[ "$CLEAN_VERSION" =~ -(alpha|beta|rc) ]]; then
-            echo "is_prerelease=true" >> $GITHUB_OUTPUT
-            echo "Prerelease: true"
-          else
-            echo "is_prerelease=false" >> $GITHUB_OUTPUT
-            echo "Prerelease: false"
-          fi
+          echo "Tag name: $TAG_NAME"
+          echo "Prerelease: $IS_PRERELEASE"
+
+      - name: Create or update tag for dispatch builds
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        run: |
+          TAG="${{ steps.version.outputs.tag_name }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Delete existing tag if it exists (re-builds)
+          git tag -d "$TAG" 2>/dev/null || true
+          git push origin ":refs/tags/$TAG" 2>/dev/null || true
+          git tag "$TAG"
+          git push origin "$TAG"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: LANscape v${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          name: ${{ github.event_name == 'repository_dispatch' && format('Webapp for LANscape v{0}', steps.version.outputs.backend_version) || format('LANscape v{0}', steps.version.outputs.version) }}
           draft: false
           prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
-          generate_release_notes: true
+          generate_release_notes: ${{ github.event_name != 'repository_dispatch' }}
+          body: ${{ github.event_name == 'repository_dispatch' && format('Webapp build for LANscape backend v{0}\n\nUI Version: {1}\nUI Branch: `{2}`', steps.version.outputs.backend_version, steps.version.outputs.version, needs.config.outputs.ui_branch) || '' }}
           files: |
             artifacts/**/*.exe
             artifacts/**/*.dmg
@@ -228,6 +320,7 @@ jobs:
             artifacts/**/*.deb
             artifacts/**/*.rpm
             artifacts/**/*.tar.gz
+            artifacts/**/webapp-dist.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -237,11 +330,22 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Prerelease:** ${{ steps.version.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.version.outputs.backend_version }}" ]; then
+            echo "**Backend Version:** v${{ steps.version.outputs.backend_version }}" >> $GITHUB_STEP_SUMMARY
+            echo "**UI Branch:** \`${{ needs.config.outputs.ui_branch }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Artifacts:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Files |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows | \`.exe\` (Installer + Portable) |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS ARM | \`.dmg\`, \`.zip\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux | \`.AppImage\`, \`.deb\`, \`.rpm\`, \`.tar.gz\` |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.config.outputs.webapp_only }}" = "true" ]; then
+            echo "| Type | Files |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Webapp | \`webapp-dist.zip\` |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Platform | Files |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Webapp | \`webapp-dist.zip\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Windows | \`.exe\` (Installer + Portable) |" >> $GITHUB_STEP_SUMMARY
+            echo "| macOS ARM | \`.dmg\`, \`.zip\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Linux | \`.AppImage\`, \`.deb\`, \`.rpm\`, \`.tar.gz\` |" >> $GITHUB_STEP_SUMMARY
+          fi
