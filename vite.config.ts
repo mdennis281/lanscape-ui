@@ -45,7 +45,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true,
+    open: process.env.VITE_NO_OPEN !== 'true',
     hmr: {
       port: 3001, // Use different port for HMR to avoid conflicts
     },
