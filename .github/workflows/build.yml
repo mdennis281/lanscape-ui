@@ -111,8 +111,6 @@ jobs:
             backend_ext: ''
 
     runs-on: ${{ matrix.os }}
-    # Skip non-linux platforms for webapp-only builds
-    if: ${{ needs.config.outputs.webapp_only != 'true' || matrix.platform == 'linux' }}
 
     steps:
       - name: Checkout repository
