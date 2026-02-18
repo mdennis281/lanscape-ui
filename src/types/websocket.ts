@@ -39,7 +39,8 @@ export type ToolsAction =
   | 'tools.subnet_test'
   | 'tools.subnet_list'
   | 'tools.config_defaults'
-  | 'tools.arp_supported';
+  | 'tools.arp_supported'
+  | 'tools.app_info';
 
 export type WSAction = ScanAction | PortAction | ToolsAction;
 

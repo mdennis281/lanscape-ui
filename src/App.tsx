@@ -98,10 +98,10 @@ function MainApp() {
         
         try {
           // Fetch initial data from backend
-          const [subnetListRes, configDefaultsRes, arpSupportedRes, portListsRes] = await Promise.all([
+          const [subnetListRes, configDefaultsRes, appInfoRes, portListsRes] = await Promise.all([
             ws.listSubnets(),
             ws.getConfigDefaults(),
-            ws.isArpSupported(),
+            ws.getAppInfo(),
             ws.listPortsSummary(),
           ]);
 
@@ -132,12 +132,15 @@ function MainApp() {
             }
           }
 
-          // Set app info including ARP support
-          if (arpSupportedRes.success) {
-            setAppInfo({
-              version: '0.0.0', // Will be updated when we add version endpoint
-              name: 'LANscape',
-              arp_supported: (arpSupportedRes.data as { supported: boolean })?.supported ?? false,
+          // Set app info from backend
+          if (appInfoRes.success && appInfoRes.data) {
+            setAppInfo(appInfoRes.data as {
+              version: string;
+              name: string;
+              arp_supported: boolean;
+              update_available?: boolean;
+              latest_version?: string;
+              runtime_args?: Record<string, unknown>;
             });
           }
 

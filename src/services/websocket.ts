@@ -339,6 +339,10 @@ class WebSocketService {
   async isArpSupported(): Promise<WSResponse> {
     return this.send('tools.arp_supported');
   }
+
+  async getAppInfo(): Promise<WSResponse> {
+    return this.send('tools.app_info');
+  }
 }
 
 // Singleton instance
