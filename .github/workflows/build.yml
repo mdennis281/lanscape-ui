@@ -303,6 +303,19 @@ jobs:
           git tag "$TAG"
           git push origin "$TAG"
 
+      - name: Generate release body
+        if: ${{ github.event_name == 'repository_dispatch' }}
+        id: body
+        run: |
+          {
+            echo "text<<EOF"
+            echo "Webapp build for LANscape backend v${{ steps.version.outputs.backend_version }}"
+            echo ""
+            echo "UI Version: ${{ steps.version.outputs.version }}"
+            echo "UI Branch: \`${{ needs.config.outputs.ui_branch }}\`"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -311,7 +324,7 @@ jobs:
           draft: false
           prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
           generate_release_notes: ${{ github.event_name != 'repository_dispatch' }}
-          body: ${{ github.event_name == 'repository_dispatch' && format('Webapp build for LANscape backend v{0}\n\nUI Version: {1}\nUI Branch: `{2}`', steps.version.outputs.backend_version, steps.version.outputs.version, needs.config.outputs.ui_branch) || '' }}
+          body: ${{ steps.body.outputs.text || '' }}
           files: |
             artifacts/**/*.exe
             artifacts/**/*.dmg
