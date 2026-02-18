@@ -1,5 +1,5 @@
 import { useScanStore } from '../../store';
-import { getCurrentWSServer } from '../../utils';
+import { getCurrentWSServer, formatVersion } from '../../utils';
 
 export function Footer() {
   const appInfo = useScanStore((state) => state.appInfo);
@@ -18,7 +18,17 @@ export function Footer() {
   return (
     <footer className="footer">
       <div className="footer-left">
-        <span>LANscape {appInfo?.version || ''}</span>
+        <span>{appInfo?.version ? formatVersion(appInfo.version) : ''}</span>
+        {appInfo?.update_available && (
+          <button
+            className="footer-update-btn"
+            onClick={() => setShowAbout(true)}
+            data-tooltip-id="tooltip"
+            data-tooltip-content={`Update available: ${appInfo.latest_version}`}
+          >
+            <i className="fa-solid fa-arrow-up"></i> Update
+          </button>
+        )}
       </div>
       <div className="footer-right">
         <button

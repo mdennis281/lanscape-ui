@@ -1,5 +1,6 @@
 import { Modal } from '../Modal';
 import { useScanStore } from '../../store';
+import { formatVersion } from '../../utils';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
           }} 
         />
         <h3 className="mt-2">{appInfo.name}</h3>
-        <p className="text-muted">Version {appInfo.version}</p>
+        <p className="text-muted">{formatVersion(appInfo.version)}</p>
       </div>
 
       {appInfo.update_available && (
@@ -52,8 +53,20 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
           borderRadius: 'var(--border-radius-sm)',
           border: '1px solid var(--secondary-accent)'
         }}>
-          <i className="fa-solid fa-arrow-up-right-from-square text-success"></i>{' '}
-          <span className="text-success">Update available: {appInfo.latest_version}</span>
+          <div className="mb-2">
+            <i className="fa-solid fa-arrow-up-right-from-square text-success"></i>{' '}
+            <span className="text-success">Update available: {appInfo.latest_version}</span>
+          </div>
+          <code style={{ 
+            display: 'block',
+            padding: '8px 12px',
+            background: 'var(--input-bg)',
+            borderRadius: 'var(--border-radius-sm)',
+            fontSize: '0.85em',
+            wordBreak: 'break-all'
+          }}>
+            pip install --upgrade lanscape --no-cache
+          </code>
         </div>
       )}
 
@@ -75,7 +88,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
 
       <div className="mt-4 text-center">
         <a 
-          href="https://github.com/your-repo/lanscape" 
+          href="https://github.com/mdennis281/LANscape" 
           target="_blank" 
           rel="noopener noreferrer"
           className="text-primary"
