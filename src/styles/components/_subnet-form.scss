@@ -92,16 +92,18 @@
   width: 30px;
   height: 40px;
   z-index: 3;
-  background-color: var(--primary-bg-accent);
+  background-color: var(--input-bg);
   border: none;
+  color: var(--text-muted) !important;
   transition: all 0.2s ease-in-out;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-left: -1px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--primary-bg-accent-hover);
+    color: var(--text-primary) !important;
   }
 }
 
@@ -142,8 +144,9 @@
   width: 30px;
   height: 40px;
   z-index: 3;
-  background-color: var(--primary-bg-accent);
+  background-color: var(--input-bg);
   border: none;
+  color: var(--text-muted) !important;
   padding: 0 !important;
   transition: all 0.2s ease-in-out;
   display: flex;
@@ -151,8 +154,9 @@
   justify-content: center;
   margin-right: -1px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--primary-bg-accent-hover);
+    color: var(--text-primary) !important;
   }
 }
 
