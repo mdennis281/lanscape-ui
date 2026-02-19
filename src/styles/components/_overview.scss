@@ -12,6 +12,7 @@
   border-radius: var(--border-radius-md);
   margin-bottom: 20px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .scan-stats-progress {

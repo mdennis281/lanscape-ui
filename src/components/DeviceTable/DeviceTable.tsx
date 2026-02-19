@@ -123,6 +123,7 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
           </p>
         </div>
       ) : (
+        <div className="table-scroll">
         <table className="device-table">
           <thead>
             <tr>
@@ -202,6 +203,7 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
             })}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
