@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type FormEvent } from 'react';
 import { useScanStore } from '../../store';
 import { getWebSocketService } from '../../services';
 import { SubnetInput } from './SubnetInput';
 import type { SubnetTestResult } from '../../types';
 
 export function Header() {
+  const formRef = useRef<HTMLFormElement>(null);
   const { 
     subnetInput, 
     status,
@@ -125,11 +126,12 @@ export function Header() {
           </span>
         </a>
 
-        <form className="subnet-form" onSubmit={handleSubmit}>
+        <form className="subnet-form" onSubmit={handleSubmit} ref={formRef}>
           <SubnetInput 
             disabled={isLoading} 
             onSettingsClick={() => setShowSettings(true)}
             validation={subnetValidation}
+            onSubmit={() => formRef.current?.requestSubmit()}
           />
           <button
             type="submit"

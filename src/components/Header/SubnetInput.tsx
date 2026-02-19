@@ -6,9 +6,10 @@ interface SubnetInputProps {
   disabled?: boolean;
   onSettingsClick?: () => void;
   validation?: SubnetTestResult | null;
+  onSubmit?: () => void;
 }
 
-export function SubnetInput({ disabled, onSettingsClick, validation }: SubnetInputProps) {
+export function SubnetInput({ disabled, onSettingsClick, validation, onSubmit }: SubnetInputProps) {
   const { subnetInput, setSubnetInput, subnets } = useScanStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -68,6 +69,12 @@ export function SubnetInput({ disabled, onSettingsClick, validation }: SubnetInp
           placeholder="Enter subnet (e.g., 192.168.1.0/24)"
           value={subnetInput}
           onChange={(e) => setSubnetInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && validation?.valid && onSubmit) {
+              e.preventDefault();
+              onSubmit();
+            }
+          }}
           disabled={disabled}
         />
 
