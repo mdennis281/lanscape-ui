@@ -9,6 +9,7 @@ interface AboutModalProps {
 
 export function AboutModal({ isOpen, onClose }: AboutModalProps) {
   const appInfo = useScanStore((state) => state.appInfo);
+  const setShowUpdate = useScanStore((state) => state.setShowUpdate);
 
   if (!appInfo) {
     return (
@@ -20,6 +21,11 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
       </Modal>
     );
   }
+
+  const handleShowUpdate = () => {
+    onClose();
+    setShowUpdate(true);
+  };
 
   return (
     <Modal
@@ -46,27 +52,37 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
         <p className="text-muted">{formatVersion(appInfo.version)}</p>
       </div>
 
-      {appInfo.update_available && (
+      {appInfo.update_available && appInfo.latest_version && (
         <div className="mb-4" style={{ 
           padding: '12px', 
           background: 'rgba(48, 209, 88, 0.1)', 
           borderRadius: 'var(--border-radius-sm)',
-          border: '1px solid var(--secondary-accent)'
+          border: '1px solid var(--secondary-accent)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}>
-          <div className="mb-2">
-            <i className="fa-solid fa-arrow-up-right-from-square text-success"></i>{' '}
-            <span className="text-success">Update available: {appInfo.latest_version}</span>
+          <div>
+            <i className="fa-solid fa-circle-up text-success"></i>{' '}
+            <span className="text-success">
+              Update available: {formatVersion(appInfo.latest_version)}
+            </span>
           </div>
-          <code style={{ 
-            display: 'block',
-            padding: '8px 12px',
-            background: 'var(--input-bg)',
-            borderRadius: 'var(--border-radius-sm)',
-            fontSize: '0.85em',
-            wordBreak: 'break-all'
-          }}>
-            pip install --upgrade lanscape --no-cache
-          </code>
+          <button
+            className="btn btn-small"
+            style={{
+              background: 'var(--secondary-accent)',
+              color: '#fff',
+              border: 'none',
+              padding: '4px 10px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              borderRadius: 'var(--border-radius-sm)',
+            }}
+            onClick={handleShowUpdate}
+          >
+            View Details
+          </button>
         </div>
       )}
 

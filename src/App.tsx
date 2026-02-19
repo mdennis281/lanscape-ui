@@ -7,6 +7,7 @@ import {
   DeviceModal,
   SettingsModal, 
   AboutModal,
+  UpdateModal,
   ErrorsModal,
   WarningsModal,
   ConnectionModal,
@@ -62,6 +63,8 @@ function MainApp() {
     setShowSettings,
     showAbout,
     setShowAbout,
+    showUpdate,
+    setShowUpdate,
     showErrors,
     setShowErrors,
     showWarnings,
@@ -287,6 +290,11 @@ function MainApp() {
       <AboutModal 
         isOpen={showAbout} 
         onClose={() => setShowAbout(false)} 
+      />
+
+      <UpdateModal
+        isOpen={showUpdate}
+        onClose={() => setShowUpdate(false)}
       />
       
       <ErrorsModal 

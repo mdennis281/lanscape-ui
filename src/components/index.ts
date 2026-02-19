@@ -6,6 +6,7 @@ export { Modal } from './Modal';
 export { JsonEditorModal } from './JsonEditor';
 export { SettingsModal } from './Settings';
 export { AboutModal } from './About';
+export { UpdateModal } from './Update';
 export { ErrorsModal } from './Errors';
 export { WarningsModal } from './Warnings';
 export { ConnectionModal } from './Connection';

@@ -5,6 +5,7 @@ export function Footer() {
   const appInfo = useScanStore((state) => state.appInfo);
   const connectionStatus = useScanStore((state) => state.connectionStatus);
   const setShowAbout = useScanStore((state) => state.setShowAbout);
+  const setShowUpdate = useScanStore((state) => state.setShowUpdate);
   const setShowConnection = useScanStore((state) => state.setShowConnection);
 
   const wsServer = getCurrentWSServer();
@@ -22,7 +23,7 @@ export function Footer() {
         {appInfo?.update_available && (
           <button
             className="footer-update-btn"
-            onClick={() => setShowAbout(true)}
+            onClick={() => setShowUpdate(true)}
             data-tooltip-id="tooltip"
             data-tooltip-content={`Update available: ${appInfo.latest_version}`}
           >

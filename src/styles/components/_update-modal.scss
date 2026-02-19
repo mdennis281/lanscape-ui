@@ -1,0 +1,101 @@
+// ============================================
+// Update Modal
+// ============================================
+
+.update-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.update-modal-icon {
+  font-size: 40px;
+  color: var(--secondary-accent);
+}
+
+.update-modal-versions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.update-modal-version {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.update-modal-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.update-modal-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.update-modal-latest {
+  color: var(--secondary-accent);
+}
+
+.update-modal-arrow {
+  color: var(--text-muted);
+  font-size: 18px;
+  // Shift down to visually align with version values, not labels
+  margin-top: 14px;
+}
+
+.update-modal-command-section {
+  width: 100%;
+}
+
+.update-modal-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--input-bg);
+  padding: 10px 14px;
+  border-radius: var(--border-radius-sm);
+  margin-top: 8px;
+
+  code {
+    flex: 1;
+    font-size: 0.85em;
+    word-break: break-all;
+    text-align: left;
+  }
+}
+
+.update-modal-copy {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 14px;
+  transition: color var(--transition-fast);
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--primary-accent);
+  }
+}
+
+.update-modal-changelog {
+  color: var(--primary-accent);
+  text-decoration: none;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

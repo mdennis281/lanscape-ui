@@ -75,6 +75,8 @@ interface ScanState {
   setShowSettings: (show: boolean) => void;
   showAbout: boolean;
   setShowAbout: (show: boolean) => void;
+  showUpdate: boolean;
+  setShowUpdate: (show: boolean) => void;
   showErrors: boolean;
   setShowErrors: (show: boolean) => void;
   showWarnings: boolean;
@@ -155,6 +157,8 @@ export const useScanStore = create<ScanState>((set, get) => ({
   setShowSettings: (showSettings) => set({ showSettings }),
   showAbout: false,
   setShowAbout: (showAbout) => set({ showAbout }),
+  showUpdate: false,
+  setShowUpdate: (showUpdate) => set({ showUpdate }),
   showErrors: false,
   setShowErrors: (showErrors) => set({ showErrors }),
   showWarnings: false,
