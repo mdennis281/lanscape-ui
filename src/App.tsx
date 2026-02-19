@@ -17,7 +17,7 @@ import { OdometerDebug } from './components/Overview/OdometerDebug';
 import { createWebSocketService } from './services';
 import { useScanStore } from './store';
 import { getWebSocketURL } from './utils';
-import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs } from './types';
+import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig } from './types';
 import './types/electron'; // Import electron types for global Window augmentation
 import 'react-tooltip/dist/react-tooltip.css';
 import './styles/main.css';
@@ -126,9 +126,45 @@ function MainApp() {
           if (configDefaultsRes.success && configDefaultsRes.data) {
             const configs = configDefaultsRes.data as DefaultConfigs;
             setDefaultConfigs(configs);
-            // Set the 'balanced' config as current config (it's the default preset)
-            if (configs.balanced) {
-              setConfig(configs.balanced);
+
+            // 1. Try the exact config the user last saved (preserves tweaks)
+            const lastConfig = (() => {
+              try {
+                const raw = localStorage.getItem('lanscape:lastConfig');
+                return raw ? (JSON.parse(raw) as ScanConfig) : null;
+              } catch { return null; }
+            })();
+
+            if (lastConfig) {
+              setConfig(lastConfig);
+            } else {
+              // 2. Fall back to resolving the active preset
+              const savedPresetId = localStorage.getItem('lanscape:activePreset');
+              let restored = false;
+
+              if (savedPresetId) {
+                if (configs[savedPresetId]) {
+                  setConfig(configs[savedPresetId]);
+                  restored = true;
+                } else {
+                  try {
+                    const raw = localStorage.getItem('lanscape:userPresets');
+                    if (raw) {
+                      const userPresets = JSON.parse(raw) as { id: string; config: ScanConfig }[];
+                      const match = userPresets.find((p) => p.id === savedPresetId);
+                      if (match?.config) {
+                        setConfig(match.config);
+                        restored = true;
+                      }
+                    }
+                  } catch { /* ignore malformed data */ }
+                }
+              }
+
+              if (!restored && configs.balanced) {
+                setConfig(configs.balanced);
+                localStorage.setItem('lanscape:activePreset', 'balanced');
+              }
             }
           }
 

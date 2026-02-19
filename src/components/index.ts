@@ -3,6 +3,7 @@ export { Overview } from './Overview';
 export { DeviceTable } from './DeviceTable';
 export { DeviceModal } from './DeviceModal';
 export { Modal } from './Modal';
+export { JsonEditorModal } from './JsonEditor';
 export { SettingsModal } from './Settings';
 export { AboutModal } from './About';
 export { ErrorsModal } from './Errors';

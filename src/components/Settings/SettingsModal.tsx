@@ -1,15 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 import { Modal } from '../Modal';
+import { PresetBar } from './PresetBar';
+import { SettingsFooter } from './SettingsFooter';
 import { useScanStore } from '../../store';
+import {
+  setActivePresetId,
+  persistConfigOnSave,
+  getActivePresetId,
+  getPresetById,
+  createUserPreset,
+  updateUserPreset,
+  resolvePresetConfig,
+} from '../../services/presets';
 import type { ScanConfig, LookupType } from '../../types';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-type Preset = 'fast' | 'balanced' | 'accurate';
 
 // Help icon component for tooltips
 function HelpTip({ text }: { text: string }) {
@@ -73,24 +82,22 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const portLists = useScanStore((state) => state.portLists);
   
   const [localConfig, setLocalConfig] = useState<ScanConfig>({});
-  const [activePreset, setActivePreset] = useState<Preset | null>(null);
 
-  useEffect(() => {
-    if (config) {
+  // Re-initialise local config each time the modal opens.
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen && config) {
       setLocalConfig(config);
     }
-  }, [config, isOpen]);
+  }
 
-  const handlePreset = (preset: Preset) => {
-    if (defaultConfigs?.[preset]) {
-      setLocalConfig({ ...defaultConfigs[preset] });
-      setActivePreset(preset);
-    }
+  const handleApplyPreset = (cfg: ScanConfig) => {
+    setLocalConfig({ ...cfg });
   };
 
   const handleChange = <K extends keyof ScanConfig>(key: K, value: ScanConfig[K]) => {
     setLocalConfig((prev) => ({ ...prev, [key]: value }));
-    setActivePreset(null);
   };
 
   // Helper for nested config updates
@@ -108,7 +115,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         [field]: value,
       },
     }));
-    setActivePreset(null);
   };
 
   const handleLookupTypeToggle = (type: LookupType) => {
@@ -119,16 +125,85 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     handleChange('lookup_type', newTypes.length > 0 ? newTypes : ['ICMP_THEN_ARP']);
   };
 
-  const handleSave = () => {
+  // ── Footer state logic ───────────────────────────────────────────
+
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveNewName, setSaveNewName] = useState('');
+
+  // Has the config changed at all vs what the store had when we opened?
+  const hasChanges = useMemo(
+    () => JSON.stringify(localConfig) !== JSON.stringify(config),
+    [localConfig, config]
+  );
+
+  // Has the user *drifted* from the currently-active preset?
+  // (i.e. they tweaked individual settings, not just clicked a different preset)
+  const isDrifted = useMemo(() => {
+    const activeId = getActivePresetId();
+    if (!activeId) return hasChanges;
+    const preset = getPresetById(activeId);
+    if (!preset) return hasChanges;
+    const presetCfg = resolvePresetConfig(preset, defaultConfigs);
+    if (!presetCfg) return hasChanges;
+    // If localConfig matches *some* preset exactly, it's a switch not a drift
+    return JSON.stringify(localConfig) !== JSON.stringify(presetCfg);
+  }, [localConfig, defaultConfigs, hasChanges]);
+
+  // Active user preset for "save to <name>" in the save dialog
+  const activeUserPreset = useMemo(() => {
+    const activeId = getActivePresetId();
+    if (!activeId) return null;
+    const preset = getPresetById(activeId);
+    if (!preset || preset.builtIn) return null;
+    return preset;
+  }, // eslint-disable-next-line react-hooks/exhaustive-deps
+  [localConfig, defaultConfigs]);
+
+  // Close modal — reverts changes (just closes, localConfig resets on next open)
+  const handleClose = useCallback(() => {
+    setShowSaveDialog(false);
+    onClose();
+  }, [onClose]);
+
+  // Revert local config to match the store without closing
+  const handleRevert = useCallback(() => {
+    if (config) setLocalConfig(config);
+  }, [config]);
+
+  // Open the "save to custom profile" dialog
+  const handleSaveClick = useCallback(() => {
+    setSaveNewName('');
+    setShowSaveDialog(true);
+  }, []);
+
+  // Use settings for this session without saving to any profile
+  const handleUse = useCallback(() => {
     setConfig(localConfig as ScanConfig);
+    persistConfigOnSave(localConfig as ScanConfig);
+    setShowSaveDialog(false);
+    onClose();
+  }, [localConfig, setConfig, onClose]);
+
+  // Save dialog: overwrite existing user profile
+  const handleSaveToProfile = () => {
+    if (!activeUserPreset) return;
+    updateUserPreset(activeUserPreset.id, { config: localConfig as ScanConfig });
+    setConfig(localConfig as ScanConfig);
+    persistConfigOnSave(localConfig as ScanConfig);
+    setShowSaveDialog(false);
     onClose();
   };
 
-  const handleReset = () => {
-    if (defaultConfigs?.balanced) {
-      setLocalConfig({ ...defaultConfigs.balanced });
-      setActivePreset('balanced');
-    }
+  // Save dialog: create new profile
+  const handleSaveAsNew = () => {
+    const name = saveNewName.trim();
+    if (!name) return;
+    const newPreset = createUserPreset(name, localConfig as ScanConfig);
+    setActivePresetId(newPreset.id);
+    setConfig(localConfig as ScanConfig);
+    persistConfigOnSave(localConfig as ScanConfig);
+    setShowSaveDialog(false);
+    onClose();
   };
 
   // Compute total thread counts for display
@@ -145,56 +220,76 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Scan Settings"
       size="large"
       footer={
-        <>
-          <button className="btn btn-secondary" onClick={handleReset}>
-            Reset
-          </button>
-          <button className="btn btn-secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="btn btn-primary" onClick={handleSave}>
-            Save
-          </button>
-        </>
+        <SettingsFooter
+          hasChanges={hasChanges}
+          isDrifted={isDrifted}
+          onClose={handleClose}
+          onRevert={handleRevert}
+          onSave={handleSaveClick}
+          onUse={handleUse}
+        />
       }
     >
-      {/* Presets */}
-      <div className="settings-section">
-        <div className="settings-section-title">Presets</div>
-        <div className="settings-preset-buttons">
-          <button
-            className={`preset-btn ${activePreset === 'fast' ? 'active' : ''}`}
-            onClick={() => handlePreset('fast')}
-          >
-            <span className="preset-btn-label">
-              <i className="fa-solid fa-bolt"></i> Fast
-            </span>
-            <span className="preset-btn-desc">Quick scan, low accuracy</span>
-          </button>
-          <button
-            className={`preset-btn ${activePreset === 'balanced' ? 'active' : ''}`}
-            onClick={() => handlePreset('balanced')}
-          >
-            <span className="preset-btn-label">
-              <i className="fa-solid fa-scale-balanced"></i> Balanced
-            </span>
-            <span className="preset-btn-desc">Good balance of speed & accuracy</span>
-          </button>
-          <button
-            className={`preset-btn ${activePreset === 'accurate' ? 'active' : ''}`}
-            onClick={() => handlePreset('accurate')}
-          >
-            <span className="preset-btn-label">
-              <i className="fa-solid fa-bullseye"></i> Accurate
-            </span>
-            <span className="preset-btn-desc">Thorough scan, slower</span>
-          </button>
+      {/* Save to custom profile dialog */}
+      {showSaveDialog && (
+        <div className="confirm-overlay">
+          <div className="confirm-dialog">
+            <div className="confirm-header">
+              <i className="fa-solid fa-floppy-disk confirm-icon confirm-icon--save" />
+              <h3>Save Custom Profile</h3>
+            </div>
+            <p className="confirm-message">
+              Save your current settings as a reusable profile.
+            </p>
+
+            <div className="confirm-actions">
+              {/* Save to existing user profile */}
+              {activeUserPreset && (
+                <button className="btn btn-primary confirm-btn-full" onClick={handleSaveToProfile}>
+                  <i className="fa-solid fa-floppy-disk" /> Save to &ldquo;{activeUserPreset.name}&rdquo;
+                </button>
+              )}
+
+              {/* Save as new profile */}
+              <div className="confirm-save-new">
+                <input
+                  className="confirm-name-input"
+                  placeholder="New profile name…"
+                  value={saveNewName}
+                  onChange={(e) => setSaveNewName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveAsNew(); }}
+                  maxLength={24}
+                  autoFocus={!activeUserPreset}
+                />
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSaveAsNew}
+                  disabled={!saveNewName.trim()}
+                >
+                  <i className="fa-solid fa-plus" /> Save as New
+                </button>
+              </div>
+
+              <div className="confirm-divider" />
+
+              <button className="btn btn-secondary confirm-btn-full" onClick={() => setShowSaveDialog(false)}>
+                <i className="fa-solid fa-arrow-left" /> Go Back
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Preset quick-select bar */}
+      <PresetBar
+        localConfig={localConfig}
+        defaultConfigs={defaultConfigs}
+        onApplyPreset={handleApplyPreset}
+      />
 
       {/* Device Detection */}
       <div className="settings-section">
