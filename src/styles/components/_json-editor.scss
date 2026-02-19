@@ -1,0 +1,63 @@
+// ============================================
+// JSON Editor Modal
+// ============================================
+
+.json-editor-backdrop {
+  z-index: 1100; // above the settings modal
+}
+
+.json-editor-modal {
+  max-width: 720px;
+  height: 70vh;
+  max-height: 680px;
+  display: flex;
+  flex-direction: column;
+
+  .modal-header {
+    flex-shrink: 0;
+  }
+}
+
+.json-editor-icon {
+  margin-right: 8px;
+  color: var(--accent-primary);
+  font-size: 16px;
+}
+
+.json-editor-body {
+  flex: 1 1 0;
+  min-height: 0;
+  border-top: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--card-border);
+
+  // Override Monaco's default background
+  .monaco-editor,
+  .monaco-editor .overflow-guard {
+    border-radius: 0;
+  }
+}
+
+.json-editor-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.json-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.json-editor-error {
+  color: var(--error-color, #ef4444);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  i { font-size: 14px; }
+}

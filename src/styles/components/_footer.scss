@@ -1,0 +1,114 @@
+// ============================================
+// Footer
+// ============================================
+
+.footer {
+  background: var(--card-bg);
+  border-top: 1px solid var(--card-border);
+  padding: 8px 2%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  height: 35px;
+
+  a {
+    color: var(--primary-accent);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-status {
+  display: flex;
+  align-items: center;
+  cursor: default;
+}
+
+.footer-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--primary-accent);
+  }
+}
+
+.footer-update-btn {
+  background: rgba(48, 209, 88, 0.15);
+  border: 1px solid var(--secondary-accent);
+  color: var(--secondary-accent);
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: var(--border-radius-sm);
+  margin-left: 12px;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: rgba(48, 209, 88, 0.25);
+    color: #fff;
+  }
+}
+
+// Connection Modal (displayed via footer)
+
+.connection-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.connection-status-section {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.connection-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+
+  & + & {
+    border-top: 1px solid var(--card-border);
+    margin-top: 4px;
+    padding-top: 8px;
+  }
+}
+
+.connection-status-label {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.connection-status-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}

@@ -1,0 +1,59 @@
+// ============================================
+// Header
+// ============================================
+
+.header {
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--card-border);
+  padding: 8px 2%;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+}
+
+.logo-text {
+  letter-spacing: -0.5px;
+}
+
+.logo-accent {
+  color: var(--primary-accent);
+}
+
+// Status dot — reusable indicator
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--danger-accent);
+  flex-shrink: 0;
+
+  &.connected  { background: var(--secondary-accent); }
+  &.connecting { background: var(--warning-accent); }
+
+  &.pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}

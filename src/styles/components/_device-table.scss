@@ -1,0 +1,323 @@
+// ============================================
+// Device table & stage indicators
+// ============================================
+
+.table-container {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--card-border);
+  background: var(--table-header-bg);
+}
+
+.table-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.table-filter {
+  padding: 6px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  width: 200px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--input-focus-border);
+  }
+}
+
+.device-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--table-header-bg);
+    border-bottom: 1px solid var(--card-border);
+    vertical-align: middle;
+  }
+
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--card-border);
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  tr:hover td {
+    background: var(--table-row-hover);
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  .ip-cell {
+    font-family: var(--font-mono);
+    font-weight: 500;
+  }
+
+  .mac-cell {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .ports-header {
+    white-space: nowrap;
+  }
+
+  // Legacy status badge
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+
+    &.online {
+      background: rgba(48, 209, 88, 0.15);
+      color: var(--secondary-accent);
+    }
+
+    &.offline {
+      background: rgba(255, 69, 58, 0.15);
+      color: var(--danger-accent);
+    }
+  }
+}
+
+// New device row entrance animation
+
+.device-row-new {
+  animation: deviceRowEnter 0.4s ease-out both;
+}
+
+@keyframes deviceRowEnter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.device-row {
+  cursor: pointer;
+}
+
+// Ports toggle
+
+.ports-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-muted);
+  padding: 2px 6px;
+  margin-left: 8px;
+  cursor: pointer;
+  font-size: 10px;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+
+  &:hover {
+    color: var(--primary-accent);
+    border-color: var(--primary-accent);
+    background: rgba(10, 132, 255, 0.1);
+  }
+}
+
+.ports-list {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+// ── Device Stage Indicator ──────────────────────────────────────────
+
+.device-stage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  // Found — pulsing radar
+  &.found .stage-pulse {
+    position: relative;
+    width: 22px;
+    height: 22px;
+  }
+
+  &.found .pulse-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    background: var(--primary-accent);
+    border-radius: 50%;
+  }
+
+  &.found .pulse-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    border: 2px solid var(--primary-accent);
+    border-radius: 50%;
+    animation: pulse-expand 1.5s ease-out infinite;
+
+    &.delay { animation-delay: 0.5s; }
+  }
+
+  // Scanning — circular progress ring
+  &.scanning {
+    gap: 4px;
+
+    .stage-progress-ring {
+      width: 22px;
+      height: 22px;
+      transform: rotate(-90deg);
+    }
+
+    .progress-bg {
+      fill: none;
+      stroke: var(--input-bg);
+      stroke-width: 2;
+    }
+
+    .progress-fill {
+      fill: none;
+      stroke: var(--warning-accent);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.3s ease;
+    }
+  }
+
+  // Complete — animated green ring + checkmark
+  &.complete {
+    .stage-checkmark {
+      width: 22px;
+      height: 22px;
+      transform: rotate(-90deg);
+    }
+
+    .complete-yellow-fade {
+      fill: none;
+      stroke: var(--warning-accent);
+      stroke-width: 2.5;
+      opacity: 1;
+      animation: yellow-fade-out 0.5s ease-out forwards;
+    }
+
+    .complete-green-draw {
+      fill: none;
+      stroke: var(--secondary-accent);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-dashoffset: 63;
+      animation: green-draw-over 0.5s ease-out forwards;
+    }
+
+    .checkmark-check {
+      fill: none;
+      stroke: var(--secondary-accent);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transform: rotate(90deg);
+      transform-origin: center;
+      opacity: 0;
+      animation: checkmark-fade-in 0.3s ease-out 0.4s forwards;
+    }
+
+    // Legacy class
+    .checkmark-circle {
+      fill: none;
+      stroke: var(--secondary-accent);
+      stroke-width: 2;
+      stroke-dasharray: 63;
+      stroke-dashoffset: 0;
+    }
+  }
+}
+
+@keyframes pulse-expand {
+  0%   { width: 6px;  height: 6px;  opacity: 1; }
+  100% { width: 20px; height: 20px; opacity: 0; }
+}
+
+@keyframes yellow-fade-out {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
+@keyframes green-draw-over {
+  0%   { stroke-dashoffset: 63; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes checkmark-fade-in {
+  0%   { opacity: 0; transform: rotate(90deg) scale(0.5); }
+  100% { opacity: 1; transform: rotate(90deg) scale(1); }
+}
+
+@keyframes circle-draw {
+  from { stroke-dashoffset: 63; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes check-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+// Empty state
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+
+  i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  h3 {
+    font-size: 18px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 14px;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}

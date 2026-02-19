@@ -1,0 +1,405 @@
+// ============================================
+// Device detail modal
+// ============================================
+
+.device-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.device-section {
+  background: var(--body-bg);
+  border-radius: var(--border-radius-sm);
+  padding: 16px;
+}
+
+.device-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-accent);
+  margin-bottom: 12px;
+
+  &.error { color: var(--danger-accent); }
+}
+
+.device-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.device-info-row {
+  display: flex;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+.device-info-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 120px;
+  text-align: right;
+}
+
+.device-info-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+// Ports
+
+.port-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.port-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  font-size: 13px;
+  font-family: var(--font-mono);
+
+  &.small {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  &.clickable {
+    cursor: pointer;
+    transition: all 0.15s ease;
+    justify-content: center;
+    color: var(--text-secondary);
+    border: 2px solid transparent;
+
+    &:hover {
+      background: var(--card-bg);
+      border-color: var(--primary-accent);
+    }
+
+    &.has-response {
+      color: var(--info-accent);
+    }
+
+    &.selected {
+      background: var(--primary-accent);
+      color: var(--bg-primary);
+      border-color: var(--primary-accent);
+
+      &.has-response {
+        background: var(--info-accent);
+        border-color: var(--info-accent);
+        color: var(--bg-primary);
+      }
+    }
+  }
+}
+
+// Services
+
+.services-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.service-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 350px;
+  overflow: hidden;
+
+  &.has-selection .service-group-content {
+    flex-direction: row;
+  }
+}
+
+.service-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: var(--primary-accent);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+
+  i {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+}
+
+.service-group-content {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.service-ports-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+  overflow-y: auto;
+  padding: 4px;
+
+  &.vertical {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    min-width: 80px;
+    max-width: 100px;
+  }
+}
+
+// Port response panel
+
+.port-response-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--input-bg);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  animation: panelFadeIn 0.25s ease-out forwards;
+
+  &.closing {
+    animation: panelFadeOut 0.15s ease-out forwards;
+  }
+}
+
+@keyframes panelFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes panelFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.port-response-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--body-bg);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.port-label {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.port-response-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  .service-response {
+    margin: 0;
+    height: 100%;
+    max-height: none;
+  }
+}
+
+.probe-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+
+  &:first-child {
+    flex: 0 0 auto;
+    max-height: 80px;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
+
+.probe-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 6px 12px 2px;
+  flex-shrink: 0;
+}
+
+.probe-content {
+  margin: 0;
+  padding: 4px 12px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+
+  &.request  { color: var(--info-accent);    background: transparent; }
+  &.response { color: var(--text-secondary); background: transparent; }
+}
+
+.service-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border-radius: var(--border-radius-sm);
+}
+
+.service-name {
+  font-weight: 500;
+  color: var(--primary-accent);
+  min-width: 100px;
+}
+
+.service-ports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+// Service Info / Responses
+
+.service-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.service-info-item {
+  background: var(--input-bg);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+
+.service-info-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--body-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.service-name-tag {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--primary-accent);
+  background: rgba(var(--primary-accent-rgb), 0.1);
+  padding: 2px 8px;
+  border-radius: var(--border-radius-sm);
+}
+
+.probe-stats {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+  font-family: var(--font-mono);
+}
+
+.service-response {
+  margin: 0;
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: var(--input-bg);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.no-response-text {
+  padding: 8px 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 12px;
+}
+
+.no-responses {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+// Legacy device-detail classes
+
+.device-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.device-detail-item {
+  padding: 12px;
+  background: var(--input-bg);
+  border-radius: var(--border-radius-sm);
+}
+
+.device-detail-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.device-detail-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.port-list {
+  margin-top: 16px;
+}
+
+.port-list-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.port-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 4px;
+}
+
+.port-number {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.port-service {
+  color: var(--text-secondary);
+}

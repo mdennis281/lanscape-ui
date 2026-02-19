@@ -1,0 +1,635 @@
+// ============================================
+// Settings modal — sections, forms, presets
+// ============================================
+
+@use '../variables' as *;
+
+// Sections
+
+.settings-section {
+  margin-bottom: 24px;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.settings-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--card-border);
+
+  .help-tip { margin-left: 6px; }
+}
+
+.settings-preset-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.settings-section-group {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+
+  .settings-section {
+    margin-bottom: 0;
+    background: var(--body-bg);
+    border-radius: var(--border-radius-sm);
+    padding: 16px;
+  }
+}
+
+.settings-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-stages-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+// ── Preset Bar ──────────────────────────────────────────────────────
+
+.preset-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 0 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.preset-bar-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-bar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--card-border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.preset-bar-actions {
+  display: flex;
+  margin-left: auto;
+}
+
+// ── Preset Chip ─────────────────────────────────────────────────────
+
+.preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--input-bg);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1.4;
+
+  i:first-child {
+    font-size: 11px;
+    opacity: 0.7;
+  }
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--card-bg-hover);
+    border-color: var(--input-border);
+  }
+
+  // Active
+  &--active {
+    color: var(--primary-accent);
+    background: rgba(var(--primary-accent-rgb), 0.12);
+    border-color: rgba(var(--primary-accent-rgb), 0.35);
+    font-weight: 600;
+
+    i:first-child { opacity: 1; }
+
+    &:hover {
+      background: rgba(var(--primary-accent-rgb), 0.18);
+      border-color: var(--primary-accent);
+    }
+  }
+
+  // User presets
+  &--user {
+    border-color: var(--input-border);
+
+    &.preset-chip--active {
+      border-color: rgba(var(--primary-accent-rgb), 0.35);
+      border-style: solid;
+    }
+  }
+
+  // Add button
+  &--add {
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px dashed var(--input-border);
+    padding: 5px 9px;
+
+    &:hover {
+      color: var(--primary-accent);
+      border-color: var(--primary-accent);
+      background: rgba(var(--primary-accent-rgb), 0.06);
+    }
+  }
+
+  &--add-highlight {
+    color: var(--primary-accent);
+    border-color: var(--primary-accent);
+    border-style: solid;
+    background: rgba(var(--primary-accent-rgb), 0.12);
+    animation: pulseAdd 1.5s ease-in-out infinite;
+
+    &:hover {
+      background: rgba(var(--primary-accent-rgb), 0.2);
+    }
+  }
+
+  // Editing (rename inline)
+  &--editing {
+    padding: 2px;
+    background: transparent;
+    border-color: var(--primary-accent);
+  }
+}
+
+@keyframes pulseAdd {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--primary-accent-rgb), 0.25); }
+  50%      { box-shadow: 0 0 0 4px rgba(var(--primary-accent-rgb), 0.08); }
+}
+
+// ── Save new form ───────────────────────────────────────────────────
+
+.preset-save-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.preset-save-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--primary-accent);
+    color: var(--primary-accent);
+  }
+}
+
+.preset-save-input {
+  width: 130px;
+  padding: 5px 10px;
+  font-size: 12.5px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 999px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast);
+
+  &:focus { border-color: var(--primary-accent); }
+  &::placeholder { color: var(--text-muted); }
+}
+
+.preset-save-confirm,
+.preset-save-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all var(--transition-fast);
+}
+
+.preset-save-confirm {
+  background: var(--primary-accent);
+  color: #fff;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    background: var(--primary-accent-hover);
+  }
+}
+
+.preset-save-cancel {
+  background: transparent;
+  color: var(--text-muted);
+
+  &:hover { color: var(--danger-accent); }
+}
+
+// ── Rename input (inline) ───────────────────────────────────────────
+
+.preset-rename-input {
+  width: 100px;
+  padding: 3px 8px;
+  font-size: 12.5px;
+  background: var(--input-bg);
+  border: none;
+  border-radius: 999px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+// ── Icon picker ─────────────────────────────────────────────────────
+
+.preset-icon-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  padding: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+}
+
+.preset-icon-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--border-radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--card-bg-hover);
+    color: var(--text-primary);
+  }
+
+  &.active {
+    background: rgba(var(--primary-accent-rgb), 0.15);
+    color: var(--primary-accent);
+  }
+}
+
+// ── Context menu ────────────────────────────────────────────────────
+
+.preset-context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 180px;
+  padding: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-lg);
+}
+
+.preset-context-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--card-bg-hover);
+    color: var(--text-primary);
+  }
+
+  &--danger:hover {
+    background: rgba(255, 69, 58, 0.12);
+    color: var(--danger-accent);
+  }
+}
+
+.preset-context-divider {
+  height: 1px;
+  background: var(--card-border);
+  margin: 4px 0;
+}
+
+// ── Unsaved-changes confirmation overlay ────────────────────────────
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: fadeIn 0.12s ease;
+}
+
+.confirm-dialog {
+  background: var(--modal-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.15s ease;
+}
+
+.confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.confirm-icon {
+  font-size: 18px;
+  color: var(--warning-accent, #f5a623);
+
+  &--save { color: var(--primary-accent); }
+}
+
+.confirm-message {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirm-save-new {
+  display: flex;
+  gap: 8px;
+}
+
+.confirm-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-accent);
+  }
+
+  &::placeholder { color: var(--text-muted); }
+}
+
+.confirm-btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
+.confirm-divider {
+  height: 1px;
+  background: var(--card-border);
+  margin: 4px 0;
+}
+
+// ── Legacy preset buttons (backward compat) ─────────────────────────
+
+.preset-btn {
+  flex: 1;
+  padding: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    border-color: var(--primary-accent);
+    background: var(--card-bg-hover);
+  }
+
+  &.active {
+    border-color: var(--primary-accent);
+    background: rgba(var(--primary-accent-rgb), 0.1);
+  }
+}
+
+.preset-btn-label {
+  font-weight: 600;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.preset-btn-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+// ── Form controls ───────────────────────────────────────────────────
+
+.form-group {
+  margin-bottom: 16px;
+  &:last-child { margin-bottom: 0; }
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+
+  .help-tip { margin-left: 4px; }
+}
+
+.help-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: help;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    color: var(--primary-accent);
+    opacity: 1;
+  }
+}
+
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: border-color var(--transition-fast);
+
+  &:focus {
+    outline: none;
+    border-color: var(--input-focus-border);
+  }
+}
+
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a1a1a6' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.form-row-inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  .form-input { flex: 1; }
+}
+
+.form-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+// Calculation row
+
+.calc-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  width: 100%;
+}
+
+.calc-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .form-input {
+    width: 100%;
+    text-align: center;
+  }
+
+  .calc-result {
+    background: var(--body-bg);
+    color: var(--text-muted);
+  }
+}
+
+.calc-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: left;
+  display: none;
+
+  @media (min-width: $bp-calc-labels) {
+    display: block;
+  }
+}
+
+.calc-op {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  color: var(--text-muted);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  align-self: flex-end;
+  padding-bottom: 10px;
+}
+
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  width: fit-content;
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-accent);
+  }
+
+  .help-tip { margin-left: 4px; }
+}

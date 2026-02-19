@@ -1,0 +1,75 @@
+// ============================================
+// Buttons
+// ============================================
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btn-primary {
+  background: var(--primary-accent);
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: var(--primary-accent-hover);
+  }
+}
+
+.btn-secondary {
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--card-border);
+
+  &:hover:not(:disabled) {
+    background: var(--card-bg-hover);
+  }
+}
+
+.btn-danger {
+  background: var(--danger-accent);
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: #e03830;
+  }
+}
+
+.btn-success {
+  background: var(--secondary-accent);
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: #2ab84b;
+  }
+}
+
+.btn-icon {
+  padding: 8px;
+  min-width: 36px;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.btn-lg {
+  padding: 12px 24px;
+  font-size: 16px;
+}

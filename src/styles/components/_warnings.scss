@@ -1,0 +1,124 @@
+// ============================================
+// Scan Warnings Modal
+// ============================================
+
+.warnings-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.warnings-summary-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: rgba(204, 136, 1, 0.12);
+  border: 1px solid rgba(204, 136, 1, 0.25);
+  border-radius: var(--border-radius-sm);
+  color: var(--warning-accent);
+  font-weight: 500;
+
+  i { font-size: 18px; }
+}
+
+.warnings-description {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.warnings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.warnings-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  color: var(--text-secondary);
+  font-size: 14px;
+
+  i { font-size: 20px; }
+}
+
+.warning-item {
+  display: flex;
+  flex-direction: column;
+  background: var(--body-bg);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--warning-accent);
+  border-radius: var(--border-radius-sm);
+  min-height: fit-content;
+}
+
+.warning-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.warning-item-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  width: 12px;
+}
+
+.warning-item-index {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--warning-accent);
+  background: rgba(204, 136, 1, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.warning-item-summary {
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1;
+  word-break: break-word;
+}
+
+.warning-item-details {
+  background: var(--secondary-bg);
+  border-top: 1px solid var(--card-border);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.warning-detail-row {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.warning-detail-label {
+  color: var(--text-muted);
+  min-width: 80px;
+}
+
+.warning-detail-value {
+  color: var(--text-secondary);
+
+  &.warning-decrease {
+    color: var(--warning-accent);
+    font-weight: 600;
+  }
+}

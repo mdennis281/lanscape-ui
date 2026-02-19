@@ -1,0 +1,35 @@
+// ============================================
+// Settings footer (animated contextual buttons)
+// ============================================
+
+.settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+// All buttons always exist in the DOM. Visible state is the default.
+.settings-footer-btn {
+  transform: scale(1);
+  opacity: 1;
+  max-width: 120px;
+  padding-inline: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    transform   0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity     0.15s ease,
+    max-width   0.2s ease,
+    padding     0.2s ease;
+
+  // Hidden buttons collapse to zero width and scale down
+  &--hidden {
+    transform: scale(0.75);
+    opacity: 0;
+    max-width: 0;
+    padding-inline: 0;
+    pointer-events: none;
+    margin-left: -8px; // offset the parent gap
+  }
+}

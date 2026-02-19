@@ -20,7 +20,7 @@ import { getWebSocketURL } from './utils';
 import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig } from './types';
 import './types/electron'; // Import electron types for global Window augmentation
 import 'react-tooltip/dist/react-tooltip.css';
-import './styles/main.css';
+import './styles/main.scss';
 
 // Check for debug mode
 const isOdometerDebug = new URLSearchParams(window.location.search).get('debug') === 'odometer';

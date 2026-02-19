@@ -1,0 +1,243 @@
+// ============================================
+// Scan Stats Bar / Overview / Odometer
+// ============================================
+
+// Stats bar
+
+.scan-stats {
+  position: relative;
+  display: flex;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.scan-stats-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg,
+    rgba(10, 132, 255, 0.12) 0%,
+    rgba(10, 132, 255, 0.2) 100%
+  );
+  transition: width 0.5s ease-out;
+  pointer-events: none;
+}
+
+.scan-stats-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  gap: 12px;
+  width: 100%;
+  z-index: 1;
+}
+
+// Individual stat
+
+.scan-stat {
+  display: flex;
+  align-items: anchor-center;
+  gap: 6px;
+}
+
+.scan-stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+
+  &.highlight { color: var(--secondary-accent); }
+  &.muted     { color: var(--text-secondary); font-weight: 400; }
+}
+
+.scan-stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+.scan-stat-sep {
+  color: var(--text-muted);
+  font-weight: 300;
+  margin: 0 2px;
+}
+
+.scan-stat-icon {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-right: 6px;
+}
+
+.scan-stat-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--card-border);
+  margin: 0 12px;
+}
+
+.scan-stat-spacer {
+  flex: 1;
+}
+
+// Stage
+
+.scan-stat.stage {
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  gap: 8px;
+
+  &.active {
+    background: rgba(255, 214, 10, 0.15);
+
+    .scan-stat-icon,
+    .scan-stat-stage {
+      color: var(--warning-accent);
+    }
+  }
+
+  &.success {
+    background: rgba(48, 209, 88, 0.15);
+
+    .scan-stat-icon,
+    .scan-stat-stage {
+      color: var(--secondary-accent);
+    }
+  }
+}
+
+.scan-stat-stage {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-transform: lowercase;
+}
+
+// Odometer — smooth spinning digit wheels
+
+.odometer {
+  display: inline-flex;
+  font-family: var(--font-mono);
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  vertical-align: baseline;
+
+  &.muted {
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+}
+
+.odometer-wheel {
+  display: inline-block;
+  position: relative;
+  width: 0.6em;
+  height: 1.2em;
+  overflow: hidden;
+  vertical-align: baseline;
+}
+
+.odometer-wheel-inner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1.2em;
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+.odometer-digit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.2em;
+  text-align: center;
+}
+
+.odometer-colon {
+  display: inline-block;
+  width: 0.35em;
+  height: 1.2em;
+  line-height: 1.2em;
+  text-align: center;
+  opacity: 0.7;
+  vertical-align: baseline;
+  margin-right: 2px;
+}
+
+// Hide old overview styles (legacy)
+.overview-section,
+.stat-item,
+.overview-card {
+  display: none;
+}
+
+// Progress bar
+
+.progress-container {
+  background: var(--input-bg);
+  border-radius: var(--border-radius-sm);
+  height: 8px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--primary-accent);
+  transition: width var(--transition-normal);
+  border-radius: var(--border-radius-sm);
+}
+
+// Error / Warning indicator badges in Overview
+
+.scan-stat.error-indicator {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255, 69, 58, 0.15);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: rgba(255, 69, 58, 0.25);
+  }
+
+  .scan-stat-icon,
+  .error-count {
+    color: var(--danger-accent);
+  }
+}
+
+.error-count {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.scan-stat.warning-indicator {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(204, 136, 1, 0.15);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: rgba(204, 136, 1, 0.25);
+  }
+
+  .scan-stat-icon,
+  .warning-count {
+    color: var(--warning-accent);
+  }
+}
+
+.warning-count {
+  font-size: 14px;
+  font-weight: 600;
+}

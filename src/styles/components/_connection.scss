@@ -1,0 +1,84 @@
+// ============================================
+// Connection status indicator
+// ============================================
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+
+  &.connected {
+    background: rgba(48, 209, 88, 0.15);
+    color: var(--secondary-accent);
+  }
+
+  &.disconnected,
+  &.error {
+    background: rgba(255, 69, 58, 0.15);
+    color: var(--danger-accent);
+  }
+
+  &.connecting {
+    background: rgba(255, 214, 10, 0.15);
+    color: var(--warning-accent);
+  }
+
+  // Status dot variant inside connection indicator
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+
+    &.pulse {
+      animation: pulse 1.5s infinite;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+// Connection Modal
+
+.connection-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.connection-status-section {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.connection-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+
+  & + & {
+    border-top: 1px solid var(--card-border);
+    margin-top: 4px;
+    padding-top: 8px;
+  }
+}
+
+.connection-status-label {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.connection-status-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
