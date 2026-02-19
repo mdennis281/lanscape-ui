@@ -22,12 +22,12 @@ export function Footer() {
         <span>{appInfo?.version ? formatVersion(appInfo.version) : ''}</span>
         {appInfo?.update_available && (
           <button
-            className="footer-update-btn"
+            className="footer-icon-btn footer-update-btn"
             onClick={() => setShowUpdate(true)}
             data-tooltip-id="tooltip"
             data-tooltip-content={`Update available: ${appInfo.latest_version}`}
           >
-            <i className="fa-solid fa-arrow-up"></i> Update
+            <i className="fa-solid fa-cloud-arrow-up"></i>
           </button>
         )}
       </div>

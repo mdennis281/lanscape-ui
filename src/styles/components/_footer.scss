@@ -60,22 +60,15 @@
 }
 
 .footer-update-btn {
-  background: rgba(48, 209, 88, 0.15);
-  border: 1px solid var(--secondary-accent);
-  color: var(--secondary-accent);
   cursor: pointer;
-  padding: 2px 8px;
-  font-size: 11px;
-  border-radius: var(--border-radius-sm);
+  background: inherit;
   margin-left: 12px;
-  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
-  gap: 4px;
+  color: var(--primary-accent);
 
   &:hover {
-    background: rgba(48, 209, 88, 0.25);
-    color: #fff;
+    transform: scale(1.2);
   }
 }
 

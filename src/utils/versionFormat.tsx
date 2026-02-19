@@ -12,18 +12,22 @@ export const VERSION_TAG_STYLES: Record<string, VersionTagStyle> = {
   beta: {
     color: '#ffd93dbb',
   },
+  rc: {
+    color: '#64b5f6bb',
+  },
   local: {
     color: '#6bcb77bb',
   },
 };
 
-export type VersionTag = 'alpha' | 'beta' | 'local' | null;
+export type VersionTag = 'alpha' | 'beta' | 'rc' | 'local' | null;
 
 /**
  * Determine the version tag based on version string
  */
 export function getVersionTag(version: string): VersionTag {
   if (version === '0.0.0') return 'local';
+  if (version.includes('rc')) return 'rc';
   if (version.includes('a')) return 'alpha';
   if (version.includes('b')) return 'beta';
   return null;
@@ -46,7 +50,7 @@ export function formatVersion(version: string): React.ReactNode {
   return (
     <>
       v{version}
-      {tag && <span style={tagStyle}>({tag})</span>}
+      {tag && <span style={tagStyle}>({tag === 'rc' ? 'release candidate' : tag})</span>}
     </>
   );
 }
