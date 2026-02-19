@@ -16,7 +16,7 @@ export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
     return null;
   }
 
-  const pipCommand = 'pip install --upgrade lanscape --no-cache';
+  const pipCommand = `pip install lanscape==${appInfo.latest_version}`;
 
   const handleCopy = async () => {
     try {

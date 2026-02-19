@@ -66,9 +66,60 @@
   display: flex;
   align-items: center;
   color: var(--primary-accent);
+  position: relative;
+  overflow: hidden;
+  animation: update-pulse 3s ease-in-out infinite;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -75%;
+    width: 50%;
+    height: 200%;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 60%
+    );
+    animation: update-shine 3s ease-in-out infinite;
+  }
 
   &:hover {
     transform: scale(1.2);
+    animation: none;
+
+    &::after {
+      animation: none;
+      opacity: 0;
+    }
+  }
+}
+
+@keyframes update-shine {
+  0%, 70%, 100% {
+    left: -75%;
+    opacity: 0;
+  }
+  80% {
+    opacity: 1;
+  }
+  90% {
+    left: 150%;
+    opacity: 1;
+  }
+  91% {
+    opacity: 0;
+  }
+}
+
+@keyframes update-pulse {
+  0%, 70%, 100% {
+    filter: brightness(1);
+  }
+  85% {
+    filter: brightness(1.5);
   }
 }
 
