@@ -2,21 +2,18 @@ import React from 'react';
 
 export interface VersionTagStyle {
   color: string;
-  background: string;
+  background?: string;
 }
 
 export const VERSION_TAG_STYLES: Record<string, VersionTagStyle> = {
   alpha: {
-    color: '#ff6b6b',
-    background: 'rgba(255, 107, 107, 0.15)',
+    color: '#ff6b6bbb',
   },
   beta: {
-    color: '#ffd93d',
-    background: 'rgba(255, 217, 61, 0.15)',
+    color: '#ffd93dbb',
   },
   local: {
-    color: '#6bcb77',
-    background: 'rgba(107, 203, 119, 0.15)',
+    color: '#6bcb77bb',
   },
 };
 
@@ -42,9 +39,6 @@ export function formatVersion(version: string): React.ReactNode {
   const tagStyle: React.CSSProperties = tag ? {
     color: VERSION_TAG_STYLES[tag].color,
     background: VERSION_TAG_STYLES[tag].background,
-    padding: '2px 6px',
-    borderRadius: '4px',
-    fontSize: '0.85em',
     fontWeight: 500,
     marginLeft: '6px',
   } : {};
