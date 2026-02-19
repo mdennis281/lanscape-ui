@@ -68,6 +68,27 @@
   margin: 0 -1px;
   z-index: 2;
 
+  .btn {
+    position: absolute;
+    width: 30px;
+    height: 38px;
+    margin-top: 1px;
+    z-index: 3;
+    padding: 0 !important;
+    border: none;
+    background: var(--table-header-bg);
+    color: var(--text-muted) !important;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--body-bg) 88%, var(--primary-accent) 12%);
+      color: var(--primary-accent) !important;
+    }
+  }
+
   &.has-error {
     .subnet-text-input {
       border-color: var(--danger-accent);
@@ -81,30 +102,13 @@
   }
 }
 
-// Settings button — left side, exactly 30px
+// Settings button — left side
 
 .subnet-settings-btn {
-  position: absolute;
   left: 0;
-  border-radius: 5px 0 0 5px !important;
-  padding: 0 !important;
-  border-right: 1px solid var(--border-color) !important;
-  width: 30px;
-  height: 40px;
-  z-index: 3;
-  background-color: var(--input-bg);
-  border: none;
-  color: var(--text-muted) !important;
-  transition: all 0.2s ease-in-out;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: -1px;
-
-  &:hover:not(:disabled) {
-    background-color: var(--primary-bg-accent-hover);
-    color: var(--text-primary) !important;
-  }
+  margin-left: 1px;
+  border-radius: 5px 0 0 5px;
+  border-right: 1px solid var(--input-border);
 }
 
 // Text input
@@ -115,7 +119,7 @@
   padding-left: calc(30px + 5px);
   background: var(--input-bg);
   border: 1px solid var(--input-border);
-  border-radius: 5px !important;
+  border-radius: 5px;
   color: var(--text-primary);
   font-size: 14px;
   transition: all 0.2s ease-in-out;
@@ -134,30 +138,13 @@
   }
 }
 
-// Dropdown button — right side, exactly 30px
+// Dropdown button — right side
 
 .subnet-dropdown-btn {
-  position: absolute;
   right: 0;
-  border-radius: 0 5px 5px 0 !important;
-  border-left: 1px solid var(--border-color) !important;
-  width: 30px;
-  height: 40px;
-  z-index: 3;
-  background-color: var(--input-bg);
-  border: none;
-  color: var(--text-muted) !important;
-  padding: 0 !important;
-  transition: all 0.2s ease-in-out;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: -1px;
-
-  &:hover:not(:disabled) {
-    background-color: var(--primary-bg-accent-hover);
-    color: var(--text-primary) !important;
-  }
+  margin-right: 1px;
+  border-radius: 0 5px 5px 0;
+  border-left: 1px solid var(--input-border);
 }
 
 .subnet-dropdown-menu {

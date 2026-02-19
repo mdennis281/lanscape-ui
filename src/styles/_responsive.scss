@@ -49,14 +49,6 @@
 }
 
 @media (max-width: $bp-mobile) {
-  .app-main {
-    padding: 12px;
-  }
-
-  .header {
-    padding: 10px 12px;
-  }
-
   .overview-section {
     grid-template-columns: 1fr;
     gap: 8px;

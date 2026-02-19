@@ -1,3 +1,5 @@
+@use '../variables' as *;
+
 // ============================================
 // Scan Stats Bar / Overview / Odometer
 // ============================================
@@ -10,7 +12,7 @@
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-md);
-  margin-bottom: 20px;
+  margin-bottom: var(--vertical-gutter);
   overflow: hidden;
   flex-shrink: 0;
 }

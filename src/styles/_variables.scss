@@ -72,4 +72,8 @@ $bp-calc-labels: 751px;
   // Typography
   --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', monospace;
+
+// Gutters
+--vertical-gutter: clamp(5px, calc(100vh / 35), 30px);
+--horizontal-gutter: clamp(5px, calc(100vw / 60), 30px);
 }
