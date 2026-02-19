@@ -1,0 +1,243 @@
+name: Electron Build & Release
+
+on:
+  push:
+    tags:
+      - 'releases/*'
+      - 'pre-releases/*'
+  workflow_dispatch:
+    inputs:
+      ui_branch:
+        description: 'Branch to build from (default: current)'
+        required: false
+        type: string
+      create_release:
+        description: 'Create a GitHub release'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      ui_branch: ${{ steps.params.outputs.ui_branch }}
+      version: ${{ steps.params.outputs.version }}
+      is_prerelease: ${{ steps.params.outputs.is_prerelease }}
+      should_release: ${{ steps.params.outputs.should_release }}
+    steps:
+      - name: Determine build parameters
+        id: params
+        run: |
+          EVENT="${{ github.event_name }}"
+
+          if [ "$EVENT" = "push" ]; then
+            TAG_NAME="${{ github.ref_name }}"
+            CLEAN_VERSION="${TAG_NAME#releases/}"
+            CLEAN_VERSION="${CLEAN_VERSION#pre-releases/}"
+
+            echo "ui_branch=" >> $GITHUB_OUTPUT
+            echo "version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+            echo "should_release=true" >> $GITHUB_OUTPUT
+
+            if [[ "$CLEAN_VERSION" =~ -(alpha|beta|rc) ]]; then
+              echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            else
+              echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "ui_branch=${{ inputs.ui_branch || github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "version=" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "should_release=${{ inputs.create_release || 'false' }}" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: config
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            artifact_name: windows
+          - os: macos-latest
+            platform: mac
+            artifact_name: macos-arm64
+          - os: ubuntu-latest
+            platform: linux
+            artifact_name: linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.config.outputs.ui_branch || github.ref }}
+
+      - name: Checkout LANscape backend
+        uses: actions/checkout@v4
+        with:
+          repository: mdennis281/LANscape
+          ref: main
+          path: lanscape-backend
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build LANscape backend
+        run: |
+          cd lanscape-backend
+          pip install pyinstaller
+          pip install -e .
+          python -m PyInstaller lanscape.spec
+          mkdir -p ../backend/${{ matrix.platform }}
+          cp -r dist/lanscape-backend ../backend/${{ matrix.platform }}/
+        shell: bash
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Sync version
+        if: ${{ needs.config.outputs.version != '' }}
+        run: npm version "${{ needs.config.outputs.version }}" --no-git-tag-version --allow-same-version
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          FONTAWESOME_TOKEN: ${{ secrets.FONTAWESOME_TOKEN }}
+
+      - name: Build application
+        run: npm run build
+
+      # Platform-specific Electron builds
+      - name: Build Windows executables
+        if: matrix.platform == 'win'
+        run: npx electron-builder --win nsis portable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build macOS executables
+        if: matrix.platform == 'mac'
+        run: npx electron-builder --mac dmg zip --arm64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Linux executables
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux AppImage deb rpm tar.gz
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Upload platform artifacts
+      - name: Upload Windows artifacts
+        if: matrix.platform == 'win'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: release/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload macOS artifacts
+        if: matrix.platform == 'mac'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Linux artifacts
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+            release/*.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    needs: [config, build]
+    runs-on: ubuntu-latest
+    if: ${{ needs.config.outputs.should_release == 'true' }}
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.config.outputs.ui_branch || github.ref }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Resolve version
+        id: version
+        run: |
+          VERSION="${{ needs.config.outputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION="$(node -p "require('./package.json').version")"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: LANscape Desktop v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ needs.config.outputs.is_prerelease == 'true' }}
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.dmg
+            artifacts/**/*.zip
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            artifacts/**/*.rpm
+            artifacts/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## 🖥️ Electron Release Created!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Prerelease:** ${{ needs.config.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Desktop Artifacts:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Formats |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | \`.exe\` (Installer + Portable) |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS ARM | \`.dmg\`, \`.zip\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | \`.AppImage\`, \`.deb\`, \`.rpm\`, \`.tar.gz\` |" >> $GITHUB_STEP_SUMMARY

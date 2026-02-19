@@ -1,0 +1,104 @@
+name: Webapp Build
+
+on:
+  repository_dispatch:
+    types: [backend-release]
+  workflow_dispatch:
+    inputs:
+      ui_branch:
+        description: 'Branch to build from (default: current)'
+        required: false
+        type: string
+      backend_version:
+        description: 'Backend version (for version sync)'
+        required: false
+        type: string
+
+concurrency:
+  group: webapp-build-${{ github.event.client_payload.backend_version || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine build parameters
+        id: config
+        run: |
+          EVENT="${{ github.event_name }}"
+          echo "Trigger event: $EVENT"
+
+          if [ "$EVENT" = "repository_dispatch" ]; then
+            BACKEND_VERSION="${{ github.event.client_payload.backend_version }}"
+            echo "ui_branch=${{ github.event.client_payload.ui_branch || 'main' }}" >> $GITHUB_OUTPUT
+            echo "backend_version=${BACKEND_VERSION}" >> $GITHUB_OUTPUT
+            echo "is_prerelease=${{ github.event.client_payload.is_prerelease || 'false' }}" >> $GITHUB_OUTPUT
+
+            # Convert PEP 440 version to npm semver
+            NPM_VERSION=$(echo "$BACKEND_VERSION" | sed -E \
+              -e 's/^([0-9]+\.[0-9]+\.[0-9]+)a([0-9]+)$/\1-alpha.\2/' \
+              -e 's/^([0-9]+\.[0-9]+\.[0-9]+)b([0-9]+)$/\1-beta.\2/' \
+              -e 's/^([0-9]+\.[0-9]+\.[0-9]+)rc([0-9]+)$/\1-rc.\2/')
+            echo "npm_version=${NPM_VERSION}" >> $GITHUB_OUTPUT
+            echo "Backend version: $BACKEND_VERSION -> npm: $NPM_VERSION"
+          else
+            echo "ui_branch=${{ inputs.ui_branch || github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "backend_version=${{ inputs.backend_version || '' }}" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "npm_version=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.config.outputs.ui_branch || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Sync version from backend
+        if: ${{ steps.config.outputs.npm_version != '' }}
+        run: npm version "${{ steps.config.outputs.npm_version }}" --no-git-tag-version --allow-same-version
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          FONTAWESOME_TOKEN: ${{ secrets.FONTAWESOME_TOKEN }}
+
+      - name: Build webapp
+        run: npx vite build
+
+      - name: Create webapp distribution
+        run: |
+          cd dist
+          zip -r ../webapp-dist.zip .
+
+      - name: Upload webapp artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-dist
+          path: webapp-dist.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## 📦 Webapp Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| UI Branch | \`${{ steps.config.outputs.ui_branch || github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          BACKEND="${{ steps.config.outputs.backend_version }}"
+          if [ -n "$BACKEND" ]; then
+            echo "| Backend Version | \`${BACKEND}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "| Pre-release | ${{ steps.config.outputs.is_prerelease }} |" >> $GITHUB_STEP_SUMMARY
