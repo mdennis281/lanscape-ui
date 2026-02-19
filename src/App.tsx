@@ -19,6 +19,10 @@ import { useScanStore } from './store';
 import { getWebSocketURL } from './utils';
 import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig } from './types';
 import './types/electron'; // Import electron types for global Window augmentation
+import '@awesome.me/kit-d0b7f59243/icons/css/fontawesome.min.css';
+import '@awesome.me/kit-d0b7f59243/icons/css/solid.min.css';
+import '@awesome.me/kit-d0b7f59243/icons/css/regular.min.css';
+import '@awesome.me/kit-d0b7f59243/icons/css/brands.min.css';
 import 'react-tooltip/dist/react-tooltip.css';
 import './styles/main.scss';
 

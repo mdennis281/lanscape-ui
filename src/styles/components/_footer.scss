@@ -13,7 +13,7 @@
   color: var(--text-muted);
   height: 35px;
 
-  a {
+  a:not(.footer-icon-btn) {
     color: var(--primary-accent);
     text-decoration: none;
 
@@ -48,9 +48,14 @@
   padding: 4px;
   font-size: 14px;
   transition: color var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 
   &:hover {
     color: var(--primary-accent);
+    text-decoration: none;
   }
 }
 
