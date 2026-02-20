@@ -11,6 +11,7 @@
  */
 
 import { useRef, useState, useCallback } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 
@@ -40,6 +41,7 @@ export function JsonEditorModal({
   onSave,
 }: JsonEditorModalProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const mouseDownTarget = useRef<EventTarget | null>(null);
   const [copied, setCopied] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
@@ -81,8 +83,11 @@ export function JsonEditorModal({
   const canSave = !readOnly && !!onSave;
 
   return (
-    <div className="modal-backdrop json-editor-backdrop" onClick={(e) => {
-      if (e.target === e.currentTarget) onClose();
+    <div className="modal-backdrop json-editor-backdrop" onMouseDown={(e: ReactMouseEvent) => {
+      mouseDownTarget.current = e.target;
+    }} onMouseUp={(e: ReactMouseEvent) => {
+      if (e.target === e.currentTarget && mouseDownTarget.current === e.currentTarget) onClose();
+      mouseDownTarget.current = null;
     }}>
       <div className="modal modal-large json-editor-modal">
         {/* Header */}

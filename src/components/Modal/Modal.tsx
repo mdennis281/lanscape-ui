@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { ReactNode, MouseEvent } from 'react';
 
 interface ModalProps {
@@ -10,16 +11,23 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, footer, size = 'medium' }: ModalProps) {
+  const mouseDownTarget = useRef<EventTarget | null>(null);
+
   if (!isOpen) return null;
 
-  const handleBackdropClick = (e: MouseEvent) => {
-    if (e.target === e.currentTarget) {
+  const handleMouseDown = (e: MouseEvent) => {
+    mouseDownTarget.current = e.target;
+  };
+
+  const handleMouseUp = (e: MouseEvent) => {
+    if (e.target === e.currentTarget && mouseDownTarget.current === e.currentTarget) {
       onClose();
     }
+    mouseDownTarget.current = null;
   };
 
   return (
-    <div className="modal-backdrop" onClick={handleBackdropClick}>
+    <div className="modal-backdrop" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
       <div className={`modal modal-${size}`}>
         <div className="modal-header">
           <h2 className="modal-title">{title}</h2>
