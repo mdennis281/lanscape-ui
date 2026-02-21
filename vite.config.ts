@@ -16,6 +16,44 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
+
+      // Force the new service worker to take control immediately on update
+      // rather than waiting for all tabs to close.
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+
+        // Navigation requests (HTML) always go to the network first so that
+        // a freshly-installed Python package is never masked by a cached
+        // index.html from a previous version.
+        navigationPreload: false,
+        runtimeCaching: [
+          {
+            // index.html and any SPA navigation — network-first, short cache
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'navigation-cache',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 5, maxAgeSeconds: 60 },
+            },
+          },
+          {
+            // Content-hashed /assets/ bundles are immutable — cache-first is fine
+            // because their URLs change with every build.
+            urlPattern: /\/assets\/.+\.[a-f0-9]{8}\.(js|css|woff2?)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'immutable-assets',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
+
+        // Clean up caches from older SW versions on activation
+        cleanupOutdatedCaches: true,
+      },
+
       manifest: {
         name: 'LANscape',
         short_name: 'LANscape',
