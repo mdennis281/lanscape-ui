@@ -18,7 +18,7 @@ import { OdometerDebug } from './components/Overview/OdometerDebug';
 import { createWebSocketService } from './services';
 import type { WebSocketService } from './services';
 import { useScanStore } from './store';
-import { getWebSocketURL } from './utils';
+import { resolveWebSocketURL } from './utils';
 import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig } from './types';
 import './types/electron'; // Import electron types for global Window augmentation
 import '@awesome.me/kit-d0b7f59243/icons/css/fontawesome.min.css';
@@ -191,37 +191,40 @@ function MainApp() {
       return;
     }
 
-    const wsUrl = getWebSocketURL();
-    console.log('Connecting to WebSocket:', wsUrl);
-    
     let cancelled = false;
-    
-    const ws = createWebSocketService({
-      url: wsUrl,
-      onStatusChange: (status) => {
-        if (!cancelled) {
-          setConnectionStatus(status);
-          // Auto-show connection modal on disconnect/error after initial load
-          if ((status === 'disconnected' || status === 'error') && hasLoadedOnce.current) {
-            setShowConnection(true);
+
+    const boot = async () => {
+      // Resolve the best WS URL (may query mDNS discovery)
+      const wsUrl = await resolveWebSocketURL();
+      if (cancelled) return;
+
+      console.log('Connecting to WebSocket:', wsUrl);
+
+      const ws = createWebSocketService({
+        url: wsUrl,
+        onStatusChange: (status) => {
+          if (!cancelled) {
+            setConnectionStatus(status);
+            // Auto-show connection modal on disconnect/error after initial load
+            if ((status === 'disconnected' || status === 'error') && hasLoadedOnce.current) {
+              setShowConnection(true);
+            }
+            // Auto-close blocking connection modal on successful reconnect
+            if (status === 'connected') {
+              setConnectionError(null);
+              setShowConnection(false);
+            }
           }
-          // Auto-close blocking connection modal on successful reconnect
-          if (status === 'connected') {
-            setConnectionError(null);
-            setShowConnection(false);
-          }
-        }
-      },
-      onEvent,
-    });
+        },
+        onEvent,
+      });
 
-    wsRef.current = ws;
-    setWsService(ws);
+      wsRef.current = ws;
+      setWsService(ws);
 
-    const MAX_INITIAL_RETRIES = 8;
-    const RETRY_DELAY_MS = 2500;
+      const MAX_INITIAL_RETRIES = 8;
+      const RETRY_DELAY_MS = 2500;
 
-    const attemptConnect = async () => {
       for (let attempt = 1; attempt <= MAX_INITIAL_RETRIES; attempt++) {
         if (cancelled) return;
 
@@ -259,11 +262,11 @@ function MainApp() {
       }
     };
 
-    attemptConnect();
+    boot();
 
     return () => {
       cancelled = true;
-      ws.disconnect();
+      if (wsRef.current) wsRef.current.disconnect();
     };
   }, [setConnectionStatus, setConnectionError, setWsService, setAppInfo, setConfig, setSubnets, setDefaultConfigs, setSubnetInput, setPortLists, setShowConnection, onEvent, showStartup, loadInitialData]);
 

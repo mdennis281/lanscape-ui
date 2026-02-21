@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { useScanStore } from '../../store';
 import { getCurrentWSServer, updateQueryParam } from '../../utils';
-import { fetchDiscoveredBackends, probeBackend } from '../../services/discovery';
+import { fetchDiscoveredBackends } from '../../services/discovery';
 import type { DiscoveredBackend } from '../../services/discovery';
 
 interface ConnectionModalProps {
@@ -23,7 +23,6 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
   const [localError, setLocalError] = useState<string | null>(null);
   const [isAttempting, setIsAttempting] = useState(false);
   const [discovered, setDiscovered] = useState<DiscoveredBackend[]>([]);
-  const [reachableKeys, setReachableKeys] = useState<Set<string>>(new Set());
   const [isScanning, setIsScanning] = useState(false);
   const [pollCount, setPollCount] = useState(0);
 
@@ -62,34 +61,6 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
     const interval = setInterval(refreshDiscovery, 5000);
     return () => clearInterval(interval);
   }, [isOpen]);
-
-  // Probe each discovered backend's WebSocket port and keep only reachable ones.
-  // The currently-connected server is always treated as reachable.
-  useEffect(() => {
-    if (discovered.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear on empty list
-      setReachableKeys(new Set());
-      return;
-    }
-
-    const currentServer = getCurrentWSServer();
-    let cancelled = false;
-
-    Promise.all(
-      discovered.map(async (b) => {
-        const key = `${b.host}:${b.ws_port}`;
-        if (key === currentServer) return key;  // already connected — always show
-        const ok = await probeBackend(b);
-        return ok ? key : null;
-      })
-    ).then((results) => {
-      if (!cancelled) {
-        setReachableKeys(new Set(results.filter((k): k is string => k !== null)));
-      }
-    });
-
-    return () => { cancelled = true; };
-  }, [discovered]);
 
   // Clear local error when connection succeeds
   useEffect(() => {
@@ -253,11 +224,9 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
             </button>
           </div>
 
-          {discovered.some((b) => reachableKeys.has(`${b.host}:${b.ws_port}`)) ? (
+          {discovered.length > 0 ? (
             <div className="discovered-list">
-              {discovered
-                .filter((b) => reachableKeys.has(`${b.host}:${b.ws_port}`))
-                .map((b) => {
+              {discovered.map((b) => {
                   const addr = `${b.host}:${b.ws_port}`;
                   const isCurrent = addr === getCurrentWSServer();
                   return (

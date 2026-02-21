@@ -2,6 +2,7 @@
  * Utility functions for parsing query parameters and configuring WebSocket URL
  */
 
+import { fetchDiscoveredBackends } from '../services/discovery';
 import '../types/electron'; // Import electron types for global Window augmentation
 
 // Cache the port once resolved
@@ -118,6 +119,45 @@ export function getWebSocketURL(port?: number): string {
     console.error('Invalid WebSocket URL format:', url, error);
     return 'ws://localhost:8766'; // fallback to default
   }
+}
+
+/**
+ * Check whether the user explicitly provided a ``ws-server`` query parameter.
+ */
+export function hasExplicitWSServer(): boolean {
+  return parseQueryParams().has('ws-server');
+}
+
+/**
+ * Resolve the best WebSocket URL to connect to.
+ *
+ * 1. If a ``ws-server`` query param or Electron port exists, use it directly.
+ * 2. Otherwise try mDNS discovery (``/api/discover``) — if backends are found,
+ *    pick the first one and persist it as the ``ws-server`` query param.
+ * 3. Fall back to ``ws://localhost:8766``.
+ */
+export async function resolveWebSocketURL(): Promise<string> {
+  // If there's an explicit ws-server param or we're in Electron, use the
+  // synchronous resolver — no need for mDNS.
+  if (hasExplicitWSServer() || window.electronAPI) {
+    return getWebSocketURL();
+  }
+
+  // No explicit server — try mDNS discovery (same-origin fetch to the
+  // Python HTTP proxy that served this page).
+  try {
+    const backends = await fetchDiscoveredBackends();
+    if (backends.length > 0) {
+      const best = backends[0];
+      const wsUrl = `ws://${best.host}:${best.ws_port}`;
+      console.log('Resolved backend via mDNS discovery:', wsUrl);
+      return wsUrl;
+    }
+  } catch {
+    // Discovery unavailable — fall through to default
+  }
+
+  return getWebSocketURL();
 }
 
 /**
