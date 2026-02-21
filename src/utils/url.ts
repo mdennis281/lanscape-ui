@@ -149,8 +149,12 @@ export async function resolveWebSocketURL(): Promise<string> {
     const backends = await fetchDiscoveredBackends();
     if (backends.length > 0) {
       const best = backends[0];
-      const wsUrl = `ws://${best.host}:${best.ws_port}`;
+      const server = `${best.host}:${best.ws_port}`;
+      const wsUrl = `ws://${server}`;
       console.log('Resolved backend via mDNS discovery:', wsUrl);
+      // Persist so the rest of the UI (ConnectionModal, getCurrentWSServer)
+      // reflects the actual connection target.
+      updateQueryParam('ws-server', server);
       return wsUrl;
     }
   } catch {
