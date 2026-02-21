@@ -132,3 +132,78 @@
   justify-content: center;
   gap: 6px;
 }
+
+// ============================================
+// Discovered backends (mDNS)
+// ============================================
+
+.discovered-section {
+  .form-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+}
+
+.discovered-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.discovered-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text-primary);
+
+  &:hover:not(:disabled) {
+    border-color: var(--primary-accent);
+    background: rgba(0, 122, 255, 0.06);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.current {
+    border-color: var(--secondary-accent);
+    background: rgba(48, 209, 88, 0.08);
+  }
+}
+
+.discovered-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.discovered-item-name {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.discovered-item-addr {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.discovered-item-version {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
