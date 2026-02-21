@@ -142,10 +142,52 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     color: var(--text-muted);
     font-size: 13px;
   }
+}
+
+.discovered-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.discovered-refresh-btn {
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+
+  &:hover:not(:disabled) {
+    color: var(--primary-accent);
+    border-color: var(--primary-accent);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.discovered-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px dashed var(--card-border);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .discovered-list {

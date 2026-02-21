@@ -24,6 +24,8 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
   const [isAttempting, setIsAttempting] = useState(false);
   const [discovered, setDiscovered] = useState<DiscoveredBackend[]>([]);
   const [reachableKeys, setReachableKeys] = useState<Set<string>>(new Set());
+  const [isScanning, setIsScanning] = useState(false);
+  const [pollCount, setPollCount] = useState(0);
 
   // Reset form state when modal opens
   useEffect(() => {
@@ -35,25 +37,30 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
     }
   }, [isOpen]);
 
-  // Poll for discovered backends while modal is open
+  // Fetch discovered backends once (triggered by pollCount changing)
+  const refreshDiscovery = () => setPollCount((c) => c + 1);
+
   useEffect(() => {
     if (!isOpen) return;
 
     let cancelled = false;
+    setIsScanning(true);
 
-    const poll = async () => {
-      const backends = await fetchDiscoveredBackends();
-      if (!cancelled) setDiscovered(backends);
-    };
+    fetchDiscoveredBackends().then((backends) => {
+      if (!cancelled) {
+        setDiscovered(backends);
+        setIsScanning(false);
+      }
+    });
 
-    // Fetch immediately, then poll every 5 seconds
-    poll();
-    const interval = setInterval(poll, 5000);
+    return () => { cancelled = true; };
+  }, [isOpen, pollCount]);
 
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
+  // Auto-poll every 5 seconds while modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = setInterval(refreshDiscovery, 5000);
+    return () => clearInterval(interval);
   }, [isOpen]);
 
   // Probe each discovered backend's WebSocket port and keep only reachable ones.
@@ -230,7 +237,58 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
           </div>
         )}
 
-        {/* Server Input */}
+        {/* Discovered Backends (mDNS) — always visible */}
+        <div className="discovered-section">
+          <div className="discovered-header">
+            <label className="form-label">
+              <i className="fa-solid fa-tower-broadcast"></i> Discovered on Network
+            </label>
+            <button
+              className="btn btn-ghost btn-xs discovered-refresh-btn"
+              onClick={refreshDiscovery}
+              disabled={isScanning}
+              title="Refresh discovery"
+            >
+              <i className={`fa-solid fa-arrows-rotate ${isScanning ? 'fa-spin' : ''}`}></i>
+            </button>
+          </div>
+
+          {discovered.some((b) => reachableKeys.has(`${b.host}:${b.ws_port}`)) ? (
+            <div className="discovered-list">
+              {discovered
+                .filter((b) => reachableKeys.has(`${b.host}:${b.ws_port}`))
+                .map((b) => {
+                  const addr = `${b.host}:${b.ws_port}`;
+                  const isCurrent = addr === getCurrentWSServer();
+                  return (
+                    <button
+                      key={addr}
+                      className={`discovered-item ${isCurrent ? 'current' : ''}`}
+                      onClick={() => handleSelectBackend(b)}
+                      disabled={isConnecting}
+                      title={`Connect to ${b.hostname} (${addr})`}
+                    >
+                      <div className="discovered-item-info">
+                        <span className="discovered-item-name">{b.hostname}</span>
+                        <span className="discovered-item-addr">{addr}</span>
+                      </div>
+                      <span className="discovered-item-version">v{b.version}</span>
+                    </button>
+                  );
+                })}
+            </div>
+          ) : (
+            <div className="discovered-empty">
+              {isScanning ? (
+                <span><i className="fa-solid fa-magnifying-glass fa-fade"></i> Scanning for devices…</span>
+              ) : (
+                <span><i className="fa-solid fa-circle-info"></i> No LANscape mDNS instances discovered on your LAN</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Manual Server Input */}
         <div className="form-group">
           <label className="form-label">WebSocket Server</label>
           <div className="form-row-inline">
@@ -261,38 +319,6 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
             </button>
           )}
         </div>
-
-        {/* Discovered Backends (mDNS) */}
-        {discovered.some((b) => reachableKeys.has(`${b.host}:${b.ws_port}`)) && (
-          <div className="discovered-section">
-            <label className="form-label">
-              <i className="fa-solid fa-tower-broadcast"></i> Discovered on Network
-            </label>
-            <div className="discovered-list">
-              {discovered
-                .filter((b) => reachableKeys.has(`${b.host}:${b.ws_port}`))
-                .map((b) => {
-                const addr = `${b.host}:${b.ws_port}`;
-                const isCurrent = addr === getCurrentWSServer();
-                return (
-                  <button
-                    key={addr}
-                    className={`discovered-item ${isCurrent ? 'current' : ''}`}
-                    onClick={() => handleSelectBackend(b)}
-                    disabled={isConnecting}
-                    title={`Connect to ${b.hostname} (${addr})`}
-                  >
-                    <div className="discovered-item-info">
-                      <span className="discovered-item-name">{b.hostname}</span>
-                      <span className="discovered-item-addr">{addr}</span>
-                    </div>
-                    <span className="discovered-item-version">v{b.version}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     </Modal>
   );
