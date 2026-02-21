@@ -118,6 +118,24 @@
   }
 }
 
+.loading-btn-link {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+  padding: 0;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--primary-accent);
+  }
+}
+
 // Legacy loading-spinner and error-message (backwards compat)
 
 .loading-spinner,

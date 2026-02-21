@@ -47,6 +47,10 @@ function MainApp() {
   // Show startup screen when running in Electron
   const [showStartup, setShowStartup] = useState(isElectron);
   const [isLoading, setIsLoading] = useState(true);
+  /** Retry state shown on the loading screen during initial connection attempts. */
+  const [loadingRetry, setLoadingRetry] = useState<{ attempt: number; max: number; failed: boolean }>({
+    attempt: 0, max: 8, failed: false,
+  });
   /** Tracks whether the app has ever fully loaded (for detecting mid-session drops). */
   const hasLoadedOnce = useRef(false);
   /** Ref to the current WS service for the reconnect-reload helper. */
@@ -214,30 +218,48 @@ function MainApp() {
     wsRef.current = ws;
     setWsService(ws);
 
-    ws.connect()
-      .then(async () => {
+    const MAX_INITIAL_RETRIES = 8;
+    const RETRY_DELAY_MS = 2500;
+
+    const attemptConnect = async () => {
+      for (let attempt = 1; attempt <= MAX_INITIAL_RETRIES; attempt++) {
         if (cancelled) return;
-        
+
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- updating retry progress
+        setLoadingRetry({ attempt, max: MAX_INITIAL_RETRIES, failed: false });
+
         try {
+          await ws.connect();
+          if (cancelled) return;
+
+          // Connected — load initial data
           await loadInitialData(ws);
           if (cancelled) return;
+
           hasLoadedOnce.current = true;
           setIsLoading(false);
+          return; // success
         } catch (error) {
           if (cancelled) return;
-          console.error('Failed to load initial data:', error);
-          setConnectionError('Failed to load initial data from server');
-          setShowConnection(true);
-          setIsLoading(false);
+          console.warn(`Initial connection attempt ${attempt}/${MAX_INITIAL_RETRIES} failed:`, error);
+
+          // Wait before next attempt (unless it was the last)
+          if (attempt < MAX_INITIAL_RETRIES) {
+            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+          }
         }
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        console.error('Failed to connect to WebSocket:', error);
-        setConnectionError(error.message || 'Failed to connect to WebSocket server');
-        setShowConnection(true);
-        setIsLoading(false);
-      });
+      }
+
+      // All retries exhausted
+      if (!cancelled) {
+        console.error('All initial connection attempts failed');
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- final failure state
+        setLoadingRetry({ attempt: MAX_INITIAL_RETRIES, max: MAX_INITIAL_RETRIES, failed: true });
+        setConnectionError('Unable to reach the backend server');
+      }
+    };
+
+    attemptConnect();
 
     return () => {
       cancelled = true;
@@ -271,11 +293,30 @@ function MainApp() {
             <p className="loading-subtitle">Local Network Scanner</p>
           </div>
           <div className="loading-progress">
-            <p className="loading-status">Connecting to server...</p>
-            {connectionStatus === 'connecting' && (
-              <div className="loading-bar">
-                <div className="loading-bar-fill loading-bar-indeterminate" />
-              </div>
+            {loadingRetry.failed ? (
+              <>
+                <div className="loading-error">
+                  <i className="fa-solid fa-plug-circle-xmark"></i>
+                  <span>Could not connect to backend server</span>
+                </div>
+                <button className="loading-btn" onClick={() => setShowConnection(true)}>
+                  <i className="fa-solid fa-gear"></i>
+                  Connection Settings
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="loading-status">
+                  Connecting to server{loadingRetry.attempt > 1 ? ` (attempt ${loadingRetry.attempt}/${loadingRetry.max})` : ''}…
+                </p>
+                <div className="loading-bar">
+                  <div className="loading-bar-fill loading-bar-indeterminate" />
+                </div>
+                <button className="loading-btn-link" onClick={() => setShowConnection(true)}>
+                  <i className="fa-solid fa-gear"></i>
+                  Connection Settings
+                </button>
+              </>
             )}
           </div>
         </div>

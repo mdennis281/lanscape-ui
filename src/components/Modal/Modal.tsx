@@ -8,10 +8,9 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: 'small' | 'medium' | 'large';
-  hideClose?: boolean;
 }
 
-export function Modal({ isOpen, onClose, title, children, footer, size = 'medium', hideClose = false }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'medium' }: ModalProps) {
   const mouseDownTarget = useRef<EventTarget | null>(null);
 
   if (!isOpen) return null;

@@ -129,12 +129,16 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
               {statusLabels[displayStatus]}
             </span>
           </div>
-          {appInfo && isConnected && (
+          {appInfo && (
             <div className="connection-status-row">
-              <span className="connection-status-label">Server Version:</span>
-              <span className="connection-status-value">{appInfo.version}</span>
+              <span className="connection-status-label">Backend Version:</span>
+              <span className="connection-status-value">v{appInfo.version}</span>
             </div>
           )}
+          <div className="connection-status-row">
+            <span className="connection-status-label">Frontend Version:</span>
+            <span className="connection-status-value">{__APP_VERSION__}</span>
+          </div>
         </div>
 
         {/* Error Display */}
