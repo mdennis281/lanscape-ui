@@ -15,6 +15,7 @@ export function Header() {
     clearDevices,
     setShowSettings, 
     setStatus,
+    connectionStatus,
   } = useScanStore();
   const [isLoading, setIsLoading] = useState(false);
   const [subnetValidation, setSubnetValidation] = useState<SubnetTestResult | null>(null);
@@ -37,18 +38,23 @@ export function Header() {
         setSubnetValidation(response.data as SubnetTestResult);
       }
     } catch {
-      setSubnetValidation({ valid: false, msg: 'Validation failed', count: -1 });
+      // WS was likely disconnected — clear validation instead of showing an
+      // error.  The effect below will re-validate once the connection is back.
+      setSubnetValidation(null);
     }
   }, []);
 
-  // Debounced validation
+  // Debounced validation — re-runs when input changes *or* when the WS
+  // connection is (re-)established so we recover from transient drops.
   useEffect(() => {
+    if (connectionStatus !== 'connected') return;
+
     const timer = setTimeout(() => {
       validateSubnet(subnetInput);
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [subnetInput, validateSubnet]);
+  }, [subnetInput, validateSubnet, connectionStatus]);
 
   const canSubmit = isScanning || (subnetInput.trim() && subnetValidation?.valid);
 
