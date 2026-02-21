@@ -36,6 +36,7 @@ class WebSocketService {
   private pendingRequests = new Map<string, RequestCallback>();
   private requestIdCounter = 0;
   private clientId: string;
+  private suppressReconnect = false;
 
   constructor(config: WebSocketServiceConfig) {
     this.config = {
@@ -71,6 +72,7 @@ class WebSocketService {
         return;
       }
 
+      this.suppressReconnect = false;
       this.setStatus('connecting');
       console.log(`Attempting to connect to: ${this.config.url}`);
 
@@ -138,6 +140,7 @@ class WebSocketService {
   }
 
   disconnect(): void {
+    this.suppressReconnect = true;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -161,7 +164,24 @@ class WebSocketService {
     this.setStatus('disconnected');
   }
 
+  /**
+   * Change the WebSocket URL and reconnect.
+   * Does NOT reload the page.
+   */
+  updateUrl(url: string): void {
+    this.config.url = url;
+    this.reconnectAttempts = 0;
+    this.suppressReconnect = false;
+  }
+
+  getUrl(): string {
+    return this.config.url;
+  }
+
   private scheduleReconnect(): void {
+    if (this.suppressReconnect) {
+      return;
+    }
     if (this.reconnectAttempts >= (this.config.maxReconnectAttempts ?? 10)) {
       console.error('Max reconnection attempts reached');
       this.setStatus('error');
@@ -288,6 +308,10 @@ class WebSocketService {
 
   async getScanDelta(scanId: string): Promise<WSResponse> {
     return this.send('scan.get_delta', { scan_id: scanId, client_id: this.clientId });
+  }
+
+  async getPortDetail(scanId: string, ip: string, port: number): Promise<WSResponse> {
+    return this.send('scan.get_port_detail', { scan_id: scanId, ip, port });
   }
 
   async getScanSummary(scanId: string): Promise<WSResponse> {

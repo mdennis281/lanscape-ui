@@ -82,3 +82,53 @@
   gap: 8px;
   font-weight: 500;
 }
+
+// Inline error banner inside connection modal
+.connection-error {
+  background: rgba(255, 69, 58, 0.12);
+  border: 1px solid var(--danger-accent);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--danger-accent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+
+  i {
+    flex-shrink: 0;
+    font-size: 15px;
+  }
+}
+
+// Connecting progress bar inside modal
+.connection-connecting {
+  .loading-bar {
+    height: 5px;
+    background: var(--input-bg);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .loading-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-accent), var(--secondary-accent));
+    border-radius: 3px;
+  }
+
+  .loading-bar-indeterminate {
+    width: 30%;
+    animation: loading-indeterminate 1.5s ease-in-out infinite;
+  }
+}
+
+// Retry button below the server input
+.connection-retry-btn {
+  margin-top: 10px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

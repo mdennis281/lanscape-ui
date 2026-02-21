@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { Tooltip } from 'react-tooltip';
 import { 
   Header, 
@@ -16,6 +16,7 @@ import {
 } from './components';
 import { OdometerDebug } from './components/Overview/OdometerDebug';
 import { createWebSocketService } from './services';
+import type { WebSocketService } from './services';
 import { useScanStore } from './store';
 import { getWebSocketURL } from './utils';
 import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig } from './types';
@@ -46,11 +47,16 @@ function MainApp() {
   // Show startup screen when running in Electron
   const [showStartup, setShowStartup] = useState(isElectron);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  /** Tracks whether the app has ever fully loaded (for detecting mid-session drops). */
+  const hasLoadedOnce = useRef(false);
+  /** Ref to the current WS service for the reconnect-reload helper. */
+  const wsRef = useRef<WebSocketService | null>(null);
   
   const {
     connectionStatus,
     setConnectionStatus,
+    setConnectionError,
+    setWsService,
     setAppInfo,
     setConfig,
     setSubnets,
@@ -78,6 +84,103 @@ function MainApp() {
     handleEvent(event);
   }, [handleEvent]);
 
+  /**
+   * Fetch initial data from backend after a (re-)connection is established.
+   * Extracted so we can call it both on first load and after a reconnect.
+   */
+  const loadInitialData = useCallback(async (ws: WebSocketService) => {
+    const [subnetListRes, configDefaultsRes, appInfoRes, portListsRes] = await Promise.all([
+      ws.listSubnets(),
+      ws.getConfigDefaults(),
+      ws.getAppInfo(),
+      ws.listPortsSummary(),
+    ]);
+
+    // Set available subnets
+    if (subnetListRes.success && Array.isArray(subnetListRes.data)) {
+      const subnets = subnetListRes.data as SubnetInfo[];
+      setSubnets(subnets);
+      if (subnets.length > 0) {
+        setSubnetInput(subnets[0].subnet);
+      }
+    }
+
+    // Set port lists
+    if (portListsRes.success && Array.isArray(portListsRes.data)) {
+      setPortLists(portListsRes.data as { name: string; count: number }[]);
+    }
+
+    // Set default configs
+    if (configDefaultsRes.success && configDefaultsRes.data) {
+      const configs = configDefaultsRes.data as DefaultConfigs;
+      setDefaultConfigs(configs);
+
+      // 1. Try the exact config the user last saved (preserves tweaks)
+      const lastConfig = (() => {
+        try {
+          const raw = localStorage.getItem('lanscape:lastConfig');
+          return raw ? (JSON.parse(raw) as ScanConfig) : null;
+        } catch { return null; }
+      })();
+
+      if (lastConfig) {
+        setConfig(lastConfig);
+      } else {
+        // 2. Fall back to resolving the active preset
+        const savedPresetId = localStorage.getItem('lanscape:activePreset');
+        let restored = false;
+
+        if (savedPresetId) {
+          if (configs[savedPresetId]) {
+            setConfig(configs[savedPresetId]);
+            restored = true;
+          } else {
+            try {
+              const raw = localStorage.getItem('lanscape:userPresets');
+              if (raw) {
+                const userPresets = JSON.parse(raw) as { id: string; config: ScanConfig }[];
+                const match = userPresets.find((p) => p.id === savedPresetId);
+                if (match?.config) {
+                  setConfig(match.config);
+                  restored = true;
+                }
+              }
+            } catch { /* ignore malformed data */ }
+          }
+        }
+
+        if (!restored && configs.balanced) {
+          setConfig(configs.balanced);
+          localStorage.setItem('lanscape:activePreset', 'balanced');
+        }
+      }
+    }
+
+    // Set app info from backend
+    if (appInfoRes.success && appInfoRes.data) {
+      setAppInfo(appInfoRes.data as {
+        version: string;
+        name: string;
+        arp_supported: boolean;
+        update_available?: boolean;
+        latest_version?: string;
+        runtime_args?: Record<string, unknown>;
+      });
+    }
+  }, [setSubnets, setSubnetInput, setPortLists, setDefaultConfigs, setConfig, setAppInfo]);
+
+  // When status transitions back to 'connected' after the initial load,
+  // re-fetch data (handles reconnects and server-URL changes).
+  useEffect(() => {
+    if (connectionStatus !== 'connected' || !hasLoadedOnce.current) return;
+    const ws = wsRef.current;
+    if (!ws) return;
+
+    loadInitialData(ws).catch((err) => {
+      console.error('Failed to reload data after reconnect:', err);
+    });
+  }, [connectionStatus, loadInitialData]);
+
   useEffect(() => {
     // Don't connect to WebSocket until startup is complete
     if (showStartup) {
@@ -94,111 +197,45 @@ function MainApp() {
       onStatusChange: (status) => {
         if (!cancelled) {
           setConnectionStatus(status);
+          // Auto-show connection modal on disconnect/error after initial load
+          if ((status === 'disconnected' || status === 'error') && hasLoadedOnce.current) {
+            setShowConnection(true);
+          }
+          // Auto-close blocking connection modal on successful reconnect
+          if (status === 'connected') {
+            setConnectionError(null);
+            setShowConnection(false);
+          }
         }
       },
       onEvent,
     });
 
+    wsRef.current = ws;
+    setWsService(ws);
+
     ws.connect()
       .then(async () => {
-        if (cancelled) return; // Effect was cleaned up, ignore
+        if (cancelled) return;
         
         try {
-          // Fetch initial data from backend
-          const [subnetListRes, configDefaultsRes, appInfoRes, portListsRes] = await Promise.all([
-            ws.listSubnets(),
-            ws.getConfigDefaults(),
-            ws.getAppInfo(),
-            ws.listPortsSummary(),
-          ]);
-
-          if (cancelled) return; // Check again after async operations
-
-          // Set available subnets
-          if (subnetListRes.success && Array.isArray(subnetListRes.data)) {
-            const subnets = subnetListRes.data as SubnetInfo[];
-            setSubnets(subnets);
-            // Set the first subnet as default input
-            if (subnets.length > 0) {
-              setSubnetInput(subnets[0].subnet);
-            }
-          }
-
-          // Set port lists
-          if (portListsRes.success && Array.isArray(portListsRes.data)) {
-            setPortLists(portListsRes.data as { name: string; count: number }[]);
-          }
-
-          // Set default configs
-          if (configDefaultsRes.success && configDefaultsRes.data) {
-            const configs = configDefaultsRes.data as DefaultConfigs;
-            setDefaultConfigs(configs);
-
-            // 1. Try the exact config the user last saved (preserves tweaks)
-            const lastConfig = (() => {
-              try {
-                const raw = localStorage.getItem('lanscape:lastConfig');
-                return raw ? (JSON.parse(raw) as ScanConfig) : null;
-              } catch { return null; }
-            })();
-
-            if (lastConfig) {
-              setConfig(lastConfig);
-            } else {
-              // 2. Fall back to resolving the active preset
-              const savedPresetId = localStorage.getItem('lanscape:activePreset');
-              let restored = false;
-
-              if (savedPresetId) {
-                if (configs[savedPresetId]) {
-                  setConfig(configs[savedPresetId]);
-                  restored = true;
-                } else {
-                  try {
-                    const raw = localStorage.getItem('lanscape:userPresets');
-                    if (raw) {
-                      const userPresets = JSON.parse(raw) as { id: string; config: ScanConfig }[];
-                      const match = userPresets.find((p) => p.id === savedPresetId);
-                      if (match?.config) {
-                        setConfig(match.config);
-                        restored = true;
-                      }
-                    }
-                  } catch { /* ignore malformed data */ }
-                }
-              }
-
-              if (!restored && configs.balanced) {
-                setConfig(configs.balanced);
-                localStorage.setItem('lanscape:activePreset', 'balanced');
-              }
-            }
-          }
-
-          // Set app info from backend
-          if (appInfoRes.success && appInfoRes.data) {
-            setAppInfo(appInfoRes.data as {
-              version: string;
-              name: string;
-              arp_supported: boolean;
-              update_available?: boolean;
-              latest_version?: string;
-              runtime_args?: Record<string, unknown>;
-            });
-          }
-
+          await loadInitialData(ws);
+          if (cancelled) return;
+          hasLoadedOnce.current = true;
           setIsLoading(false);
         } catch (error) {
           if (cancelled) return;
           console.error('Failed to load initial data:', error);
-          setLoadError('Failed to load initial data from server');
+          setConnectionError('Failed to load initial data from server');
+          setShowConnection(true);
           setIsLoading(false);
         }
       })
       .catch((error) => {
-        if (cancelled) return; // Ignore errors from cancelled connections (StrictMode)
+        if (cancelled) return;
         console.error('Failed to connect to WebSocket:', error);
-        setLoadError(`Failed to connect to WebSocket server: ${error.message || 'Unknown error'}`);
+        setConnectionError(error.message || 'Failed to connect to WebSocket server');
+        setShowConnection(true);
         setIsLoading(false);
       });
 
@@ -206,7 +243,7 @@ function MainApp() {
       cancelled = true;
       ws.disconnect();
     };
-  }, [setConnectionStatus, setAppInfo, setConfig, setSubnets, setDefaultConfigs, setSubnetInput, onEvent, showStartup]);
+  }, [setConnectionStatus, setConnectionError, setWsService, setAppInfo, setConfig, setSubnets, setDefaultConfigs, setSubnetInput, setPortLists, setShowConnection, onEvent, showStartup, loadInitialData]);
 
   const handleDeviceClick = (device: DeviceResult) => {
     setSelectedDevice(device);
@@ -242,33 +279,19 @@ function MainApp() {
             )}
           </div>
         </div>
+        {/* Connection modal shown as blocking overlay when initial connect fails */}
+        <ConnectionModal
+          isOpen={showConnection}
+          onClose={() => setShowConnection(false)}
+          blocking
+        />
       </div>
     );
   }
 
-  // Show error state if connection failed
-  if (loadError) {
-    return (
-      <div className="app-container app-error">
-        <div className="loading-screen">
-          <div className="loading-header">
-            <div className="loading-logo">
-              <img src="./android-chrome-192x192.png" alt="LANscape" className="loading-logo-img" />
-            </div>
-            <h1 className="loading-title">LANscape</h1>
-            <p className="loading-subtitle">Local Network Scanner</p>
-          </div>
-          <div className="loading-error">
-            <i className="fas fa-exclamation-triangle"></i>
-            <span>{loadError}</span>
-          </div>
-          <button className="loading-btn" onClick={() => window.location.reload()}>
-            <i className="fas fa-redo"></i> Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Determine whether to show the connection-lost overlay.
+  // This is true when connection drops mid-session OR on initial failure.
+  const connectionLost = showConnection && connectionStatus !== 'connected';
 
   return (
     <div className="app-container">
@@ -307,9 +330,11 @@ function MainApp() {
         onClose={() => setShowWarnings(false)}
       />
 
+      {/* Connection modal — blocking when connection is lost, closeable when manually opened */}
       <ConnectionModal
         isOpen={showConnection}
         onClose={() => setShowConnection(false)}
+        blocking={connectionLost}
       />
       
       {selectedDevice && (

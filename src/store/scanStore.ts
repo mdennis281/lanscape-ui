@@ -16,11 +16,18 @@ import type {
   ScanWarningInfo
 } from '../types';
 import type { ConnectionStatus } from '../services/websocket';
+import type { WebSocketService } from '../services/websocket';
 
 interface ScanState {
   // Connection status
   connectionStatus: ConnectionStatus;
   setConnectionStatus: (status: ConnectionStatus) => void;
+  connectionError: string | null;
+  setConnectionError: (error: string | null) => void;
+
+  // WebSocket service reference (for reconnection)
+  wsService: WebSocketService | null;
+  setWsService: (ws: WebSocketService | null) => void;
 
   // App info
   appInfo: AppInfo | null;
@@ -96,6 +103,12 @@ export const useScanStore = create<ScanState>((set, get) => ({
   // Connection status
   connectionStatus: 'disconnected',
   setConnectionStatus: (status) => set({ connectionStatus: status }),
+  connectionError: null,
+  setConnectionError: (connectionError) => set({ connectionError }),
+
+  // WebSocket service reference
+  wsService: null,
+  setWsService: (wsService) => set({ wsService }),
 
   // App info
   appInfo: null,

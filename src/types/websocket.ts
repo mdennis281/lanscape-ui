@@ -21,6 +21,7 @@ export type ScanAction =
   | 'scan.start_sync'
   | 'scan.get'
   | 'scan.get_delta'
+  | 'scan.get_port_detail'
   | 'scan.summary'
   | 'scan.terminate'
   | 'scan.subscribe'
@@ -205,11 +206,25 @@ export interface ScanMetadata {
 export interface ServiceInfo {
   port: number;
   service: string;
-  request?: string | null;
-  response?: string | null;
   probes_sent?: number;
   probes_received?: number;
   is_tls?: boolean;
+}
+
+export interface ServiceResponseGroup {
+  response: string | null;
+  service: string;
+  probes: string[];
+  is_tls: boolean;
+}
+
+export interface PortServiceDetail {
+  port: number;
+  service: string;
+  probes_sent: number;
+  probes_received: number;
+  is_tls: boolean;
+  responses: ServiceResponseGroup[];
 }
 
 export interface DeviceResult {

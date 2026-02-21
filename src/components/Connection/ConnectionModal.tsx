@@ -7,36 +7,94 @@ import { getCurrentWSServer, updateQueryParam } from '../../utils';
 interface ConnectionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** When true the modal acts as a blocking overlay (no close button). */
+  blocking?: boolean;
 }
 
-export function ConnectionModal({ isOpen, onClose }: ConnectionModalProps) {
+export function ConnectionModal({ isOpen, onClose, blocking = false }: ConnectionModalProps) {
   const connectionStatus = useScanStore((state) => state.connectionStatus);
+  const connectionError = useScanStore((state) => state.connectionError);
   const appInfo = useScanStore((state) => state.appInfo);
+  const wsService = useScanStore((state) => state.wsService);
   
   const [wsServer, setWsServer] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [isAttempting, setIsAttempting] = useState(false);
 
+  // Reset form state when modal opens
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting form on open
       setWsServer(getCurrentWSServer());
+      setLocalError(null);
+      setIsAttempting(false);
     }
   }, [isOpen]);
 
-  const handleConnect = () => {
-    if (wsServer.trim()) {
-      updateQueryParam('ws-server', wsServer.trim());
-      window.location.reload();
+  // Clear local error when connection succeeds
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing on connect
+      setLocalError(null);
+      setIsAttempting(false);
+    }
+  }, [connectionStatus]);
+
+  const handleConnect = async () => {
+    const server = wsServer.trim();
+    if (!server || !wsService) return;
+
+    setLocalError(null);
+    setIsAttempting(true);
+
+    // Build a proper ws:// URL from user input
+    const wsUrl = server.startsWith('ws://') || server.startsWith('wss://')
+      ? server
+      : `ws://${server}`;
+
+    // Persist the choice in query params (so reloads remember it)
+    updateQueryParam('ws-server', server);
+
+    // Disconnect any existing socket, update URL, and reconnect in-place
+    wsService.disconnect();
+    wsService.updateUrl(wsUrl);
+
+    try {
+      await wsService.connect();
+      // Connection succeeded — onStatusChange in App.tsx will handle re-init
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLocalError(msg);
+      setIsAttempting(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!wsService) return;
+    setLocalError(null);
+    setIsAttempting(true);
+    try {
+      await wsService.connect();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLocalError(msg);
+      setIsAttempting(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && wsServer.trim()) {
+    if (e.key === 'Enter' && wsServer.trim() && !isAttempting) {
       handleConnect();
     }
   };
 
+  const displayError = localError || connectionError;
+  const isConnecting = isAttempting || connectionStatus === 'connecting';
+  const isConnected = connectionStatus === 'connected';
+
   const statusLabels: Record<string, string> = {
     connected: 'Connected',
-    connecting: 'Connecting...',
+    connecting: 'Connecting…',
     disconnected: 'Disconnected',
     error: 'Connection Error',
   };
@@ -48,10 +106,13 @@ export function ConnectionModal({ isOpen, onClose }: ConnectionModalProps) {
     error: 'var(--color-error)',
   };
 
+  // Derive display status — show "connecting" while we're attempting
+  const displayStatus = isAttempting ? 'connecting' : connectionStatus;
+
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={blocking ? () => {} : onClose}
       title="Server Connection"
       size="small"
     >
@@ -62,19 +123,36 @@ export function ConnectionModal({ isOpen, onClose }: ConnectionModalProps) {
             <span className="connection-status-label">Status:</span>
             <span 
               className="connection-status-value"
-              style={{ color: statusColors[connectionStatus] }}
+              style={{ color: statusColors[displayStatus] }}
             >
-              <span className={`status-dot ${connectionStatus} ${connectionStatus === 'connecting' ? 'pulse' : ''}`}></span>
-              {statusLabels[connectionStatus]}
+              <span className={`status-dot ${displayStatus} ${isConnecting ? 'pulse' : ''}`}></span>
+              {statusLabels[displayStatus]}
             </span>
           </div>
-          {appInfo && (
+          {appInfo && isConnected && (
             <div className="connection-status-row">
               <span className="connection-status-label">Server Version:</span>
               <span className="connection-status-value">{appInfo.version}</span>
             </div>
           )}
         </div>
+
+        {/* Error Display */}
+        {displayError && !isConnecting && (
+          <div className="connection-error">
+            <i className="fa-solid fa-triangle-exclamation"></i>
+            <span>{displayError}</span>
+          </div>
+        )}
+
+        {/* Connecting Indicator */}
+        {isConnecting && (
+          <div className="connection-connecting">
+            <div className="loading-bar">
+              <div className="loading-bar-fill loading-bar-indeterminate" />
+            </div>
+          </div>
+        )}
 
         {/* Server Input */}
         <div className="form-group">
@@ -87,18 +165,25 @@ export function ConnectionModal({ isOpen, onClose }: ConnectionModalProps) {
               value={wsServer}
               onChange={(e) => setWsServer(e.target.value)}
               onKeyDown={handleKeyDown}
+              disabled={isConnecting}
             />
             <button 
               className="btn btn-primary btn-sm" 
               onClick={handleConnect}
-              disabled={!wsServer.trim()}
+              disabled={!wsServer.trim() || isConnecting}
             >
-              Connect
+              {isConnecting ? 'Connecting…' : 'Connect'}
             </button>
           </div>
-          <small className="form-hint">
-            Enter the WebSocket server address (page will reload)
-          </small>
+          {!isConnecting && !isConnected && wsServer === getCurrentWSServer() && (
+            <button 
+              className="btn btn-secondary btn-sm connection-retry-btn"
+              onClick={handleRetry}
+              disabled={isConnecting}
+            >
+              <i className="fa-solid fa-rotate-right"></i> Retry Current Server
+            </button>
+          )}
         </div>
       </div>
     </Modal>

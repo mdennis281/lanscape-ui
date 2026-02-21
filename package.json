@@ -1,7 +1,7 @@
 {
   "name": "lanscape-ui",
   "private": true,
-  "version": "0.1.2",
+  "version": "2026.02.21.059753",
   "description": "LANscape Desktop - Local Network Scanner",
   "author": {
     "name": "Michael Dennis",
@@ -11,11 +11,12 @@
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
+    "stamp": "node scripts/stamp-version.js",
     "dev": "vite",
     "dev:electron": "vite & electron .",
     "dev:local": "npm run dev:electron",
     "electron:local": "npm run electron",
-    "build": "tsc -b && vite build && npm run build:electron",
+    "build": "npm run stamp && tsc -b && vite build && npm run build:electron",
     "build:electron": "tsc -p tsconfig.electron.json && node scripts/rename-cjs.js",
     "lint": "eslint .",
     "preview": "vite preview",

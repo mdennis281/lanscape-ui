@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Modal } from '../Modal';
-import type { DeviceResult, ServiceInfo } from '../../types';
+import type { DeviceResult, PortServiceDetail, ServiceResponseGroup } from '../../types';
+import { getWebSocketService } from '../../services/websocket';
+import { useScanStore } from '../../store/scanStore';
 
 interface DeviceModalProps {
   device: DeviceResult | null;
@@ -10,67 +12,148 @@ interface DeviceModalProps {
 // Clickable port badge
 function PortBadge({ 
   port, 
-  hasResponse,
-  isSelected, 
+  hasServiceInfo,
+  isSelected,
+  isLoading,
   onClick 
 }: { 
   port: number; 
-  hasResponse: boolean;
+  hasServiceInfo: boolean;
   isSelected: boolean;
+  isLoading: boolean;
   onClick: () => void;
 }) {
   return (
     <button
-      className={`port-badge clickable ${hasResponse ? 'has-response' : ''} ${isSelected ? 'selected' : ''}`}
+      className={`port-badge clickable ${hasServiceInfo ? 'has-response' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
-      title={hasResponse ? 'Click to view response' : 'No response captured'}
+      title={hasServiceInfo ? 'Click to view service detail' : 'No service info available'}
+      disabled={isLoading}
     >
-      {port}
+      {isLoading && isSelected ? <i className="fa-solid fa-spinner fa-spin" /> : port}
     </button>
   );
 }
 
-// Response panel that slides in/out
+// Detail view for the currently selected response tab
+function ResponseDetail({ group }: { group: ServiceResponseGroup }) {
+  return (
+    <div className="response-detail">
+      <div className="response-detail-probes">
+        <div className="probe-section-label">
+          Probes ({group.probes.length})
+        </div>
+        <div className="probe-list">
+          {group.probes.map((probe, i) => (
+            <pre className="probe-content request" key={i}>{probe}</pre>
+          ))}
+        </div>
+      </div>
+      <div className="response-detail-content">
+        <div className="probe-section-label">Response</div>
+        {group.response ? (
+          <pre className="probe-content response">{group.response}</pre>
+        ) : (
+          <div className="no-response-text">No response captured</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Response panel with tabbed interface for switching between responses
 function ResponsePanel({ 
-  serviceInfo, 
+  portDetail,
+  isLoading,
+  error,
   isClosing,
   onAnimationEnd 
 }: { 
-  serviceInfo?: ServiceInfo;
+  portDetail: PortServiceDetail | null;
+  isLoading: boolean;
+  error: string | null;
   isClosing: boolean;
   onAnimationEnd: () => void;
 }) {
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Filter to responses with content, memoized
+  const responsesWithContent = useMemo(() => 
+    portDetail?.responses.filter(g => g.response !== null) ?? [],
+    [portDetail]
+  );
+
+  // Reset tab when port detail changes
+  const activeGroup = responsesWithContent[activeTab] ?? responsesWithContent[0] ?? null;
+
   return (
     <div 
       className={`port-response-panel ${isClosing ? 'closing' : ''}`}
       onAnimationEnd={onAnimationEnd}
     >
-      <div className="port-response-header">
-        <span className="port-label">Port {serviceInfo?.port}</span>
-        <span className="probe-stats">
-          {serviceInfo?.probes_sent ?? 0} probes sent / {serviceInfo?.probes_received ?? 0} received
-        </span>
-      </div>
-      <div className="port-response-body">
-        {/* Request Section */}
-        <div className="probe-section">
-          <div className="probe-section-label">Request</div>
-          <pre className="probe-content request">
-            {serviceInfo?.request || '(no request sent)'}
-          </pre>
+      {isLoading && (
+        <div className="port-response-loading">
+          <i className="fa-solid fa-spinner fa-spin" />
+          <span>Loading service detail...</span>
         </div>
-        {/* Response Section */}
-        <div className="probe-section">
-          <div className="probe-section-label">Response</div>
-          {serviceInfo?.response ? (
-            <pre className="probe-content response">
-              {serviceInfo.response}
-            </pre>
+      )}
+      {error && (
+        <div className="port-response-error">
+          <i className="fa-solid fa-circle-exclamation" />
+          <span>{error}</span>
+        </div>
+      )}
+      {portDetail && !isLoading && (
+        <>
+          <div className="port-response-header">
+            <span className="port-label">
+              Port {portDetail.port}
+              {portDetail.is_tls && <span className="tls-badge">TLS</span>}
+            </span>
+            <span className="probe-stats">
+              {portDetail.probes_sent} sent / {portDetail.probes_received} received
+            </span>
+          </div>
+          {responsesWithContent.length > 0 ? (
+            <div className="port-response-body">
+              {/* Response tabs */}
+              {responsesWithContent.length > 1 && (
+                <div className="response-tabs">
+                  {responsesWithContent.map((group, idx) => (
+                    <button
+                      key={idx}
+                      className={`response-tab ${idx === activeTab ? 'active' : ''}`}
+                      onClick={() => setActiveTab(idx)}
+                    >
+                      <span className="response-tab-service">{group.service}</span>
+                      {group.is_tls && <span className="tls-badge">TLS</span>}
+                      <span className="response-tab-probes">
+                        {group.probes.length} {group.probes.length === 1 ? 'probe' : 'probes'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Single response - show service label inline */}
+              {responsesWithContent.length === 1 && activeGroup && (
+                <div className="response-single-label">
+                  <span className="response-tab-service">{activeGroup.service}</span>
+                  {activeGroup.is_tls && <span className="tls-badge">TLS</span>}
+                  <span className="response-tab-probes">
+                    {activeGroup.probes.length} {activeGroup.probes.length === 1 ? 'probe' : 'probes'}
+                  </span>
+                </div>
+              )}
+              {/* Active response detail */}
+              {activeGroup && <ResponseDetail group={activeGroup} />}
+            </div>
           ) : (
-            <div className="no-response-text">No response captured</div>
+            <div className="port-response-body">
+              <div className="no-response-text">No responses captured</div>
+            </div>
           )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
@@ -83,17 +166,41 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const pendingPortRef = useRef<number | null>(null);
   
+  // Lazy-loaded port detail state
+  const [portDetail, setPortDetail] = useState<PortServiceDetail | null>(null);
+  const [loadingPort, setLoadingPort] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  
+  const currentScanId = useScanStore(s => s.currentScanId);
+  
   if (!device) return null;
 
   const ports = device.ports || [];
   const services = device.services || {};
   const serviceInfo = device.service_info || [];
+
+  // Create a lookup set of ports that have service info
+  const portsWithServiceInfo = new Set(serviceInfo.map(info => info.port));
   
-  // Create a lookup map from port to service info
-  const serviceInfoByPort = new Map<number, ServiceInfo>();
-  serviceInfo.forEach(info => {
-    serviceInfoByPort.set(info.port, info);
-  });
+  // Fetch port detail from backend
+  const loadPortDetail = async (port: number) => {
+    if (!currentScanId || !device) return;
+    setLoadingPort(port);
+    setLoadError(null);
+    setPortDetail(null);
+    try {
+      const ws = getWebSocketService();
+      if (!ws) throw new Error('WebSocket not connected');
+      const response = await ws.getPortDetail(currentScanId, device.ip, port);
+      setPortDetail(response.data as PortServiceDetail);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message 
+        : (err as { error?: string })?.error || 'Failed to load port detail';
+      setLoadError(errorMsg);
+    } finally {
+      setLoadingPort(null);
+    }
+  };
   
   // Handle port toggle with animation
   const togglePort = (port: number) => {
@@ -111,6 +218,7 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
       // Opening a new port (nothing currently open)
       setSelectedPort(port);
       setVisiblePort(port);
+      loadPortDetail(port);
     }
   };
   
@@ -120,11 +228,15 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
       setIsClosing(false);
       if (pendingPortRef.current !== null) {
         // Switch to the pending port
-        setVisiblePort(pendingPortRef.current);
+        const nextPort = pendingPortRef.current;
+        setVisiblePort(nextPort);
         pendingPortRef.current = null;
+        loadPortDetail(nextPort);
       } else {
         // Just closing
         setVisiblePort(null);
+        setPortDetail(null);
+        setLoadError(null);
       }
     }
   };
@@ -205,15 +317,18 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
                             <PortBadge
                               key={port}
                               port={port}
-                              hasResponse={!!serviceInfoByPort.get(port)?.response}
+                              hasServiceInfo={portsWithServiceInfo.has(port)}
                               isSelected={port === selectedPort}
+                              isLoading={port === loadingPort}
                               onClick={() => togglePort(port)}
                             />
                           ))}
                         </div>
                         {visibleInGroup !== null && (
                           <ResponsePanel 
-                            serviceInfo={serviceInfoByPort.get(visibleInGroup)} 
+                            portDetail={portDetail}
+                            isLoading={loadingPort === visibleInGroup}
+                            error={loadError}
                             isClosing={isClosing}
                             onAnimationEnd={handleAnimationEnd}
                           />
@@ -239,15 +354,18 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
                             <PortBadge
                               key={port}
                               port={port}
-                              hasResponse={!!serviceInfoByPort.get(port)?.response}
+                              hasServiceInfo={portsWithServiceInfo.has(port)}
                               isSelected={port === selectedPort}
+                              isLoading={port === loadingPort}
                               onClick={() => togglePort(port)}
                             />
                           ))}
                         </div>
                         {visiblePort !== null && ports.includes(visiblePort) && (
                           <ResponsePanel 
-                            serviceInfo={serviceInfoByPort.get(visiblePort)} 
+                            portDetail={portDetail}
+                            isLoading={loadingPort === visiblePort}
+                            error={loadError}
                             isClosing={isClosing}
                             onAnimationEnd={handleAnimationEnd}
                           />
