@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { useScanStore } from '../../store';
 import { getCurrentWSServer, updateQueryParam } from '../../utils';
-import { fetchDiscoveredBackends } from '../../services/discovery';
-import type { DiscoveredBackend } from '../../services/discovery';
+import { fetchDiscoverInfo } from '../../services/discovery';
+import type { DiscoveredBackend, DiscoverResponse } from '../../services/discovery';
 
 interface ConnectionModalProps {
   isOpen: boolean;
@@ -23,6 +23,7 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
   const [localError, setLocalError] = useState<string | null>(null);
   const [isAttempting, setIsAttempting] = useState(false);
   const [discovered, setDiscovered] = useState<DiscoveredBackend[]>([]);
+  const [mdnsEnabled, setMdnsEnabled] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [pollCount, setPollCount] = useState(0);
 
@@ -43,11 +44,13 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
     if (!isOpen) return;
 
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset scanning indicator on mount/poll
     setIsScanning(true);
 
-    fetchDiscoveredBackends().then((backends) => {
+    fetchDiscoverInfo().then((info: DiscoverResponse) => {
       if (!cancelled) {
-        setDiscovered(backends);
+        setDiscovered(info.instances);
+        setMdnsEnabled(info.mdns_enabled);
         setIsScanning(false);
       }
     });
@@ -208,7 +211,8 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
           </div>
         )}
 
-        {/* Discovered Backends (mDNS) — always visible */}
+        {/* Discovered Backends (mDNS) — only shown when mDNS is enabled */}
+        {mdnsEnabled && (
         <div className="discovered-section">
           <div className="discovered-header">
             <label className="form-label">
@@ -251,11 +255,12 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
               {isScanning ? (
                 <span><i className="fa-solid fa-magnifying-glass fa-fade"></i> Scanning for devices…</span>
               ) : (
-                <span><i className="fa-solid fa-circle-info"></i> No LANscape mDNS instances discovered on your LAN</span>
+                <span><i className="fa-solid fa-circle-info"></i> No LANscape instances discovered on your LAN</span>
               )}
             </div>
           )}
         </div>
+        )}
 
         {/* Manual Server Input */}
         <div className="form-group">

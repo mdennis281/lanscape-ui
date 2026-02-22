@@ -2,7 +2,7 @@
  * Utility functions for parsing query parameters and configuring WebSocket URL
  */
 
-import { fetchDiscoveredBackends } from '../services/discovery';
+import { fetchDiscoverInfo } from '../services/discovery';
 import '../types/electron'; // Import electron types for global Window augmentation
 
 // Cache the port once resolved
@@ -132,30 +132,46 @@ export function hasExplicitWSServer(): boolean {
  * Resolve the best WebSocket URL to connect to.
  *
  * 1. If a ``ws-server`` query param or Electron port exists, use it directly.
- * 2. Otherwise try mDNS discovery (``/api/discover``) — if backends are found,
- *    pick the first one and persist it as the ``ws-server`` query param.
+ * 2. Otherwise hit ``/api/discover`` — use the ``default_route`` to derive
+ *    the WS host, and if mDNS is enabled pick a discovered backend.
  * 3. Fall back to ``ws://localhost:8766``.
  */
 export async function resolveWebSocketURL(): Promise<string> {
   // If there's an explicit ws-server param or we're in Electron, use the
-  // synchronous resolver — no need for mDNS.
+  // synchronous resolver — no need for discovery.
   if (hasExplicitWSServer() || window.electronAPI) {
     return getWebSocketURL();
   }
 
-  // No explicit server — try mDNS discovery (same-origin fetch to the
-  // Python HTTP proxy that served this page).
+  // No explicit server — ask the backend for connection info.
   try {
-    const backends = await fetchDiscoveredBackends();
-    if (backends.length > 0) {
-      const best = backends[0];
+    const discover = await fetchDiscoverInfo();
+
+    // If mDNS is on and peers were found, prefer the first one.
+    if (discover.mdns_enabled && discover.instances.length > 0) {
+      const best = discover.instances[0];
       const server = `${best.host}:${best.ws_port}`;
       const wsUrl = `ws://${server}`;
       console.log('Resolved backend via mDNS discovery:', wsUrl);
-      // Persist so the rest of the UI (ConnectionModal, getCurrentWSServer)
-      // reflects the actual connection target.
       updateQueryParam('ws-server', server);
       return wsUrl;
+    }
+
+    // No mDNS peers (or mDNS disabled) — derive WS URL from default_route.
+    if (discover.default_route) {
+      try {
+        const parsed = new URL(discover.default_route);
+        // The HTTP server and WS server share the same host; WS port
+        // comes from cachedPort or the standard default.
+        const wsPort = cachedPort ?? 8766;
+        const server = `${parsed.hostname}:${wsPort}`;
+        const wsUrl = `ws://${server}`;
+        console.log('Using default route from backend:', wsUrl);
+        updateQueryParam('ws-server', server);
+        return wsUrl;
+      } catch {
+        // Bad URL — fall through
+      }
     }
   } catch {
     // Discovery unavailable — fall through to default
