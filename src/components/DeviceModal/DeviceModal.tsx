@@ -35,33 +35,33 @@ function PortBadge({
   );
 }
 
-// Detail view for the currently selected response tab
+// Detail view for one response and the probe that triggered it
 function ResponseDetail({ group }: { group: ServiceResponseGroup }) {
   return (
     <div className="response-detail">
-      <div className="response-detail-probes">
-        <div className="probe-section-label">
-          Probes ({group.probes.length})
+      {group.probes.length > 0 && (
+        <div className="response-detail-probes">
+          <div className="probe-section-label">Probe Sent</div>
+          <div className="probe-list">
+            {group.probes.map((probe, i) => (
+              <pre className="probe-content request" key={i}>{probe}</pre>
+            ))}
+          </div>
         </div>
-        <div className="probe-list">
-          {group.probes.map((probe, i) => (
-            <pre className="probe-content request" key={i}>{probe}</pre>
-          ))}
-        </div>
-      </div>
+      )}
       <div className="response-detail-content">
-        <div className="probe-section-label">Response</div>
+        <div className="probe-section-label">Response Received</div>
         {group.response ? (
           <pre className="probe-content response">{group.response}</pre>
         ) : (
-          <div className="no-response-text">No response captured</div>
+          <div className="no-response-text">No response received</div>
         )}
       </div>
     </div>
   );
 }
 
-// Response panel with tabbed interface for switching between responses
+// Response panel with prev/next navigation for switching between responses
 function ResponsePanel({ 
   portDetail,
   isLoading,
@@ -75,16 +75,16 @@ function ResponsePanel({
   isClosing: boolean;
   onAnimationEnd: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeIdx, setActiveIdx] = useState(0);
 
-  // Filter to responses with content, memoized
-  const responsesWithContent = useMemo(() => 
-    portDetail?.responses.filter(g => g.response !== null) ?? [],
-    [portDetail]
-  );
+  const responses = useMemo(() => portDetail?.responses ?? [], [portDetail]);
 
-  // Reset tab when port detail changes
-  const activeGroup = responsesWithContent[activeTab] ?? responsesWithContent[0] ?? null;
+  // Clamp index when responses change
+  const idx = Math.min(activeIdx, Math.max(responses.length - 1, 0));
+  const activeGroup = responses[idx] ?? null;
+
+  const goPrev = () => setActiveIdx(i => Math.max(i - 1, 0));
+  const goNext = () => setActiveIdx(i => Math.min(i + 1, responses.length - 1));
 
   return (
     <div 
@@ -114,36 +114,36 @@ function ResponsePanel({
               {portDetail.probes_sent} sent / {portDetail.probes_received} received
             </span>
           </div>
-          {responsesWithContent.length > 0 ? (
+          {responses.length > 0 ? (
             <div className="port-response-body">
-              {/* Response tabs */}
-              {responsesWithContent.length > 1 && (
-                <div className="response-tabs">
-                  {responsesWithContent.map((group, idx) => (
-                    <button
-                      key={idx}
-                      className={`response-tab ${idx === activeTab ? 'active' : ''}`}
-                      onClick={() => setActiveTab(idx)}
-                    >
-                      <span className="response-tab-service">{group.service}</span>
-                      {group.is_tls && <span className="tls-badge">TLS</span>}
-                      <span className="response-tab-probes">
-                        {group.probes.length} {group.probes.length === 1 ? 'probe' : 'probes'}
-                      </span>
-                    </button>
-                  ))}
+              {/* Navigation bar */}
+              <div className="response-nav">
+                <button
+                  className="response-nav-btn"
+                  onClick={goPrev}
+                  disabled={idx === 0}
+                  aria-label="Previous response"
+                >
+                  <i className="fa-solid fa-chevron-left" />
+                </button>
+                <div className="response-nav-info">
+                  <span className="response-nav-counter">{idx + 1} / {responses.length}</span>
+                  {activeGroup && (
+                    <span className="response-nav-service">
+                      {activeGroup.service}
+                      {activeGroup.is_tls && <span className="tls-badge">TLS</span>}
+                    </span>
+                  )}
                 </div>
-              )}
-              {/* Single response - show service label inline */}
-              {responsesWithContent.length === 1 && activeGroup && (
-                <div className="response-single-label">
-                  <span className="response-tab-service">{activeGroup.service}</span>
-                  {activeGroup.is_tls && <span className="tls-badge">TLS</span>}
-                  <span className="response-tab-probes">
-                    {activeGroup.probes.length} {activeGroup.probes.length === 1 ? 'probe' : 'probes'}
-                  </span>
-                </div>
-              )}
+                <button
+                  className="response-nav-btn"
+                  onClick={goNext}
+                  disabled={idx === responses.length - 1}
+                  aria-label="Next response"
+                >
+                  <i className="fa-solid fa-chevron-right" />
+                </button>
+              </div>
               {/* Active response detail */}
               {activeGroup && <ResponseDetail group={activeGroup} />}
             </div>
