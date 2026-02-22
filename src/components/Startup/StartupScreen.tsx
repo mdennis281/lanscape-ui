@@ -5,7 +5,7 @@
  * server startup status when running in Electron.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import '../../types/electron'; // Import electron types for global Window augmentation
 import { setWebSocketPort } from '../../utils/url';
 import './StartupScreen.css';
@@ -21,26 +21,34 @@ interface StatusLogEntry {
   type: 'info' | 'error' | 'success';
 }
 
+// Map status messages to progress percentages (pure function, no state closure)
+function getProgressFromStatus(status: string, currentProgress: number): number {
+  const statusLower = status.toLowerCase();
+  if (statusLower.includes('initializing backend')) return 10;
+  if (statusLower.includes('backend ready')) return 20;
+  if (statusLower.includes('creating python')) return 15;
+  if (statusLower.includes('environment found')) return 25;
+  if (statusLower.includes('installing lanscape core')) return 35;
+  if (statusLower.includes('starting lanscape core')) return 55;
+  if (statusLower.includes('starting websocket')) return 75;
+  if (statusLower.includes('websocket server running')) return 100;
+  return currentProgress;
+}
+
 export function StartupScreen({ onReady, onSkip }: StartupScreenProps) {
-  const [statusLog, setStatusLog] = useState<StatusLogEntry[]>([]);
+  const [statusLog, setStatusLog] = useState<StatusLogEntry[]>(() =>
+    window.electronAPI
+      ? [{ message: 'Starting LANscape backend...', timestamp: new Date(), type: 'info' as const }]
+      : []
+  );
   const [currentStatus, setCurrentStatus] = useState('Starting up...');
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [progress, setProgress] = useState(5); // Start with small progress to show activity
 
-  // Map status messages to progress percentages
-  const getProgressFromStatus = (status: string): number => {
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes('initializing backend')) return 10;
-    if (statusLower.includes('backend ready')) return 20;
-    if (statusLower.includes('creating python')) return 15;
-    if (statusLower.includes('environment found')) return 25;
-    if (statusLower.includes('installing lanscape core')) return 35;
-    if (statusLower.includes('starting lanscape core')) return 55;
-    if (statusLower.includes('starting websocket')) return 75;
-    if (statusLower.includes('websocket server running')) return 100;
-    return progress; // Keep current progress if unknown
-  };
+  const addLogEntry = useCallback((message: string, type: 'info' | 'error' | 'success') => {
+    setStatusLog((prev) => [...prev, { message, timestamp: new Date(), type }]);
+  }, []);
 
   useEffect(() => {
     const electronAPI = window.electronAPI;
@@ -55,9 +63,6 @@ export function StartupScreen({ onReady, onSkip }: StartupScreenProps) {
     // Track whether the port has been received
     let portReceived = false;
 
-    // Add initial log entry
-    addLogEntry('Starting LANscape backend...', 'info');
-
     // Listen for the WebSocket port (sent after Python selects an available port)
     const unsubPort = electronAPI.onWsPortReady((port: number) => {
       console.log('WebSocket port from Python:', port);
@@ -70,7 +75,7 @@ export function StartupScreen({ onReady, onSkip }: StartupScreenProps) {
     const unsubStatus = electronAPI.onPythonStatus((status: string) => {
       console.log('Python status:', status);
       setCurrentStatus(status);
-      setProgress(getProgressFromStatus(status));
+      setProgress((prev) => getProgressFromStatus(status, prev));
       addLogEntry(status, 'info');
     });
 
@@ -120,11 +125,7 @@ export function StartupScreen({ onReady, onSkip }: StartupScreenProps) {
       unsubError();
       unsubReady();
     };
-  }, [onReady]);
-
-  const addLogEntry = (message: string, type: 'info' | 'error' | 'success') => {
-    setStatusLog((prev) => [...prev, { message, timestamp: new Date(), type }]);
-  };
+  }, [onReady, addLogEntry]);
 
   const handleRetry = async () => {
     setError(null);

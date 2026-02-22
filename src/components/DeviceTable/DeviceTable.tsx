@@ -30,6 +30,17 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Reset tracking when devices are cleared (new scan)
+    if (devices.length === 0) {
+      seenDevicesRef.current.clear();
+      pendingNewRef.current = [];
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      return;
+    }
+
     // Find devices we haven't seen yet
     for (const device of devices) {
       if (!seenDevicesRef.current.has(device.ip)) {
@@ -66,19 +77,6 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
       }, 0);
     }
   }, [devices]);
-
-  // Reset when devices list is cleared (new scan)
-  useEffect(() => {
-    if (devices.length === 0) {
-      seenDevicesRef.current.clear();
-      setNewDevices(new Map());
-      pendingNewRef.current = [];
-      if (flushTimerRef.current) {
-        clearTimeout(flushTimerRef.current);
-        flushTimerRef.current = null;
-      }
-    }
-  }, [devices.length]);
 
   const filteredDevices = useMemo(() => {
     let result = devices;

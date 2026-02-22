@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useScanStore } from '../../store';
 import { Odometer, OdometerTime } from './Odometer';
 
@@ -23,17 +23,18 @@ export function Overview() {
   const stage = status?.stage ?? 'idle';
   const progress = status?.progress ?? 0;
 
-  // Track scan start to reset odometer instantly
+  // Track scan start to reset odometer instantly.
+  // Uses React's recommended "adjust state during render" pattern
+  // instead of useEffect to avoid setting state in effects.
   const [scanResetKey, setScanResetKey] = useState(0);
-  const wasRunningRef = useRef(isRunning);
+  const [prevIsRunning, setPrevIsRunning] = useState(false);
 
-  useEffect(() => {
-    // Detect when a new scan starts (transition from not running to running)
-    if (isRunning && !wasRunningRef.current) {
-      setScanResetKey((prev) => prev + 1);
+  if (isRunning !== prevIsRunning) {
+    setPrevIsRunning(isRunning);
+    if (isRunning) {
+      setScanResetKey((k) => k + 1);
     }
-    wasRunningRef.current = isRunning;
-  }, [isRunning]);
+  }
 
   const pctComplete = progress * 100;
   const showRemaining = pctComplete >= 10;

@@ -228,7 +228,6 @@ function MainApp() {
       for (let attempt = 1; attempt <= MAX_INITIAL_RETRIES; attempt++) {
         if (cancelled) return;
 
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- updating retry progress
         setLoadingRetry({ attempt, max: MAX_INITIAL_RETRIES, failed: false });
 
         try {
@@ -256,7 +255,6 @@ function MainApp() {
       // All retries exhausted
       if (!cancelled) {
         console.error('All initial connection attempts failed');
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- final failure state
         setLoadingRetry({ attempt: MAX_INITIAL_RETRIES, max: MAX_INITIAL_RETRIES, failed: true });
         setConnectionError('Unable to reach the backend server');
       }

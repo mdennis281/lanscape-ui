@@ -78,9 +78,8 @@ const OdometerWheel = memo(function OdometerWheel({
   const animationStartRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // If no direction or same digit, just show target
+    // No animation needed — position is already correct from useState(startDigit)
     if (direction === 0 || startDigit === targetDigit) {
-      setPosition(targetDigit);
       return;
     }
 
@@ -326,26 +325,32 @@ export function OdometerTime({ seconds, className = '', resetKey }: { seconds: n
   const currentRef = useRef(Math.floor(Math.max(0, seconds)));
   const animatingRef = useRef(false);
   const frameRef = useRef<number | null>(null);
-  const lastResetKeyRef = useRef(resetKey);
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
+  const resetKeyInitialized = useRef(false);
 
-  const { BASE_SPEED, MAX_SPEED, ACCEL_FACTOR, SNAP_THRESHOLD } = TIME_WHEEL_CONFIG;
+  // Handle instant reset when resetKey changes:
+  // State resets happen during render (React's recommended pattern for
+  // "adjusting state when a prop changes"), ref cleanup in an effect.
+  if (resetKey !== undefined && resetKey !== prevResetKey) {
+    setPrevResetKey(resetKey);
+    setDisplaySeconds(0);
+    setDigitOffsets([0, 0, 0, 0]);
+  }
 
-  // Handle instant reset when resetKey changes
+  // Cancel ongoing animation and reset position refs when resetKey changes
   useEffect(() => {
-    if (resetKey !== undefined && resetKey !== lastResetKeyRef.current) {
-      lastResetKeyRef.current = resetKey;
-      // Cancel any ongoing animation
-      if (frameRef.current) {
-        cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      }
-      animatingRef.current = false;
-      // Instantly reset to 0
-      currentRef.current = 0;
-      targetRef.current = 0;
-      setDisplaySeconds(0);
-      setDigitOffsets([0, 0, 0, 0]);
+    // Skip initial mount — refs are already initialized correctly
+    if (!resetKeyInitialized.current) {
+      resetKeyInitialized.current = true;
+      return;
     }
+    if (frameRef.current) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    animatingRef.current = false;
+    currentRef.current = 0;
+    targetRef.current = 0;
   }, [resetKey]);
 
   useEffect(() => {
@@ -364,7 +369,7 @@ export function OdometerTime({ seconds, className = '', resetKey }: { seconds: n
         const diff = target - current;
 
         // Are we close enough? Snap to target
-        if (Math.abs(diff) < SNAP_THRESHOLD) {
+        if (Math.abs(diff) < TIME_WHEEL_CONFIG.SNAP_THRESHOLD) {
           currentRef.current = target;
           setDisplaySeconds(target);
           setDigitOffsets([0, 0, 0, 0]);
@@ -374,7 +379,7 @@ export function OdometerTime({ seconds, className = '', resetKey }: { seconds: n
         }
 
         // Speed based on distance
-        const speed = Math.min(MAX_SPEED, BASE_SPEED + Math.abs(diff) * ACCEL_FACTOR);
+        const speed = Math.min(TIME_WHEEL_CONFIG.MAX_SPEED, TIME_WHEEL_CONFIG.BASE_SPEED + Math.abs(diff) * TIME_WHEEL_CONFIG.ACCEL_FACTOR);
 
         // Move toward target
         const step = diff > 0 ? speed : -speed;

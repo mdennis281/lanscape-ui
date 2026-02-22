@@ -274,7 +274,7 @@ export const useScanStore = create<ScanState>((set, get) => ({
         }
 
         case 'update':
-        case 'delta':
+        case 'delta': {
           // Handle delta updates from server
           // Server sends: { devices: [...], metadata: {...}, has_changes: bool }
           const delta = eventData as {
@@ -357,6 +357,7 @@ export const useScanStore = create<ScanState>((set, get) => ({
             }
           }
           break;
+        }
 
         case 'results':
           // Full results update
