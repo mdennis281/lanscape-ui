@@ -78,6 +78,8 @@ export function Header() {
           total_hosts: status?.total_hosts ?? 0,
           scanned_hosts: status?.scanned_hosts ?? 0,
           found_hosts: status?.found_hosts ?? 0,
+          ports_scanned: status?.ports_scanned ?? 0,
+          ports_total: status?.ports_total ?? 0,
           runtime: status?.runtime ?? 0,
           remaining: 0,
         });
@@ -93,6 +95,8 @@ export function Header() {
           total_hosts: subnetValidation?.count ?? 0,
           scanned_hosts: 0,
           found_hosts: 0,
+          ports_scanned: 0,
+          ports_total: 0,
           runtime: 0,
           remaining: 0,
         });
@@ -119,6 +123,8 @@ export function Header() {
         total_hosts: status?.total_hosts ?? 0,
         scanned_hosts: status?.scanned_hosts ?? 0,
         found_hosts: status?.found_hosts ?? 0,
+        ports_scanned: status?.ports_scanned ?? 0,
+        ports_total: status?.ports_total ?? 0,
         runtime: status?.runtime ?? 0,
         remaining: 0,
       });

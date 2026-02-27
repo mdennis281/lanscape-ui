@@ -287,6 +287,8 @@ export const useScanStore = create<ScanState>((set, get) => ({
               devices_total?: number;
               devices_alive?: number;
               percent_complete?: number;
+              ports_scanned?: number;
+              ports_total?: number;
               errors?: ScanErrorInfo[];
               warnings?: ScanWarningInfo[];
               // Nested metadata from ScanResults structure
@@ -298,6 +300,8 @@ export const useScanStore = create<ScanState>((set, get) => ({
                 devices_total?: number;
                 devices_alive?: number;
                 percent_complete?: number;
+                ports_scanned?: number;
+                ports_total?: number;
                 errors?: ScanErrorInfo[];
                 warnings?: ScanWarningInfo[];
               };
@@ -340,6 +344,8 @@ export const useScanStore = create<ScanState>((set, get) => ({
                 total_hosts: total,
                 // found_hosts is the count of alive devices
                 found_hosts: scanMeta.devices_alive ?? currentDevices.length,
+                ports_scanned: scanMeta.ports_scanned ?? currentStatus?.ports_scanned ?? 0,
+                ports_total: scanMeta.ports_total ?? currentStatus?.ports_total ?? 0,
                 progress: pctComplete / 100, // Store as 0-1
                 remaining: remainingSec,
               } as ScanStatus

@@ -8,6 +8,9 @@ function digitCount(n: number): number {
   return Math.floor(Math.log10(Math.abs(n))) + 1;
 }
 
+// Stages where port scanning is active
+const PORT_SCAN_STAGES = ['testing ports', 'complete', 'terminated'];
+
 export function Overview() {
   const status = useScanStore((state) => state.status);
   const scanErrors = useScanStore((state) => state.scanErrors);
@@ -18,10 +21,15 @@ export function Overview() {
   const isRunning = status?.is_running ?? false;
   const scannedHosts = status?.scanned_hosts ?? 0;
   const totalHosts = status?.total_hosts ?? 0;
+  const portsScanned = status?.ports_scanned ?? 0;
+  const portsTotal = status?.ports_total ?? 0;
   const runtime = status?.runtime ?? 0;
   const remaining = status?.remaining ?? 0;
   const stage = status?.stage ?? 'idle';
   const progress = status?.progress ?? 0;
+
+  // Show port progress once we enter port scanning
+  const showPortProgress = PORT_SCAN_STAGES.includes(stage);
 
   // Track scan start to reset odometer instantly.
   // Uses React's recommended "adjust state during render" pattern
@@ -43,6 +51,7 @@ export function Overview() {
   
   // Use total hosts to determine digit count (so scanned aligns properly)
   const hostDigits = Math.max(digitCount(totalHosts), 1);
+  const portDigits = Math.max(digitCount(portsTotal), 1);
 
   return (
     <div className="scan-stats">
@@ -52,12 +61,24 @@ export function Overview() {
       )}
       
       <div className="scan-stats-content">
-        {/* Devices scanned */}
-        <div className="scan-stat">
-          <Odometer value={scannedHosts} digits={hostDigits} className="scan-stat-value" />
-          <span className="scan-stat-sep">/</span>
-          <Odometer value={totalHosts} digits={hostDigits} className="scan-stat-value muted" />
-          <span className="scan-stat-label">scanned</span>
+        {/* Counter with slide transition between devices and ports */}
+        <div className="scan-stat-slider">
+          <div className={`scan-stat-slide ${showPortProgress ? 'slide-out' : 'slide-in'}`}>
+            <div className="scan-stat">
+              <Odometer value={scannedHosts} digits={hostDigits} className="scan-stat-value" />
+              <span className="scan-stat-sep">/</span>
+              <Odometer value={totalHosts} digits={hostDigits} className="scan-stat-value muted" />
+              <span className="scan-stat-label">IPs scanned</span>
+            </div>
+          </div>
+          <div className={`scan-stat-slide ${showPortProgress ? 'slide-in' : 'slide-out-down'}`}>
+            <div className="scan-stat">
+              <Odometer value={portsScanned} digits={portDigits} className="scan-stat-value" />
+              <span className="scan-stat-sep">/</span>
+              <Odometer value={portsTotal} digits={portDigits} className="scan-stat-value muted" />
+              <span className="scan-stat-label">ports scanned</span>
+            </div>
+          </div>
         </div>
 
         <div className="scan-stat-spacer" />

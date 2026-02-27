@@ -201,6 +201,8 @@ export interface ScanMetadata {
   devices_scanned: number;
   devices_alive: number;
   port_list_length: number;
+  ports_scanned: number;
+  ports_total: number;
   start_time: number;
   end_time?: number;
   run_time: number;
@@ -289,6 +291,8 @@ export interface ScanStatus {
   total_hosts: number;
   scanned_hosts: number;
   found_hosts: number;
+  ports_scanned: number;
+  ports_total: number;
   runtime: number;
   remaining: number;
 }
