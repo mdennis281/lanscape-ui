@@ -13,6 +13,8 @@ export function Header() {
     currentScanId,
     setCurrentScanId,
     clearDevices,
+    clearScanErrors,
+    clearScanWarnings,
     setShowSettings, 
     setStatus,
     connectionStatus,
@@ -82,6 +84,8 @@ export function Header() {
       } else {
         // Clear previous results and start a new scan
         clearDevices();
+        clearScanErrors();
+        clearScanWarnings();
         setStatus({
           is_running: true,
           stage: 'starting',

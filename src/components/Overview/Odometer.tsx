@@ -40,13 +40,18 @@ const ODOMETER_CONFIG = {
 };
 
 /**
- * Time Wheel Animation Settings (for MM:SS display - 0-9 range)
+ * Time Wheel Animation Settings (for MM:SS display)
+ * Uses time-based animation so large diffs complete in bounded time.
  */
 const TIME_WHEEL_CONFIG = {
-  BASE_SPEED: 0.05,
-  MAX_SPEED: 0.18,
-  ACCEL_FACTOR: 0.015,
-  SNAP_THRESHOLD: 0.01,
+  /** Minimum animation duration in ms (for small diffs like 1-2 seconds) */
+  MIN_DURATION: 300,
+  /** Maximum animation duration in ms (caps large diffs) */
+  MAX_DURATION: 1500,
+  /** Logarithmic duration scale factor */
+  DURATION_SCALE: 200,
+  /** Easing function — ease-out cubic for smooth deceleration */
+  easing: (t: number) => 1 - Math.pow(1 - t, 3),
 };
 
 // ============================================================================
@@ -357,84 +362,94 @@ export function OdometerTime({ seconds, className = '', resetKey }: { seconds: n
     const targetSecs = Math.floor(Math.max(0, seconds));
     targetRef.current = targetSecs;
 
-    // Start animation if not already running and we need to move
-    if (!animatingRef.current && currentRef.current !== targetSecs) {
-      animatingRef.current = true;
-
-      const animate = () => {
-        const target = targetRef.current;
-        const current = currentRef.current;
-
-        // Distance to target
-        const diff = target - current;
-
-        // Are we close enough? Snap to target
-        if (Math.abs(diff) < TIME_WHEEL_CONFIG.SNAP_THRESHOLD) {
-          currentRef.current = target;
-          setDisplaySeconds(target);
-          setDigitOffsets([0, 0, 0, 0]);
-          animatingRef.current = false;
-          frameRef.current = null;
-          return;
-        }
-
-        // Speed based on distance
-        const speed = Math.min(TIME_WHEEL_CONFIG.MAX_SPEED, TIME_WHEEL_CONFIG.BASE_SPEED + Math.abs(diff) * TIME_WHEEL_CONFIG.ACCEL_FACTOR);
-
-        // Move toward target
-        const step = diff > 0 ? speed : -speed;
-        let newCurrent = current + step;
-
-        // Don't overshoot
-        newCurrent = diff > 0
-          ? Math.min(newCurrent, target)
-          : Math.max(newCurrent, target);
-
-        currentRef.current = newCurrent;
-
-        // Extract whole seconds and fractional part
-        const wholeSecs = Math.floor(newCurrent);
-        const frac = newCurrent - wholeSecs;
-
-        setDisplaySeconds(wholeSecs);
-
-        // Calculate per-digit offsets
-        // Time format: MM:SS, digits are [m10, m1, s10, s1]
-        const m = Math.floor(wholeSecs / 60);
-        const s = wholeSecs % 60;
-        const digits = [
-          Math.floor(m / 10) % 10,  // m10
-          m % 10,                    // m1
-          Math.floor(s / 10),        // s10
-          s % 10                     // s1
-        ];
-
-        // Only the rightmost digit (s1) gets the fractional offset
-        // Higher digits only scroll when lower ones are about to wrap
-        const offsets = [0, 0, 0, 0];
-        let carry = frac;
-
-        // Process right to left
-        for (let i = 3; i >= 0; i--) {
-          offsets[i] = -carry * DIGIT_HEIGHT;
-
-          // Determine wrap point for this digit
-          const wrapAt = (i === 2) ? 5 : 9; // s10 wraps at 5, others at 9
-
-          if (digits[i] === wrapAt && diff > 0) {
-            // This digit will wrap, propagate carry
-          } else {
-            carry = 0;
-          }
-        }
-
-        setDigitOffsets(offsets);
-
-        frameRef.current = requestAnimationFrame(animate);
-      };
-
-      frameRef.current = requestAnimationFrame(animate);
+    // Cancel any in-progress animation so we can restart from current position
+    if (frameRef.current) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
     }
+
+    const startValue = currentRef.current;
+    const diff = targetSecs - startValue;
+
+    // Nothing to animate
+    if (Math.abs(diff) < 0.001) {
+      currentRef.current = targetSecs;
+      setDisplaySeconds(targetSecs);
+      setDigitOffsets([0, 0, 0, 0]);
+      animatingRef.current = false;
+      return;
+    }
+
+    animatingRef.current = true;
+
+    // Duration scales logarithmically with diff — large jumps stay fast
+    const absDiff = Math.abs(diff);
+    const duration = Math.min(
+      TIME_WHEEL_CONFIG.MAX_DURATION,
+      TIME_WHEEL_CONFIG.MIN_DURATION + Math.log1p(absDiff) * TIME_WHEEL_CONFIG.DURATION_SCALE
+    );
+
+    const startTime = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const easedProgress = TIME_WHEEL_CONFIG.easing(progress);
+
+      const newCurrent = startValue + diff * easedProgress;
+      currentRef.current = newCurrent;
+
+      // Extract whole seconds and fractional part
+      const wholeSecs = Math.floor(newCurrent);
+      const frac = newCurrent - wholeSecs;
+
+      setDisplaySeconds(wholeSecs);
+
+      // Calculate per-digit offsets
+      // Time format: MM:SS, digits are [m10, m1, s10, s1]
+      const m = Math.floor(wholeSecs / 60);
+      const s = wholeSecs % 60;
+      const digits = [
+        Math.floor(m / 10) % 10,  // m10
+        m % 10,                    // m1
+        Math.floor(s / 10),        // s10
+        s % 10                     // s1
+      ];
+
+      // Only the rightmost digit (s1) gets the fractional offset
+      // Higher digits only scroll when lower ones are about to wrap
+      const offsets: [number, number, number, number] = [0, 0, 0, 0];
+      let carry = frac;
+
+      // Process right to left
+      for (let i = 3; i >= 0; i--) {
+        offsets[i] = -carry * DIGIT_HEIGHT;
+
+        // Determine wrap point for this digit
+        const wrapAt = (i === 2) ? 5 : 9; // s10 wraps at 5, others at 9
+
+        if (digits[i] === wrapAt && diff > 0) {
+          // This digit will wrap, propagate carry
+        } else {
+          carry = 0;
+        }
+      }
+
+      setDigitOffsets(offsets);
+
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(animate);
+      } else {
+        // Snap to exact target
+        currentRef.current = targetSecs;
+        setDisplaySeconds(targetSecs);
+        setDigitOffsets([0, 0, 0, 0]);
+        animatingRef.current = false;
+        frameRef.current = null;
+      }
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
   }, [seconds]);
 
   // Cleanup on unmount
