@@ -10,27 +10,35 @@
 
 .warnings-summary-banner {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 14px 18px;
   background: rgba(204, 136, 1, 0.12);
   border: 1px solid rgba(204, 136, 1, 0.25);
   border-radius: var(--border-radius-sm);
   color: var(--warning-accent);
-  font-weight: 500;
 
-  i { font-size: 18px; }
+  > i { font-size: 18px; margin-top: 2px; flex-shrink: 0; }
 }
 
-.warnings-description {
-  font-size: 13px;
-  line-height: 1.5;
+.warnings-summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 500;
+}
+
+.warnings-summary-detail {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .warnings-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   max-height: 400px;
   overflow-y: auto;
 }
@@ -61,7 +69,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   cursor: pointer;
   transition: background var(--transition-fast);
 
@@ -74,7 +82,7 @@
   font-size: 10px;
   color: var(--text-muted);
   flex-shrink: 0;
-  width: 12px;
+  margin-left: auto;
 }
 
 .warning-item-index {
@@ -97,7 +105,7 @@
 .warning-item-details {
   background: var(--secondary-bg);
   border-top: 1px solid var(--card-border);
-  padding: 12px 14px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -107,18 +115,46 @@
   display: flex;
   gap: 10px;
   font-size: 12px;
+  align-items: baseline;
 }
 
 .warning-detail-label {
   color: var(--text-muted);
   min-width: 80px;
+  flex-shrink: 0;
+  &::after { content: ':'; }
 }
 
 .warning-detail-value {
   color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 
-  &.warning-decrease {
-    color: var(--warning-accent);
-    font-weight: 600;
+  &.warning-error-msg {
+    color: var(--error-accent, #e74c3c);
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    word-break: break-word;
   }
+}
+
+.warning-arrow {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.warning-decrease {
+  color: var(--warning-accent);
+  font-weight: 600;
+}
+
+.warning-decrease-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--warning-accent);
+  background: rgba(204, 136, 1, 0.15);
+  padding: 1px 5px;
+  border-radius: 3px;
 }

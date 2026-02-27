@@ -169,6 +169,11 @@ export interface ScanWarningInfo {
   new_multiplier?: number;
   decrease_percent?: number;
   timestamp?: number;
+  failed_job?: string;
+  error_message?: string;
+  stage?: string;
+  retry_attempt?: number;
+  max_retries?: number;
 }
 
 export interface ScanSummary {
