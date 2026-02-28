@@ -11,7 +11,7 @@
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
-    "stamp": "node scripts/stamp-version.js",
+    "stamp": "node scripts/stamp-version.js --force",
     "dev": "vite",
     "dev:electron": "vite & electron .",
     "dev:local": "npm run dev:electron",
