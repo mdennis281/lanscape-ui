@@ -21,12 +21,16 @@ export function Overview() {
   const isRunning = status?.is_running ?? false;
   const scannedHosts = status?.scanned_hosts ?? 0;
   const totalHosts = status?.total_hosts ?? 0;
-  const portsScanned = status?.ports_scanned ?? 0;
   const portsTotal = status?.ports_total ?? 0;
   const runtime = status?.runtime ?? 0;
   const remaining = status?.remaining ?? 0;
   const stage = status?.stage ?? 'idle';
   const progress = status?.progress ?? 0;
+
+  // When scan completes (isRunning goes false), snap ports_scanned to ports_total
+  // so the odometer animates to the final count instead of stopping short
+  const rawPortsScanned = status?.ports_scanned ?? 0;
+  const portsScanned = (!isRunning && portsTotal > 0) ? portsTotal : rawPortsScanned;
 
   // Show port progress once we enter port scanning
   const showPortProgress = PORT_SCAN_STAGES.includes(stage);
