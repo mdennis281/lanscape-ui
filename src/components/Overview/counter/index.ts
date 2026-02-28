@@ -21,6 +21,7 @@ export {
   // Spec builders
   decimalSpecs,
   timeSpecs,
+  hexSpecs,
   // Debug helpers
   formatPositions,
   runPositionTests,

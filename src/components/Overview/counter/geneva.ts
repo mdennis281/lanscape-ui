@@ -56,6 +56,13 @@ export const DIGIT_HEIGHT = 1.2;
  */
 export const DEFAULT_ENGAGE = 3;
 
+/**
+ * DEFAULT_INTENSITY: Multiplier for how far the next digit rolls during the engage phase.
+ * 1 means with engage=2 and base=10, the next digit rolls a full position 
+ * (e.g. from 4.00 to 5.00) as the lower digit goes from 8 to 0.
+ */
+export const DEFAULT_INTENSITY = .25;
+
 // ── Animation presets ───────────────────────────────────────────────
 
 /** Animation config for number counters (IP counts, port counts, etc.) */
@@ -93,26 +100,29 @@ export function animationDuration(diff: number, config: AnimationConfig): number
   );
 }
 
+
 /**
- * Compute the continuous display position of a single wheel.
+ * Calculates the rotational position of a single wheel in a Geneva-drive–style
+ * odometer mechanism.
  *
- * Cascading bias: each digit starts rolling when the combined value of all
- * lower digits is within `engage` steps of causing a carry.
- *
- * @param V           - Current (possibly fractional) counter value
- * @param placeValue  - This wheel's place value (1, 10, 100, 60, 600…)
- * @param base        - Number of positions on this wheel (10, 6, 16…)
- * @param continuous  - If true, wheel scrolls continuously (for the lowest-order digit)
- * @param engage      - Number of steps before carry where bias starts (default 3)
- * @returns           - Continuous position in [0, base), possibly with fractional part
- *
- * Examples with base=10, engage=3:
- *   wheelPosition(96, 100, 10, false)  → 0.0   (hundreds settled)
- *   wheelPosition(97, 100, 10, false)  → 0.25  (hundreds starting)
- *   wheelPosition(98, 100, 10, false)  → 0.5   (hundreds mid-roll)
- *   wheelPosition(99, 100, 10, false)  → 0.75  (hundreds almost there)
- *   wheelPosition(100, 100, 10, false) → 1.0   (hundreds settled at 1)
- *   wheelPosition(105, 100, 10, false) → 1.0   (hundreds settled at 1)
+ * @param V - The current numeric value driving the entire counter.
+ * @param placeValue - The place value this wheel represents (e.g. 1, 10, 100).
+ * @param base - The numeric base / number of positions per wheel (e.g. 10 for decimal).
+ * @param continuous - If `true`, the wheel scrolls smoothly and linearly (used for the
+ *   lowest-order digit). If `false`, the wheel snaps between digits and only
+ *   animates during the engage zone near a carry.
+ * @param engage - The size of the engage zone (in sub-value units) before a carry occurs.
+ *   Within this zone the wheel begins transitioning toward the next digit.
+ *   Defaults to {@link DEFAULT_ENGAGE}.
+ * @param intensity_base - Controls how much of the full transition the wheel completes
+ *   during the engage zone under normal conditions. A value of `1` means the wheel
+ *   travels the entire distance to the next digit; values less than `1` produce a
+ *   subtler partial rotation. As the wheel approaches a full-base rollover
+ *   (e.g. 9 → 0 in base 10), intensity is dynamically ramped up toward `1` so the
+ *   final "flop" always completes cleanly regardless of the base intensity.
+ *   Defaults to {@link DEFAULT_INTENSITY}.
+ * @returns The fractional wheel position in the range `[0, base)`, where integer
+ *   values represent fully settled digit positions.
  */
 export function wheelPosition(
   V: number,
@@ -120,12 +130,15 @@ export function wheelPosition(
   base: number,
   continuous: boolean,
   engage: number = DEFAULT_ENGAGE,
+  intensity_base: number = DEFAULT_INTENSITY,
 ): number {
   if (continuous) {
     // Lowest-order wheel: fully continuous — always scrolling
     const exactPos = V / placeValue;
     return ((exactPos % base) + base) % base;
   }
+
+  let intensity = intensity_base;
 
   // Integer digit at this place value
   const digit = Math.floor(V / placeValue) % base;
@@ -140,9 +153,18 @@ export function wheelPosition(
   if (subValue >= engageStart) {
     // In the engage zone: linear bias from 0 to 1
     const bias = (subValue - engageStart) / engage;
-    return digit + bias;
-  }
+    
+    // Clean yet dramatic flop between 9 and 10 (placeValue==10)
+    const leftTillFlop = placeValue - ( subValue % placeValue );
+    if (leftTillFlop < 1) {
+      intensity = Math.min(1, intensity_base + (1-leftTillFlop))
+    }
 
+    console.log(`Engage! engageStart=${engageStart} subValue=${subValue.toFixed(2)} digit=${digit} bias=${bias.toFixed(2)}, intensity=${intensity}, leftTillFlop=${leftTillFlop}, base=${base} digit=${digit} → ${digit + bias * intensity} placeValue=${placeValue}`);
+    
+    return digit + ( bias * intensity );
+  }
+  console.log(`No engage. subValue=${subValue.toFixed(2)} digit=${digit} → ${digit}`);
   // Otherwise, digit is settled at its integer position
   return digit;
 }
@@ -169,10 +191,12 @@ export function computePositions(
   V: number,
   specs: WheelSpec[],
   engage: number = DEFAULT_ENGAGE,
+  intensity: number = DEFAULT_INTENSITY,
 ): number[] {
   const lastIdx = specs.length - 1;
+  console.log(`specs: `, specs)
   return specs.map((spec, i) =>
-    wheelPosition(V, spec.placeValue, spec.base, i === lastIdx, engage)
+    wheelPosition(V, spec.placeValue, spec.base, i === lastIdx, engage, intensity)
   );
 }
 
@@ -200,6 +224,19 @@ export function timeSpecs(): WheelSpec[] {
     { base: 6,  placeValue: 10 },   // seconds tens
     { base: 10, placeValue: 1 },    // seconds ones
   ];
+}
+
+/**
+ * Build wheel specs for an N-digit hexadecimal counter.
+ * Each wheel has base 16, place values are powers of 16.
+ * e.g. 3 → [256, 16, 1] for values 0x000–0xFFF
+ */
+export function hexSpecs(numDigits: number): WheelSpec[] {
+  const specs: WheelSpec[] = [];
+  for (let i = 0; i < numDigits; i++) {
+    specs.push({ base: 16, placeValue: Math.pow(16, numDigits - 1 - i) });
+  }
+  return specs;
 }
 
 // ── Debug helpers ───────────────────────────────────────────────────

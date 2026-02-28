@@ -1,8 +1,9 @@
 import { useState, type CSSProperties, type FormEvent } from 'react';
-import { Odometer, OdometerTime } from './Odometer';
+import { Odometer, OdometerTime, HexOdometer } from './Odometer';
 import {
   decimalSpecs,
   timeSpecs,
+  hexSpecs,
   computePositions,
   formatPositions,
   runPositionTests,
@@ -104,11 +105,16 @@ export function OdometerDebug() {
   const [timeSeconds, setTimeSeconds] = useState(0);
   const [timeResetKey, setTimeResetKey] = useState(0);
 
+  // Hex odometer state
+  const [hexValue, setHexValue] = useState(0);
+  const [hexDigits, setHexDigits] = useState(3);
+
   // Custom test value for position readout
   const [testValue, setTestValue] = useState(258);
 
   const decSpecs = decimalSpecs(numDigits);
   const tSpecs = timeSpecs();
+  const hSpecs = hexSpecs(hexDigits);
 
   return (
     <div style={containerStyle}>
@@ -216,6 +222,60 @@ export function OdometerDebug() {
         </p>
       </Section>
 
+      {/* ─── Hex Odometer ────────────────────────────── */}
+      <Section title="Hex Odometer (Base 16)">
+        <div style={displayStyle}>
+          <HexOdometer value={hexValue} digits={hexDigits} />
+        </div>
+
+        <PositionReadout value={hexValue} specs={hSpecs} label="Positions" />
+
+        <div style={{ color: '#888', fontSize: '0.85rem', marginBottom: '8px' }}>
+          Decimal: {hexValue} | Hex: 0x{hexValue.toString(16).toUpperCase().padStart(hexDigits, '0')}
+        </div>
+
+        <div style={controlsStyle}>
+          <ApplyInput label="Value" value={hexValue} onChange={setHexValue} max={Math.pow(16, hexDigits) - 1} />
+          <ApplyInput label="Digits" value={hexDigits} onChange={setHexDigits} min={1} max={4} width="60px" />
+        </div>
+
+        <Presets
+          presets={[
+            { label: '0x0', value: 0 },
+            { label: '0xF', value: 15 },
+            { label: '0x10', value: 16 },
+            { label: '0x1F', value: 31 },
+            { label: '0xFF', value: 255 },
+            { label: '0x100', value: 256 },
+            { label: '0xABC', value: 0xABC },
+            { label: '0xFFF', value: 0xFFF },
+          ]}
+          onSelect={setHexValue}
+        />
+
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+          <button onClick={() => setHexValue((v) => Math.max(0, v - 1))} style={buttonStyle}>−1</button>
+          <button onClick={() => setHexValue((v) => v + 1)} style={buttonStyle}>+1</button>
+          <button onClick={() => setHexValue((v) => Math.max(0, v - 16))} style={buttonStyle}>−0x10</button>
+          <button onClick={() => setHexValue((v) => v + 16)} style={buttonStyle}>+0x10</button>
+          <button onClick={() => setHexValue((v) => Math.max(0, v - 256))} style={buttonStyle}>−0x100</button>
+          <button onClick={() => setHexValue((v) => v + 256)} style={buttonStyle}>+0x100</button>
+        </div>
+
+        <div style={{ marginTop: '12px' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '0.9rem', color: '#888' }}>Carry boundary presets:</h3>
+          <Presets
+            presets={[
+              { label: '0xFD (E starts)', value: 0xFD },
+              { label: '0xFE (E mid)', value: 0xFE },
+              { label: '0xFF (E almost)', value: 0xFF },
+              { label: '0x100 (E settled)', value: 0x100 },
+            ]}
+            onSelect={setHexValue}
+          />
+        </div>
+      </Section>
+
       {/* ─── Position Calculator ───────────────────────── */}
       <Section title="Position Calculator">
         <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '12px' }}>
@@ -227,6 +287,7 @@ export function OdometerDebug() {
         <div style={{ marginTop: '12px' }}>
           <PositionReadout value={testValue} specs={decimalSpecs(3)} label="3-digit" />
           <PositionReadout value={testValue} specs={timeSpecs()} label="MM:SS" />
+          <PositionReadout value={testValue} specs={hexSpecs(3)} label="3-hex" />
         </div>
 
         <p style={{ color: '#555', fontSize: '0.75rem', marginTop: '8px' }}>

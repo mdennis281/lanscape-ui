@@ -3,6 +3,7 @@ import {
   CounterWheel,
   decimalSpecs,
   timeSpecs,
+  hexSpecs,
   computePositions,
   animationDuration,
   NUMBER_ANIMATION,
@@ -36,6 +37,11 @@ export function Odometer({ value, digits, className = '' }: OdometerProps) {
   const [positions, setPositions] = useState<number[]>(() =>
     computePositions(targetValue, specs)
   );
+
+  // Reset positions immediately when digits changes (specs array changed)
+  useEffect(() => {
+    setPositions(computePositions(targetValue, specs));
+  }, [digits]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const startValue = prevValueRef.current;
@@ -81,8 +87,86 @@ export function Odometer({ value, digits, className = '' }: OdometerProps) {
 
   return (
     <span className={`odometer ${className}`}>
-      {positions.map((pos, i) => (
-        <CounterWheel key={i} position={pos} base={specs[i].base} />
+      {specs.map((spec, i) => (
+        <CounterWheel key={i} position={positions[i] ?? 0} base={spec.base} />
+      ))}
+    </span>
+  );
+}
+
+// ============================================================================
+// HEX ODOMETER — Base-16 counter with Geneva mechanism animation
+// ============================================================================
+
+interface HexOdometerProps {
+  value: number;
+  digits: number;  // How many hex digits to display (pads with zeros)
+  className?: string;
+}
+
+/**
+ * Hexadecimal odometer with realistic mechanical animation.
+ * Displays values 0-F per digit, using the same Geneva mechanism as decimal.
+ */
+export function HexOdometer({ value, digits, className = '' }: HexOdometerProps) {
+  const specs = useMemo(() => hexSpecs(digits), [digits]);
+  const targetValue = Math.max(0, Math.floor(value));
+
+  const prevValueRef = useRef(targetValue);
+  const frameRef = useRef<number | null>(null);
+  const [positions, setPositions] = useState<number[]>(() =>
+    computePositions(targetValue, specs)
+  );
+
+  // Reset positions when digits changes
+  useEffect(() => {
+    setPositions(computePositions(targetValue, specs));
+  }, [digits]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const startValue = prevValueRef.current;
+    if (targetValue === startValue) return;
+
+    if (frameRef.current) cancelAnimationFrame(frameRef.current);
+
+    const diff = targetValue - startValue;
+    const duration = animationDuration(diff, NUMBER_ANIMATION);
+    const { easing } = NUMBER_ANIMATION;
+    const startTime = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const currentV = startValue + diff * easing(progress);
+      setPositions(computePositions(currentV, specs));
+
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(animate);
+      } else {
+        setPositions(computePositions(targetValue, specs));
+        frameRef.current = null;
+      }
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
+    prevValueRef.current = targetValue;
+
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
+  }, [targetValue, specs]);
+
+  useEffect(() => {
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
+  }, []);
+
+  return (
+    <span className={`odometer ${className}`}>
+      <span style={{ color: '#888', marginRight: '0.1em' }}>0x</span>
+      {specs.map((spec, i) => (
+        <CounterWheel key={i} position={positions[i] ?? 0} base={spec.base} />
       ))}
     </span>
   );
@@ -186,11 +270,11 @@ export function OdometerTime({ seconds, className = '', resetKey }: OdometerTime
 
   return (
     <span className={`odometer ${className}`}>
-      <CounterWheel position={positions[0]} base={specs[0].base} />
-      <CounterWheel position={positions[1]} base={specs[1].base} />
+      <CounterWheel position={positions[0] ?? 0} base={specs[0]?.base ?? 10} />
+      <CounterWheel position={positions[1] ?? 0} base={specs[1]?.base ?? 10} />
       <span className="odometer-colon">:</span>
-      <CounterWheel position={positions[2]} base={specs[2].base} />
-      <CounterWheel position={positions[3]} base={specs[3].base} />
+      <CounterWheel position={positions[2] ?? 0} base={specs[2]?.base ?? 6} />
+      <CounterWheel position={positions[3] ?? 0} base={specs[3]?.base ?? 10} />
     </span>
   );
 }
