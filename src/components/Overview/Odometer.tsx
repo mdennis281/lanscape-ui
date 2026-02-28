@@ -5,10 +5,36 @@ import {
   timeSpecs,
   hexSpecs,
   computePositions,
+  settledPositions,
   animationDuration,
   NUMBER_ANIMATION,
   TIME_ANIMATION,
 } from './counter';
+
+// ============================================================================
+// JIGGLE ANIMATION — Damped oscillation for lock-in effect
+// ============================================================================
+
+/** Duration of the jiggle animation in ms */
+const JIGGLE_DURATION = 400;
+/** Number of oscillations during jiggle */
+const JIGGLE_FREQUENCY = 3;
+/** Initial amplitude of jiggle (in digit units) */
+const JIGGLE_AMPLITUDE = 0.08;
+
+/**
+ * Compute jiggle offset for a single wheel.
+ * Uses damped sine wave: amplitude * sin(freq * t) * e^(-decay * t)
+ * Only jiggles if the wheel was off-center (had fractional position).
+ */
+function jiggleOffset(progress: number, wasFractional: boolean): number {
+  if (!wasFractional) return 0;
+  const decay = 4; // How quickly oscillation dies down
+  const t = progress * JIGGLE_DURATION / 1000;
+  const envelope = Math.exp(-decay * t);
+  const wave = Math.sin(2 * Math.PI * JIGGLE_FREQUENCY * progress);
+  return JIGGLE_AMPLITUDE * wave * envelope;
+}
 
 // ============================================================================
 // ODOMETER COMPONENT — Decimal counter with Geneva mechanism animation
@@ -181,6 +207,8 @@ interface OdometerTimeProps {
   className?: string;
   /** When this value changes, instantly reset to 0 instead of animating */
   resetKey?: string | number;
+  /** When true, snap wheels to settled positions with jiggle effect */
+  locked?: boolean;
 }
 
 /**
@@ -189,16 +217,21 @@ interface OdometerTimeProps {
  * Uses mixed-base wheels: 10 for most digits, 6 for seconds tens (0-5).
  * Animates via Geneva mechanism with appropriate carry boundaries.
  */
-export function OdometerTime({ seconds, className = '', resetKey }: OdometerTimeProps) {
+export function OdometerTime({ seconds, className = '', resetKey, locked = false }: OdometerTimeProps) {
   // Memoize specs to prevent animation cancellation on re-renders
   const specs = useMemo(() => timeSpecs(), []);
-  const targetSecs = Math.floor(Math.max(0, seconds));
+  // Keep fractional seconds for smooth animation - only floor for position computation
+  const targetSecs = Math.max(0, seconds);
 
   const currentRef = useRef(targetSecs);
   const frameRef = useRef<number | null>(null);
+  const jiggleFrameRef = useRef<number | null>(null);
   const [positions, setPositions] = useState<number[]>(() =>
     computePositions(targetSecs, specs)
   );
+
+  // Track locked state for jiggle animation
+  const [prevLocked, setPrevLocked] = useState(locked);
 
   // Track resetKey for instant reset
   const [prevResetKey, setPrevResetKey] = useState(resetKey);
@@ -224,8 +257,63 @@ export function OdometerTime({ seconds, className = '', resetKey }: OdometerTime
     currentRef.current = 0;
   }, [resetKey]);
 
-  // Main animation effect
+  // Jiggle animation when locked becomes true
   useEffect(() => {
+    if (locked && !prevLocked) {
+      // Just became locked - start jiggle animation
+      setPrevLocked(true);
+
+      // Cancel any running value animation
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+
+      // Capture current positions and compute which wheels were fractional
+      const currentPositions = positions;
+      const targetPositions = settledPositions(Math.floor(targetSecs), specs);
+      const wasFractional = currentPositions.map((pos) => {
+        const frac = Math.abs(pos - Math.round(pos));
+        return frac > 0.01; // Consider fractional if > 1% off integer
+      });
+
+      const startTime = performance.now();
+
+      const animateJiggle = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / JIGGLE_DURATION);
+
+        // Ease towards target with jiggle overlay
+        const easeProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const jiggled = targetPositions.map((target, i) => {
+          const start = currentPositions[i];
+          const current = start + (target - start) * easeProgress;
+          return current + jiggleOffset(progress, wasFractional[i]);
+        });
+
+        setPositions(jiggled);
+
+        if (progress < 1) {
+          jiggleFrameRef.current = requestAnimationFrame(animateJiggle);
+        } else {
+          // Snap to exact settled positions
+          setPositions(targetPositions);
+          currentRef.current = Math.floor(targetSecs);
+          jiggleFrameRef.current = null;
+        }
+      };
+
+      jiggleFrameRef.current = requestAnimationFrame(animateJiggle);
+    } else if (!locked && prevLocked) {
+      // Unlocked - just update state
+      setPrevLocked(false);
+    }
+  }, [locked]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Main animation effect (skip if locked)
+  useEffect(() => {
+    if (locked) return; // Don't animate while locked
+
     const startValue = currentRef.current;
     const diff = targetSecs - startValue;
 
@@ -259,12 +347,13 @@ export function OdometerTime({ seconds, className = '', resetKey }: OdometerTime
     };
 
     frameRef.current = requestAnimationFrame(animate);
-  }, [targetSecs, specs]);
+  }, [targetSecs, specs, locked]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      if (jiggleFrameRef.current) cancelAnimationFrame(jiggleFrameRef.current);
     };
   }, []);
 

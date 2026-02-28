@@ -160,11 +160,8 @@ export function wheelPosition(
       intensity = Math.min(1, intensity_base + (1-leftTillFlop))
     }
 
-    console.log(`Engage! engageStart=${engageStart} subValue=${subValue.toFixed(2)} digit=${digit} bias=${bias.toFixed(2)}, intensity=${intensity}, leftTillFlop=${leftTillFlop}, base=${base} digit=${digit} → ${digit + bias * intensity} placeValue=${placeValue}`);
-    
     return digit + ( bias * intensity );
   }
-  console.log(`No engage. subValue=${subValue.toFixed(2)} digit=${digit} → ${digit}`);
   // Otherwise, digit is settled at its integer position
   return digit;
 }
@@ -194,7 +191,6 @@ export function computePositions(
   intensity: number = DEFAULT_INTENSITY,
 ): number[] {
   const lastIdx = specs.length - 1;
-  console.log(`specs: `, specs)
   return specs.map((spec, i) =>
     wheelPosition(V, spec.placeValue, spec.base, i === lastIdx, engage, intensity)
   );

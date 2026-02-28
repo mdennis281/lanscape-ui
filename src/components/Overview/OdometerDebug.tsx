@@ -104,6 +104,7 @@ export function OdometerDebug() {
   // Time odometer state
   const [timeSeconds, setTimeSeconds] = useState(0);
   const [timeResetKey, setTimeResetKey] = useState(0);
+  const [timeLocked, setTimeLocked] = useState(false);
 
   // Hex odometer state
   const [hexValue, setHexValue] = useState(0);
@@ -178,7 +179,8 @@ export function OdometerDebug() {
       {/* ─── Time Odometer ───────────────────────────── */}
       <Section title="Time Odometer (MM:SS)">
         <div style={displayStyle}>
-          <OdometerTime seconds={timeSeconds} resetKey={timeResetKey} />
+          <OdometerTime seconds={timeSeconds} resetKey={timeResetKey} locked={timeLocked} />
+          {timeLocked && <span style={{ marginLeft: '12px', color: '#f80', fontSize: '0.75rem' }}>🔒 LOCKED</span>}
         </div>
 
         <PositionReadout value={timeSeconds} specs={tSpecs} label="Positions" />
@@ -210,15 +212,32 @@ export function OdometerDebug() {
           <button onClick={() => setTimeSeconds((v) => Math.max(0, v - 60))} style={buttonStyle}>−60s</button>
           <button onClick={() => setTimeSeconds((v) => v + 60)} style={buttonStyle}>+60s</button>
           <button
-            onClick={() => { setTimeResetKey((k) => k + 1); setTimeSeconds(0); }}
+            onClick={() => { setTimeResetKey((k) => k + 1); setTimeSeconds(0); setTimeLocked(false); }}
             style={{ ...buttonStyle, background: '#6a3a3a' }}
           >
             Reset (instant)
           </button>
         </div>
 
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+          <button
+            onClick={() => setTimeLocked(true)}
+            style={{ ...buttonStyle, background: timeLocked ? '#555' : '#3a5a3a' }}
+            disabled={timeLocked}
+          >
+            🔒 Lock
+          </button>
+          <button
+            onClick={() => setTimeLocked(false)}
+            style={{ ...buttonStyle, background: !timeLocked ? '#555' : '#5a3a3a' }}
+            disabled={!timeLocked}
+          >
+            🔓 Unlock
+          </button>
+        </div>
+
         <p style={{ color: '#666', fontSize: '0.8rem', marginTop: '12px' }}>
-          Try jumping 60→500 to test speed scaling on large diffs.
+          Try setting time to 58.5s or a mid-transition value, then Lock to see jiggle effect.
         </p>
       </Section>
 

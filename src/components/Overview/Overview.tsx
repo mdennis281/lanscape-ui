@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useScanStore } from '../../store';
 import { Odometer, OdometerTime } from './Odometer';
 
@@ -11,6 +11,47 @@ function digitCount(n: number): number {
 // Stages where port scanning is active
 const PORT_SCAN_STAGES = ['testing ports', 'complete', 'terminated'];
 
+/**
+ * Hook for smooth local runtime counting.
+ * 
+ * Instead of jumping to server-sent runtime values (which causes choppy updates),
+ * this hook starts a local timer when the scan begins and increments smoothly
+ * every second. On scan complete, it syncs to the final server value.
+ */
+function useLocalRuntime(isRunning: boolean, serverRuntime: number): number {
+  const [localRuntime, setLocalRuntime] = useState(0);
+  const startTimeRef = useRef<number | null>(null);
+  const initialOffsetRef = useRef(0);
+
+  // When scan starts, capture the start time and any initial offset from server
+  useEffect(() => {
+    if (isRunning) {
+      // Scan just started - begin local counting
+      startTimeRef.current = Date.now();
+      initialOffsetRef.current = serverRuntime; // Usually 0 or 1
+      setLocalRuntime(serverRuntime);
+    } else {
+      // Scan stopped - sync to final server value
+      startTimeRef.current = null;
+      setLocalRuntime(serverRuntime);
+    }
+  }, [isRunning]); // Only react to isRunning changes, not serverRuntime
+
+  // Increment local runtime smoothly while scan is running (0.1s precision)
+  useEffect(() => {
+    if (!isRunning || startTimeRef.current === null) return;
+
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - startTimeRef.current!) / 1000;
+      setLocalRuntime(initialOffsetRef.current + elapsed);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  return localRuntime;
+}
+
 export function Overview() {
   const status = useScanStore((state) => state.status);
   const scanErrors = useScanStore((state) => state.scanErrors);
@@ -22,10 +63,13 @@ export function Overview() {
   const scannedHosts = status?.scanned_hosts ?? 0;
   const totalHosts = status?.total_hosts ?? 0;
   const portsTotal = status?.ports_total ?? 0;
-  const runtime = status?.runtime ?? 0;
+  const serverRuntime = status?.runtime ?? 0;
   const remaining = status?.remaining ?? 0;
   const stage = status?.stage ?? 'idle';
   const progress = status?.progress ?? 0;
+
+  // Use local runtime for smooth counting instead of choppy server updates
+  const runtime = useLocalRuntime(isRunning, serverRuntime);
 
   // When scan completes (isRunning goes false), snap ports_scanned to ports_total
   // so the odometer animates to the final count instead of stopping short
@@ -47,6 +91,9 @@ export function Overview() {
       setScanResetKey((k) => k + 1);
     }
   }
+
+  // Lock the time odometer when scan stops (shows final time with jiggle)
+  const timeLocked = !isRunning && serverRuntime > 0;
 
   const pctComplete = progress * 100;
   const showRemaining = pctComplete >= 10;
@@ -90,7 +137,7 @@ export function Overview() {
         {/* Time */}
         <div className="scan-stat">
           <i className="fa-regular fa-clock scan-stat-icon" />
-          <OdometerTime seconds={runtime} className="scan-stat-value" resetKey={scanResetKey} />
+          <OdometerTime seconds={runtime} className="scan-stat-value" resetKey={scanResetKey} locked={timeLocked} />
           {isRunning && showRemaining && (
             <>
               <span className="scan-stat-sep">/</span>
