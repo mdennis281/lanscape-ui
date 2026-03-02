@@ -71,10 +71,12 @@ export function Overview() {
   // Use local runtime for smooth counting instead of choppy server updates
   const runtime = useLocalRuntime(isRunning, serverRuntime);
 
-  // When scan completes (isRunning goes false), snap ports_scanned to ports_total
-  // so the odometer animates to the final count instead of stopping short
+  // When scan completes normally (stage='complete'), snap ports_scanned to ports_total
+  // so the odometer animates to the final count instead of stopping short.
+  // Don't snap on termination - show actual ports scanned.
   const rawPortsScanned = status?.ports_scanned ?? 0;
-  const portsScanned = (!isRunning && portsTotal > 0) ? portsTotal : rawPortsScanned;
+  const scanCompleted = stage === 'complete';
+  const portsScanned = (scanCompleted && portsTotal > 0) ? portsTotal : rawPortsScanned;
 
   // Show port progress once we enter port scanning
   const showPortProgress = PORT_SCAN_STAGES.includes(stage);
