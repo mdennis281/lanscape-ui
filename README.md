@@ -1,6 +1,10 @@
-# LANscape Desktop
+# lanscape-ui
 
-A cross-platform desktop application for scanning and monitoring local network devices. Built with Electron and React, LANscape Desktop provides a modern interface for the [LANscape](https://github.com/mdennis281/LANscape) network scanning library.
+The UI for: [LANscape](https://github.com/mdennis281/LANscape)
+
+This repo is still WIP, git/PR policies still havent been setup yet. I will get to it eventually. 
+
+TLDR: started off as an electron app, but then i realized i can dump the react build into the python library instead of importing the python library into this. I like the current approach better because I dont have to worry about executable signing. That being said, a lot of the electron build stuff is still present here.
 
 ## How It Works
 
