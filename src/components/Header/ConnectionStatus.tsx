@@ -1,8 +1,8 @@
-import { useScanStore } from '../../store';
+import { useConnectionStore } from '../../store';
 import { getCurrentWSServer } from '../../utils';
 
 export function ConnectionStatus() {
-  const connectionStatus = useScanStore((state) => state.connectionStatus);
+  const connectionStatus = useConnectionStore((state) => state.connectionStatus);
   const wsServer = getCurrentWSServer();
 
   const statusLabels: Record<string, string> = {

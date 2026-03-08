@@ -8,7 +8,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import '../../types/electron'; // Import electron types for global Window augmentation
 import { setWebSocketPort } from '../../utils/url';
-import './StartupScreen.css';
 
 interface StartupScreenProps {
   onReady: () => void;

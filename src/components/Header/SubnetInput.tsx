@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useScanStore } from '../../store';
+import { useScanStore, useUIStore } from '../../store';
 import type { SubnetInfo, SubnetTestResult } from '../../types';
 
 interface SubnetInputProps {
@@ -10,7 +10,8 @@ interface SubnetInputProps {
 }
 
 export function SubnetInput({ disabled, onSettingsClick, validation, onSubmit }: SubnetInputProps) {
-  const { subnetInput, setSubnetInput, subnets } = useScanStore();
+  const subnets = useScanStore((s) => s.subnets);
+  const { subnetInput, setSubnetInput } = useUIStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

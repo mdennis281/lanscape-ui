@@ -17,7 +17,7 @@ import {
 import { OdometerDebug } from './components/Overview/OdometerDebug';
 import { createWebSocketService } from './services';
 import type { WebSocketService } from './services';
-import { useScanStore } from './store';
+import { useConnectionStore, useScanStore, useUIStore } from './store';
 import { resolveWebSocketURL } from './utils';
 import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig } from './types';
 import './types/electron'; // Import electron types for global Window augmentation
@@ -56,17 +56,26 @@ function MainApp() {
   /** Ref to the current WS service for the reconnect-reload helper. */
   const wsRef = useRef<WebSocketService | null>(null);
   
+  // --- Connection store ---
   const {
     connectionStatus,
     setConnectionStatus,
     setConnectionError,
     setWsService,
     setAppInfo,
+  } = useConnectionStore();
+
+  // --- Scan store ---
+  const {
     setConfig,
     setSubnets,
     setDefaultConfigs,
     setPortLists,
     handleEvent,
+  } = useScanStore();
+
+  // --- UI store ---
+  const {
     selectedDevice,
     setSelectedDevice,
     showSettings,
@@ -82,7 +91,7 @@ function MainApp() {
     showConnection,
     setShowConnection,
     setSubnetInput,
-  } = useScanStore();
+  } = useUIStore();
 
   const onEvent = useCallback((event: WSEvent) => {
     handleEvent(event);
@@ -175,14 +184,28 @@ function MainApp() {
 
   // When status transitions back to 'connected' after the initial load,
   // re-fetch data (handles reconnects and server-URL changes).
+  // Also handles completing initial load when auto-reconnect succeeds.
   useEffect(() => {
-    if (connectionStatus !== 'connected' || !hasLoadedOnce.current) return;
+    if (connectionStatus !== 'connected') return;
     const ws = wsRef.current;
     if (!ws) return;
 
-    loadInitialData(ws).catch((err) => {
-      console.error('Failed to reload data after reconnect:', err);
-    });
+    if (!hasLoadedOnce.current) {
+      // First successful connection (from auto-reconnect after initial failure)
+      loadInitialData(ws)
+        .then(() => {
+          hasLoadedOnce.current = true;
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.error('Failed to load initial data after reconnect:', err);
+        });
+    } else {
+      // Subsequent reconnection
+      loadInitialData(ws).catch((err) => {
+        console.error('Failed to reload data after reconnect:', err);
+      });
+    }
   }, [connectionStatus, loadInitialData]);
 
   useEffect(() => {
@@ -197,8 +220,6 @@ function MainApp() {
       // Resolve the best WS URL (may query mDNS discovery)
       const wsUrl = await resolveWebSocketURL();
       if (cancelled) return;
-
-      console.log('Connecting to WebSocket:', wsUrl);
 
       const ws = createWebSocketService({
         url: wsUrl,
@@ -222,40 +243,26 @@ function MainApp() {
       wsRef.current = ws;
       setWsService(ws);
 
-      const MAX_INITIAL_RETRIES = 8;
-      const RETRY_DELAY_MS = 2500;
+      // Single connection attempt — the WebSocket service handles retries
+      // via its built-in exponential backoff reconnect logic.
+      setLoadingRetry({ attempt: 1, max: 1, failed: false });
 
-      for (let attempt = 1; attempt <= MAX_INITIAL_RETRIES; attempt++) {
+      try {
+        await ws.connect();
         if (cancelled) return;
 
-        setLoadingRetry({ attempt, max: MAX_INITIAL_RETRIES, failed: false });
+        // Connected — load initial data
+        await loadInitialData(ws);
+        if (cancelled) return;
 
-        try {
-          await ws.connect();
-          if (cancelled) return;
-
-          // Connected — load initial data
-          await loadInitialData(ws);
-          if (cancelled) return;
-
-          hasLoadedOnce.current = true;
-          setIsLoading(false);
-          return; // success
-        } catch (error) {
-          if (cancelled) return;
-          console.warn(`Initial connection attempt ${attempt}/${MAX_INITIAL_RETRIES} failed:`, error);
-
-          // Wait before next attempt (unless it was the last)
-          if (attempt < MAX_INITIAL_RETRIES) {
-            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
-          }
-        }
-      }
-
-      // All retries exhausted
-      if (!cancelled) {
-        console.error('All initial connection attempts failed');
-        setLoadingRetry({ attempt: MAX_INITIAL_RETRIES, max: MAX_INITIAL_RETRIES, failed: true });
+        hasLoadedOnce.current = true;
+        setIsLoading(false);
+      } catch {
+        if (cancelled) return;
+        // First attempt failed — show as loading with reconnect in progress.
+        // The service's auto-reconnect will keep trying in the background.
+        // Listen for the eventual connected status to finish loading.
+        setLoadingRetry({ attempt: 1, max: 1, failed: true });
         setConnectionError('Unable to reach the backend server');
       }
     };

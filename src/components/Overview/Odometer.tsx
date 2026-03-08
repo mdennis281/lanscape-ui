@@ -66,7 +66,7 @@ export function Odometer({ value, digits, className = '' }: OdometerProps) {
 
   // Reset positions immediately when digits changes (specs array changed)
   useEffect(() => {
-    setPositions(computePositions(targetValue, specs));
+    setPositions(computePositions(targetValue, specs)); // eslint-disable-line react-hooks/set-state-in-effect -- sync to spec change
   }, [digits]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -146,7 +146,7 @@ export function HexOdometer({ value, digits, className = '' }: HexOdometerProps)
 
   // Reset positions when digits changes
   useEffect(() => {
-    setPositions(computePositions(targetValue, specs));
+    setPositions(computePositions(targetValue, specs)); // eslint-disable-line react-hooks/set-state-in-effect -- sync to spec change
   }, [digits]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -241,7 +241,7 @@ export function OdometerTime({ seconds, className = '', resetKey, locked = false
   if (resetKey !== undefined && resetKey !== prevResetKey) {
     setPrevResetKey(resetKey);
     setPositions(computePositions(0, specs));
-    currentRef.current = 0;
+    currentRef.current = 0; // eslint-disable-line react-hooks/refs -- intentional reset during derived-state render
   }
 
   // Cancel animation when resetKey changes

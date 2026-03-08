@@ -9,16 +9,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { PythonManager, LANSCAPE_VERSION } from './pythonManager';
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  if (require('electron-squirrel-startup')) {
-    app.quit();
-  }
-} catch {
-  // electron-squirrel-startup not installed, ignore
-}
-
 // Single instance lock - prevent multiple app windows
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {

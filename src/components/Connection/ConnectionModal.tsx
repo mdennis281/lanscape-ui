@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { Modal } from '../Modal';
-import { useScanStore } from '../../store';
+import { useConnectionStore } from '../../store';
 import { getCurrentWSServer, updateQueryParam } from '../../utils';
+import { getWebSocketService } from '../../services';
 import { fetchDiscoverInfo } from '../../services/discovery';
 import type { DiscoveredBackend, DiscoverResponse } from '../../services/discovery';
 
@@ -14,10 +15,9 @@ interface ConnectionModalProps {
 }
 
 export function ConnectionModal({ isOpen, onClose, blocking = false }: ConnectionModalProps) {
-  const connectionStatus = useScanStore((state) => state.connectionStatus);
-  const connectionError = useScanStore((state) => state.connectionError);
-  const appInfo = useScanStore((state) => state.appInfo);
-  const wsService = useScanStore((state) => state.wsService);
+  const connectionStatus = useConnectionStore((state) => state.connectionStatus);
+  const connectionError = useConnectionStore((state) => state.connectionError);
+  const appInfo = useConnectionStore((state) => state.appInfo);
   
   const [wsServer, setWsServer] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
@@ -27,10 +27,16 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
   const [isScanning, setIsScanning] = useState(false);
   const [pollCount, setPollCount] = useState(0);
 
+  /** Cancel any background auto-reconnect so manual input takes priority. */
+  const cancelAutoReconnect = useCallback(() => {
+    const ws = getWebSocketService();
+    ws?.cancelReconnect();
+  }, []);
+
   // Reset form state when modal opens
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting form on open
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- init on open
       setWsServer(getCurrentWSServer());
       setLocalError(null);
       setIsAttempting(false);
@@ -44,8 +50,7 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
     if (!isOpen) return;
 
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset scanning indicator on mount/poll
-    setIsScanning(true);
+    setIsScanning(true); // eslint-disable-line react-hooks/set-state-in-effect -- loading indicator
 
     fetchDiscoverInfo().then((info: DiscoverResponse) => {
       if (!cancelled) {
@@ -68,7 +73,7 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
   // Clear local error when connection succeeds
   useEffect(() => {
     if (connectionStatus === 'connected') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing on connect
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync to external status
       setLocalError(null);
       setIsAttempting(false);
     }
@@ -76,6 +81,7 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
 
   const handleConnect = async () => {
     const server = wsServer.trim();
+    const wsService = getWebSocketService();
     if (!server || !wsService) return;
 
     setLocalError(null);
@@ -104,16 +110,25 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
   };
 
   const handleRetry = async () => {
+    const wsService = getWebSocketService();
     if (!wsService) return;
     setLocalError(null);
     setIsAttempting(true);
     try {
+      wsService.cancelReconnect();
       await wsService.connect();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setLocalError(msg);
       setIsAttempting(false);
     }
+  };
+
+  /** When the user starts typing, cancel auto-reconnect so we don't fight. */
+  const handleServerInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setWsServer(e.target.value);
+    cancelAutoReconnect();
+    setLocalError(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -126,6 +141,7 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
     const server = `${backend.host}:${backend.ws_port}`;
     setWsServer(server);
     // Auto-connect immediately
+    const wsService = getWebSocketService();
     if (!wsService) return;
     setLocalError(null);
     setIsAttempting(true);
@@ -144,6 +160,8 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
   const displayError = localError || connectionError;
   const isConnecting = isAttempting || connectionStatus === 'connecting';
   const isConnected = connectionStatus === 'connected';
+  const wsService = getWebSocketService();
+  const isAutoReconnecting = wsService?.isReconnecting() ?? false;
 
   const statusLabels: Record<string, string> = {
     connected: 'Connected',
@@ -208,6 +226,11 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
             <div className="loading-bar">
               <div className="loading-bar-fill loading-bar-indeterminate" />
             </div>
+            {isAutoReconnecting && (
+              <span className="connection-reconnecting-hint">
+                Auto-reconnecting… Type below to override.
+              </span>
+            )}
           </div>
         )}
 
@@ -271,16 +294,15 @@ export function ConnectionModal({ isOpen, onClose, blocking = false }: Connectio
               className="form-input"
               placeholder="localhost:8766"
               value={wsServer}
-              onChange={(e) => setWsServer(e.target.value)}
+              onChange={handleServerInputChange}
               onKeyDown={handleKeyDown}
-              disabled={isConnecting}
             />
             <button 
               className="btn btn-primary btn-sm" 
               onClick={handleConnect}
-              disabled={!wsServer.trim() || isConnecting}
+              disabled={!wsServer.trim() || isAttempting}
             >
-              {isConnecting ? 'Connecting…' : 'Connect'}
+              {isAttempting ? 'Connecting…' : 'Connect'}
             </button>
           </div>
           {!isConnecting && !isConnected && wsServer === getCurrentWSServer() && (

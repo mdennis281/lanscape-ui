@@ -74,7 +74,6 @@ class WebSocketService {
 
       this.suppressReconnect = false;
       this.setStatus('connecting');
-      console.log(`Attempting to connect to: ${this.config.url}`);
 
       let settled = false;
 
@@ -85,18 +84,16 @@ class WebSocketService {
         const connectTimeout = setTimeout(() => {
           if (!settled) {
             settled = true;
-            console.error('WebSocket connection timeout');
             this.ws?.close();
             this.setStatus('error');
             reject(new Error('WebSocket connection timeout'));
           }
-        }, 10000); // 10 second timeout
+        }, 4000); // 4 second timeout
 
         this.ws.onopen = () => {
           clearTimeout(connectTimeout);
           if (!settled) {
             settled = true;
-            console.log('WebSocket connection established');
             this.setStatus('connected');
             this.reconnectAttempts = 0;
             resolve();
@@ -105,7 +102,6 @@ class WebSocketService {
 
         this.ws.onclose = (event) => {
           clearTimeout(connectTimeout);
-          console.log('WebSocket connection closed:', event.code, event.reason);
           // Only reject if we haven't resolved yet (connection failed before opening)
           if (!settled) {
             settled = true;
@@ -117,15 +113,9 @@ class WebSocketService {
           }
         };
 
-        this.ws.onerror = (event) => {
+        this.ws.onerror = () => {
           // Don't reject here - onerror is always followed by onclose
           // Let onclose handle the rejection
-          console.error('WebSocket error details:', {
-            event,
-            readyState: this.ws?.readyState,
-            url: this.config.url,
-            timestamp: new Date().toISOString()
-          });
         };
 
         this.ws.onmessage = (event) => {
@@ -178,23 +168,52 @@ class WebSocketService {
     return this.config.url;
   }
 
+  /**
+   * Cancel any pending auto-reconnect without fully disconnecting.
+   * Use this when the user starts manually editing the connection string
+   * so auto-reconnect doesn't fight with their input.
+   */
+  cancelReconnect(): void {
+    this.suppressReconnect = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempts = 0;
+    // If we're currently in a connecting state from auto-reconnect, surface that
+    if (this.status === 'connecting' && this.ws) {
+      this.ws.close();
+      this.ws = null;
+      this.setStatus('disconnected');
+    }
+  }
+
+  /** Whether the service is currently auto-reconnecting. */
+  isReconnecting(): boolean {
+    return this.reconnectTimer !== null || (this.status === 'connecting' && this.reconnectAttempts > 0);
+  }
+
   private scheduleReconnect(): void {
     if (this.suppressReconnect) {
       return;
     }
-    if (this.reconnectAttempts >= (this.config.maxReconnectAttempts ?? 10)) {
-      console.error('Max reconnection attempts reached');
+    const maxAttempts = this.config.maxReconnectAttempts ?? 10;
+    if (this.reconnectAttempts >= maxAttempts) {
       this.setStatus('error');
       return;
     }
 
+    // Exponential backoff: 1s, 2s, 4s, 8s, capped at 15s
+    const baseDelay = 1000;
+    const delay = Math.min(baseDelay * Math.pow(2, this.reconnectAttempts), 15000);
+
     this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
       this.reconnectAttempts++;
-      console.log(`Reconnection attempt ${this.reconnectAttempts}...`);
       this.connect().catch(() => {
         // Will be handled by onclose
       });
-    }, this.config.reconnectInterval);
+    }, delay);
   }
 
   private handleMessage(data: string): void {
@@ -245,7 +264,6 @@ class WebSocketService {
       const data = event.data as Record<string, unknown>;
       if (data?.client_id) {
         this.clientId = data.client_id as string;
-        console.log('Received server client_id:', this.clientId);
       }
     }
     this.config.onEvent?.(event);

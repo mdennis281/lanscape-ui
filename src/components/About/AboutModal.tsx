@@ -1,5 +1,5 @@
 import { Modal } from '../Modal';
-import { useScanStore } from '../../store';
+import { useConnectionStore, useUIStore } from '../../store';
 import { formatVersion } from '../../utils';
 
 interface AboutModalProps {
@@ -8,8 +8,8 @@ interface AboutModalProps {
 }
 
 export function AboutModal({ isOpen, onClose }: AboutModalProps) {
-  const appInfo = useScanStore((state) => state.appInfo);
-  const setShowUpdate = useScanStore((state) => state.setShowUpdate);
+  const appInfo = useConnectionStore((state) => state.appInfo);
+  const setShowUpdate = useUIStore((state) => state.setShowUpdate);
 
   if (!appInfo) {
     return (

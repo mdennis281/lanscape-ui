@@ -28,7 +28,6 @@ export async function getWebSocketPort(): Promise<number> {
   if (window.electronAPI) {
     try {
       cachedPort = await window.electronAPI.getWsPort();
-      console.log('Got WebSocket port from Electron:', cachedPort);
       return cachedPort;
     } catch (error) {
       console.error('Failed to get port from Electron:', error);
@@ -113,7 +112,6 @@ export function getWebSocketURL(port?: number): string {
       console.error('Invalid WebSocket protocol:', wsUrl.protocol);
       return 'ws://localhost:8766'; // fallback
     }
-    console.log('WebSocket URL validated:', url);
     return url;
   } catch (error) {
     console.error('Invalid WebSocket URL format:', url, error);
@@ -152,7 +150,6 @@ export async function resolveWebSocketURL(): Promise<string> {
       const best = discover.instances[0];
       const server = `${best.host}:${best.ws_port}`;
       const wsUrl = `ws://${server}`;
-      console.log('Resolved backend via mDNS discovery:', wsUrl);
       updateQueryParam('ws-server', server);
       return wsUrl;
     }
@@ -166,7 +163,6 @@ export async function resolveWebSocketURL(): Promise<string> {
         const wsPort = cachedPort ?? 8766;
         const server = `${parsed.hostname}:${wsPort}`;
         const wsUrl = `ws://${server}`;
-        console.log('Using default route from backend:', wsUrl);
         updateQueryParam('ws-server', server);
         return wsUrl;
       } catch {

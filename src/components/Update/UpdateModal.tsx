@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal } from '../Modal';
-import { useScanStore } from '../../store';
+import { useConnectionStore } from '../../store';
 import { formatVersion } from '../../utils';
 
 interface UpdateModalProps {
@@ -9,7 +9,7 @@ interface UpdateModalProps {
 }
 
 export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
-  const appInfo = useScanStore((state) => state.appInfo);
+  const appInfo = useConnectionStore((state) => state.appInfo);
   const [copied, setCopied] = useState(false);
 
   if (!appInfo?.update_available || !appInfo.latest_version) {

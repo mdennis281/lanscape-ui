@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useRef, type FormEvent } from 'react';
-import { useScanStore } from '../../store';
+import { useConnectionStore, useScanStore, useUIStore } from '../../store';
 import { getWebSocketService } from '../../services';
 import { SubnetInput } from './SubnetInput';
 import type { SubnetTestResult } from '../../types';
 
 export function Header() {
   const formRef = useRef<HTMLFormElement>(null);
-  const { 
-    subnetInput, 
+
+  const connectionStatus = useConnectionStore((s) => s.connectionStatus);
+
+  const {
     status,
     config,
     currentScanId,
@@ -15,10 +17,12 @@ export function Header() {
     clearDevices,
     clearScanErrors,
     clearScanWarnings,
-    setShowSettings, 
     setStatus,
-    connectionStatus,
   } = useScanStore();
+
+  const subnetInput = useUIStore((s) => s.subnetInput);
+  const setShowSettings = useUIStore((s) => s.setShowSettings);
+
   const [isLoading, setIsLoading] = useState(false);
   const [subnetValidation, setSubnetValidation] = useState<SubnetTestResult | null>(null);
 

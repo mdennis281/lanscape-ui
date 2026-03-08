@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useScanStore } from '../../store';
+import { useScanStore, useUIStore } from '../../store';
 import { Odometer, OdometerTime } from './Odometer';
 
 // Calculate number of digits needed to display a number
@@ -29,13 +29,14 @@ function useLocalRuntime(isRunning: boolean, serverRuntime: number): number {
       // Scan just started - begin local counting
       startTimeRef.current = Date.now();
       initialOffsetRef.current = serverRuntime; // Usually 0 or 1
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync to scan lifecycle
       setLocalRuntime(serverRuntime);
     } else {
       // Scan stopped - sync to final server value
       startTimeRef.current = null;
       setLocalRuntime(serverRuntime);
     }
-  }, [isRunning]); // Only react to isRunning changes, not serverRuntime
+  }, [isRunning]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally only react to isRunning, not serverRuntime
 
   // Increment local runtime smoothly while scan is running (0.1s precision)
   useEffect(() => {
@@ -56,8 +57,8 @@ export function Overview() {
   const status = useScanStore((state) => state.status);
   const scanErrors = useScanStore((state) => state.scanErrors);
   const scanWarnings = useScanStore((state) => state.scanWarnings);
-  const setShowErrors = useScanStore((state) => state.setShowErrors);
-  const setShowWarnings = useScanStore((state) => state.setShowWarnings);
+  const setShowErrors = useUIStore((state) => state.setShowErrors);
+  const setShowWarnings = useUIStore((state) => state.setShowWarnings);
 
   const isRunning = status?.is_running ?? false;
   const scannedHosts = status?.scanned_hosts ?? 0;

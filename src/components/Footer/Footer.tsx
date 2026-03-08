@@ -1,12 +1,12 @@
-import { useScanStore } from '../../store';
+import { useConnectionStore, useUIStore } from '../../store';
 import { getCurrentWSServer, formatVersion } from '../../utils';
 
 export function Footer() {
-  const appInfo = useScanStore((state) => state.appInfo);
-  const connectionStatus = useScanStore((state) => state.connectionStatus);
-  const setShowAbout = useScanStore((state) => state.setShowAbout);
-  const setShowUpdate = useScanStore((state) => state.setShowUpdate);
-  const setShowConnection = useScanStore((state) => state.setShowConnection);
+  const appInfo = useConnectionStore((state) => state.appInfo);
+  const connectionStatus = useConnectionStore((state) => state.connectionStatus);
+  const setShowAbout = useUIStore((state) => state.setShowAbout);
+  const setShowUpdate = useUIStore((state) => state.setShowUpdate);
+  const setShowConnection = useUIStore((state) => state.setShowConnection);
 
   const wsServer = getCurrentWSServer();
   const statusLabels: Record<string, string> = {

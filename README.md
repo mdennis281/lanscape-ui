@@ -1,105 +1,100 @@
 # lanscape-ui
 
-The UI for: [LANscape](https://github.com/mdennis281/LANscape)
+Web frontend for [LANscape](https://github.com/mdennis281/LANscape) — a local network scanner and device discovery tool.
 
-This repo is still WIP, git/PR policies still havent been setup yet. I will get to it eventually. 
+The production build (`dist/`) is bundled directly into the [LANscape Python package](https://pypi.org/project/lanscape/) and served by its built-in WebSocket server. An Electron wrapper also exists for standalone desktop distribution but is not the primary target.
 
-TLDR: started off as an electron app, but then i realized i can dump the react build into the python library instead of importing the python library into this. I like the current approach better because I dont have to worry about executable signing. That being said, a lot of the electron build stuff is still present here.
-
-## How It Works
-
-LANscape Desktop bundles the LANscape Python backend as a standalone executable. When the application starts, it launches the backend process which handles all network scanning operations. The frontend communicates with the backend over WebSocket, receiving real-time updates as devices are discovered on the network.
-
-The scanning process:
-1. Backend performs ARP scans to discover active hosts
-2. Open ports are detected via TCP connection attempts
-3. Service identification probes known ports for banners and signatures
-4. Results stream to the frontend in real-time via WebSocket
-
-## Backend
-
-The network scanning functionality comes from the [LANscape PyPI package](https://pypi.org/project/lanscape/). This is a Python library that provides:
-
-- ARP-based host discovery
-- TCP port scanning with configurable ranges
-- Service identification using protocol probes
-- MAC address vendor lookup
-- Hostname resolution via mDNS and NetBIOS
-
-For desktop distribution, the Python backend is compiled into a standalone executable using PyInstaller. This allows the app to run without requiring Python to be installed on the user's system.
-
-Source: https://github.com/mdennis281/LANscape
-
-## Building
+## Getting Started
 
 ### Prerequisites
 
 - Node.js 20+
-- npm
+- A running [LANscape](https://github.com/mdennis281/LANscape) backend (`lanscape serve`)
 
-### Development
+### Install & Run
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
-
-# Run Electron in development
-npm run electron
 ```
 
-### Production Build
+The dev server starts at `http://localhost:5173` and connects to the LANscape WebSocket backend.
+
+### Connecting to the Backend
+
+The WebSocket URL is resolved in this order:
+
+1. **Query parameter** — `?ws-server=host:port` (e.g. `?ws-server=192.168.1.100:8766`)
+2. **Environment variable** — `VITE_WS_URL=ws://host:port`
+3. **Same-origin** — if none of the above are set, the UI infers the WebSocket URL from `window.location`
+4. **Fallback** — `ws://localhost:8766`
+
+During development you can point at any backend instance:
+
+```
+http://localhost:5173?ws-server=192.168.1.50:8766
+```
+
+### Build
 
 ```bash
-# Build for current platform
-npm run dist
+# Web app only (output: dist/)
+npm run build
 
-# Build for specific platform
-npm run dist:win
-npm run dist:mac
-npm run dist:linux
+# Web app + Electron main process
+npm run build:all
 ```
 
-Output files are placed in the `release/` directory.
+### Other Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production web build |
+| `npm run build:electron` | Compile Electron main process |
+| `npm run build:all` | Web + Electron build |
+| `npm run typecheck` | Full type check (all tsconfigs) |
+| `npm run lint` | ESLint |
+| `npm run preview` | Preview production build locally |
+| `npm run dist` | Package Electron app for current platform |
 
 ## Project Structure
 
 ```
 lanscape-ui/
-  electron/          # Electron main process
-    main.ts          # Application entry point
-    preload.ts       # Preload script for IPC
-    pythonManager.ts # Backend process management
-    portFinder.ts    # Dynamic port allocation
-  src/               # React frontend
-    components/      # UI components
-    services/        # API and WebSocket clients
-    store/           # State management
-    types/           # TypeScript definitions
-  backend/           # Platform-specific backend binaries
-    win/
-    mac/
-    linux/
+  src/
+    components/      # React UI components
+    services/        # WebSocket client & presets
+    store/           # Zustand stores (connection, scan, ui)
+    types/           # TypeScript type definitions
+    utils/           # Helpers (URL resolution, version formatting)
+    styles/          # SCSS (variables, layout, component partials)
+  electron/          # Electron main process (secondary target)
+    main.ts          # App entry point & window management
+    preload.ts       # IPC bridge
+    pythonManager.ts # Python venv / backend lifecycle
+  scripts/           # Build utilities
+  backend/           # Platform-specific backend binaries (Electron)
 ```
 
-## Releases
+## Tech Stack
 
-Releases are built automatically via GitHub Actions when a version tag is pushed. The workflow builds for Windows, macOS (Apple Silicon), and Linux, then publishes the artifacts as a GitHub release.
+- **React 19** + **TypeScript 5.9** — UI framework
+- **Vite 7** — bundler & dev server
+- **Zustand** — lightweight state management
+- **SCSS** — styling with CSS custom properties
+- **PWA** — installable via service worker (vite-plugin-pwa)
+- **Electron** (optional) — desktop distribution with bundled Python backend
 
-To create a release:
+## Releasing
 
-```powershell
-# Run the release task in VS Code, or:
-./scripts/tag_release.ps1 1.0.0
+Releases are built via GitHub Actions when a version tag is pushed.
+
+```bash
+python scripts/tag_release.py
 ```
 
-For pre-releases, use semver suffixes:
-
-```powershell
-./scripts/tag_release.ps1 1.0.0-beta.1
-```
+This stamps `package.json` with a date-based version, creates a git tag, and pushes it.
 
 ## License
 

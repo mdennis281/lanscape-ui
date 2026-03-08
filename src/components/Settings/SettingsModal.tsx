@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Modal } from '../Modal';
 import { PresetBar } from './PresetBar';
 import { SettingsFooter } from './SettingsFooter';
-import { useScanStore } from '../../store';
+import { useScanStore, useConnectionStore } from '../../store';
 import {
   setActivePresetId,
   persistConfigOnSave,
@@ -78,7 +78,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const config = useScanStore((state) => state.config);
   const defaultConfigs = useScanStore((state) => state.defaultConfigs);
   const setConfig = useScanStore((state) => state.setConfig);
-  const arpSupported = useScanStore((state) => state.appInfo?.arp_supported ?? true);
+  const arpSupported = useConnectionStore((state) => state.appInfo?.arp_supported ?? true);
   const portLists = useScanStore((state) => state.portLists);
   
   const [localConfig, setLocalConfig] = useState<ScanConfig>({});

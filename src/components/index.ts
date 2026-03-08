@@ -1,4 +1,4 @@
-export { Header, ConnectionStatus } from './Header';
+export { Header } from './Header';
 export { Overview } from './Overview';
 export { DeviceTable } from './DeviceTable';
 export { DeviceModal } from './DeviceModal';
@@ -7,7 +7,7 @@ export { JsonEditorModal } from './JsonEditor';
 export { SettingsModal } from './Settings';
 export { AboutModal } from './About';
 export { UpdateModal } from './Update';
-export { ErrorsModal } from './Errors';
+export { ErrorBoundary, ErrorsModal } from './Errors';
 export { WarningsModal } from './Warnings';
 export { ConnectionModal } from './Connection';
 export { Footer } from './Footer';
