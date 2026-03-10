@@ -90,6 +90,22 @@
     font-weight: 500;
   }
 
+  .ip-extra-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    padding: 1px 5px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    background: var(--primary-accent);
+    color: var(--button-text);
+    border-radius: 8px;
+    cursor: help;
+    vertical-align: middle;
+  }
+
   .mac-cell {
     font-family: var(--font-mono);
     font-size: 12px;

@@ -152,6 +152,13 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
               const isNew = delay !== undefined;
               const portsSorted = device.ports?.slice().sort((a, b) => a - b) || [];
               
+              // Collect all IPs (excluding the primary one shown in the cell)
+              const allIps = [
+                ...(device.ipv4_addresses || []),
+                ...(device.ipv6_addresses || [])
+              ].filter(ip => ip !== device.ip);
+              const hasExtraIps = allIps.length > 0;
+              
               return (
                 <tr 
                   key={device.ip} 
@@ -162,7 +169,18 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
                   <td>
                     <DeviceStage device={device} />
                   </td>
-                  <td className="ip-cell">{device.ip}</td>
+                  <td 
+                    className="ip-cell"
+                    data-tooltip-id={hasExtraIps ? "tooltip" : undefined}
+                    data-tooltip-content={hasExtraIps ? `Also: ${allIps.join(', ')}` : undefined}
+                  >
+                    {device.ip}
+                    {hasExtraIps && (
+                      <span className="ip-extra-badge" title={allIps.join(', ')}>
+                        +{allIps.length}
+                      </span>
+                    )}
+                  </td>
                   <td className="hostname-cell">{device.hostname || '—'}</td>
                   <td className="mac-cell">{device.mac_addr || '—'}</td>
                   <td className="vendor-cell">{device.manufacturer || '—'}</td>
