@@ -34,17 +34,28 @@ export function SubnetInput({ disabled, onSettingsClick, validation, onSubmit }:
 
   const showError = subnetInput.trim() && validation && !validation.valid;
 
+  // Determine what to show in the info area
+  const getInfoContent = () => {
+    if (!subnetInput.trim()) {
+      return <span className="text-muted">0 IPs</span>;
+    }
+    if (validation) {
+      return (
+        <span className={validation.valid ? 'valid' : 'invalid'}>
+          {validation.msg}
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="subnet-input-group" ref={dropdownRef}>
       {/* Label and info row */}
       <div className="subnet-label-row">
         <label htmlFor="subnet-input">Subnet:</label>
         <div className={`subnet-info ${showError ? 'error' : ''}`}>
-          {validation ? (
-            <span className={validation.valid ? 'valid' : 'invalid'}>
-              {validation.msg}
-            </span>
-          ) : null}
+          {getInfoContent()}
         </div>
       </div>
 

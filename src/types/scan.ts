@@ -174,7 +174,8 @@ export interface DeviceResult {
   macs?: string[];
   mac_addr?: string;
   manufacturer?: string;
-  alt_ips?: string[];
+  ipv4_addresses?: string[];
+  ipv6_addresses?: string[];
   ports?: number[];
   stage?: string;
   ports_scanned?: number;

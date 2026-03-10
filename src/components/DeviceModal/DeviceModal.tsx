@@ -268,8 +268,20 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
           <div className="device-section-title">Overview</div>
           <div className="device-info-grid">
             <div className="device-info-row">
-              <span className="device-info-label">IP Address</span>
-              <span className="device-info-value">{device.ip}</span>
+              <span className="device-info-label">IPv4 Address(es)</span>
+              <span className="device-info-value">
+                {device.ipv4_addresses && device.ipv4_addresses.length > 0
+                  ? device.ipv4_addresses.join(', ')
+                  : <span className="text-muted">not found</span>}
+              </span>
+            </div>
+            <div className="device-info-row">
+              <span className="device-info-label">IPv6 Address(es)</span>
+              <span className="device-info-value">
+                {device.ipv6_addresses && device.ipv6_addresses.length > 0
+                  ? device.ipv6_addresses.join(', ')
+                  : <span className="text-muted">not found</span>}
+              </span>
             </div>
             <div className="device-info-row">
               <span className="device-info-label">Hostname</span>
@@ -283,14 +295,6 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
               <span className="device-info-label">Manufacturer</span>
               <span className="device-info-value">{device.manufacturer || '—'}</span>
             </div>
-            {device.alt_ips && device.alt_ips.length > 0 && (
-              <div className="device-info-row">
-                <span className="device-info-label">Alt. IPs</span>
-                <span className="device-info-value">
-                  {device.alt_ips.join(', ')}
-                </span>
-              </div>
-            )}
             <div className="device-info-row">
               <span className="device-info-label">Stage</span>
               <span className="device-info-value">
