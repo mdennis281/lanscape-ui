@@ -283,6 +283,14 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
               <span className="device-info-label">Manufacturer</span>
               <span className="device-info-value">{device.manufacturer || '—'}</span>
             </div>
+            {device.alt_ips && device.alt_ips.length > 0 && (
+              <div className="device-info-row">
+                <span className="device-info-label">Alt. IPs</span>
+                <span className="device-info-value">
+                  {device.alt_ips.join(', ')}
+                </span>
+              </div>
+            )}
             <div className="device-info-row">
               <span className="device-info-label">Stage</span>
               <span className="device-info-value">
