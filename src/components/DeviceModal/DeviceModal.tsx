@@ -268,7 +268,9 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
           <div className="device-section-title">Overview</div>
           <div className="device-info-grid">
             <div className="device-info-row">
-              <span className="device-info-label">IPv4 Address(es)</span>
+              <span className="device-info-label">
+                IPv4 Address{(device.ipv4_addresses?.length ?? 0) > 1 ? 'es' : ''}
+              </span>
               <span className="device-info-value">
                 {device.ipv4_addresses && device.ipv4_addresses.length > 0
                   ? device.ipv4_addresses.join(', ')
@@ -276,7 +278,9 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
               </span>
             </div>
             <div className="device-info-row">
-              <span className="device-info-label">IPv6 Address(es)</span>
+              <span className="device-info-label">
+                IPv6 Address{(device.ipv6_addresses?.length ?? 0) > 1 ? 'es' : ''}
+              </span>
               <span className="device-info-value">
                 {device.ipv6_addresses && device.ipv6_addresses.length > 0
                   ? device.ipv6_addresses.join(', ')
