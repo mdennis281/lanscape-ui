@@ -91,7 +91,11 @@ export function processScanEvent(
         }
       }
 
-      const finalStage = finishedDelta?.metadata?.stage ?? action;
+      // Use the event action as the authoritative stage for completion events
+      // to guard against a stale stage value from the backend (race condition)
+      const finalStage = action === 'complete' ? 'complete'
+        : action === 'terminated' ? 'terminated'
+        : finishedDelta?.metadata?.stage ?? action;
 
       // Mark all devices with the final stage
       updatedDevices = updatedDevices.map((d) => ({
