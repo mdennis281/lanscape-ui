@@ -38,6 +38,11 @@ export interface ServiceScanConfig {
   max_concurrent_probes?: number;
 }
 
+export interface NeighborTableConfig {
+  refresh_interval?: number;
+  command_timeout?: number;
+}
+
 export type LookupType = 'ICMP' | 'ARP_LOOKUP' | 'POKE_THEN_ARP' | 'ICMP_THEN_ARP';
 
 // ── Scan configuration ───────────────────────────────────────────────
@@ -59,6 +64,7 @@ export interface ScanConfig {
   arp_config?: ArpConfig;
   arp_cache_config?: ArpCacheConfig;
   poke_config?: PokeConfig;
+  neighbor_table_config?: NeighborTableConfig;
   port_scan_config?: PortScanConfig;
   service_scan_config?: ServiceScanConfig;
 }

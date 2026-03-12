@@ -102,7 +102,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   // Helper for nested config updates
   const handleNestedChange = <
-    K extends 'ping_config' | 'arp_config' | 'arp_cache_config' | 'poke_config' | 'port_scan_config' | 'service_scan_config'
+    K extends 'ping_config' | 'arp_config' | 'arp_cache_config' | 'poke_config' | 'neighbor_table_config' | 'port_scan_config' | 'service_scan_config'
   >(
     configKey: K,
     field: string,
@@ -569,6 +569,46 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         </div>
       )}
+
+      {/* Neighbor Table Settings — ARP/NDP background refresh */}
+      <div className="settings-section settings-subsection">
+        <div className="settings-section-title">
+          Device Detection <span className="text-muted">/</span> ARP Table Refresh
+          <HelpTip text="The scanner maintains a background ARP/NDP neighbor table that is refreshed periodically. A shorter interval finds new devices faster but uses more system resources." />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">
+              Refresh Interval (sec)
+              <HelpTip text="How often (in seconds) the ARP/NDP neighbor table is refreshed in the background. Lower values detect devices faster but increase CPU usage." />
+            </label>
+            <input
+              type="number"
+              className="form-input"
+              min="0.5"
+              max="30"
+              step="0.5"
+              value={localConfig.neighbor_table_config?.refresh_interval || 2}
+              onChange={(e) => handleNestedChange('neighbor_table_config', 'refresh_interval', parseFloat(e.target.value) || 2)}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">
+              Command Timeout (sec)
+              <HelpTip text="Maximum time to wait for ARP/NDP system commands to complete. Increase on slow systems or large networks." />
+            </label>
+            <input
+              type="number"
+              className="form-input"
+              min="1"
+              max="30"
+              step="0.5"
+              value={localConfig.neighbor_table_config?.command_timeout || 5}
+              onChange={(e) => handleNestedChange('neighbor_table_config', 'command_timeout', parseFloat(e.target.value) || 5)}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Port Testing */}
       <div className="settings-section">

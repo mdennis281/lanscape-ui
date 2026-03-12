@@ -394,6 +394,14 @@ class WebSocketService {
   async resetJobStats(): Promise<WSResponse> {
     return this.send('debug.job_stats_reset');
   }
+
+  async clearArpTable(): Promise<WSResponse> {
+    return this.send('debug.clear_arp');
+  }
+
+  async clearNdpTable(): Promise<WSResponse> {
+    return this.send('debug.clear_ndp');
+  }
 }
 
 // Singleton instance

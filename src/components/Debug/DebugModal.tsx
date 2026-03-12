@@ -14,7 +14,13 @@ interface JobStats {
   timing: Record<string, number>;
 }
 
-type TabId = 'job-stats';
+interface FlushResult {
+  success: boolean;
+  error?: string;
+  details?: string[];
+}
+
+type TabId = 'job-stats' | 'cache-tools';
 
 export function DebugModal({ isOpen, onClose }: DebugModalProps) {
   const [activeTab, setActiveTab] = useState<TabId>('job-stats');
@@ -22,6 +28,12 @@ export function DebugModal({ isOpen, onClose }: DebugModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  // Cache tools state
+  const [arpResult, setArpResult] = useState<FlushResult | null>(null);
+  const [ndpResult, setNdpResult] = useState<FlushResult | null>(null);
+  const [arpLoading, setArpLoading] = useState(false);
+  const [ndpLoading, setNdpLoading] = useState(false);
 
   const fetchStats = useCallback(async () => {
     const ws = getWebSocketService();
@@ -78,7 +90,113 @@ export function DebugModal({ isOpen, onClose }: DebugModalProps) {
 
   const tabs: { id: TabId; label: string; icon: string }[] = [
     { id: 'job-stats', label: 'Job Stats', icon: 'fa-chart-bar' },
+    { id: 'cache-tools', label: 'Cache Tools', icon: 'fa-database' },
   ];
+
+  const handleClearArp = async () => {
+    const ws = getWebSocketService();
+    if (!ws) return;
+
+    setArpLoading(true);
+    setArpResult(null);
+    try {
+      const response = await ws.clearArpTable();
+      setArpResult(response.data as FlushResult);
+    } catch (err: unknown) {
+      const msg = (err as { error?: string })?.error ?? JSON.stringify(err);
+      setArpResult({ success: false, error: msg });
+    } finally {
+      setArpLoading(false);
+    }
+  };
+
+  const handleClearNdp = async () => {
+    const ws = getWebSocketService();
+    if (!ws) return;
+
+    setNdpLoading(true);
+    setNdpResult(null);
+    try {
+      const response = await ws.clearNdpTable();
+      setNdpResult(response.data as FlushResult);
+    } catch (err: unknown) {
+      const msg = (err as { error?: string })?.error ?? JSON.stringify(err);
+      setNdpResult({ success: false, error: msg });
+    } finally {
+      setNdpLoading(false);
+    }
+  };
+
+  const renderFlushResult = (result: FlushResult | null) => {
+    if (!result) return null;
+
+    if (result.success) {
+      return (
+        <div className="debug-success">
+          <i className="fa-solid fa-circle-check"></i>
+          Cache cleared successfully
+        </div>
+      );
+    }
+
+    return (
+      <div className="debug-error-block">
+        <div className="debug-error-header">
+          <i className="fa-solid fa-triangle-exclamation"></i>
+          {result.error}
+        </div>
+        {result.details && result.details.length > 0 && (
+          <pre className="debug-error-details">
+            {result.details.join('\n')}
+          </pre>
+        )}
+      </div>
+    );
+  };
+
+  const renderCacheToolsTab = () => (
+    <div className="debug-cache-tools">
+      <div className="debug-cache-card">
+        <div className="debug-cache-card-header">
+          <div>
+            <h3>ARP Cache (IPv4)</h3>
+            <p className="debug-cache-desc">
+              Flush the system ARP table. Entries will repopulate as devices communicate.
+            </p>
+          </div>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={handleClearArp}
+            disabled={arpLoading}
+          >
+            <i className={`fa-solid fa-broom ${arpLoading ? 'fa-spin' : ''}`}></i>
+            Clear ARP
+          </button>
+        </div>
+        {renderFlushResult(arpResult)}
+      </div>
+
+      <div className="debug-cache-card">
+        <div className="debug-cache-card-header">
+          <div>
+            <h3>NDP Cache (IPv6)</h3>
+            <p className="debug-cache-desc">
+              Flush the system NDP neighbor table. Entries will repopulate as devices communicate.
+            </p>
+          </div>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={handleClearNdp}
+            disabled={ndpLoading}
+          >
+            <i className={`fa-solid fa-broom ${ndpLoading ? 'fa-spin' : ''}`}></i>
+            Clear NDP
+          </button>
+        </div>
+        {renderFlushResult(ndpResult)}
+      </div>
+    </div>
+  );
 
   const renderJobStatsTab = () => {
     const functions = getAllFunctions();
@@ -169,6 +287,7 @@ export function DebugModal({ isOpen, onClose }: DebugModalProps) {
 
         <div className="debug-content">
           {activeTab === 'job-stats' && renderJobStatsTab()}
+          {activeTab === 'cache-tools' && renderCacheToolsTab()}
         </div>
       </div>
     </Modal>
