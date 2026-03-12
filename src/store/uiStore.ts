@@ -27,6 +27,9 @@ interface UIState {
   showConnection: boolean;
   setShowConnection: (show: boolean) => void;
 
+  showDebug: boolean;
+  setShowDebug: (show: boolean) => void;
+
   /** Subnet string the user typed in the header. */
   subnetInput: string;
   setSubnetInput: (subnet: string) => void;
@@ -53,6 +56,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   showConnection: false,
   setShowConnection: (showConnection) => set({ showConnection }),
+
+  showDebug: false,
+  setShowDebug: (showDebug) => set({ showDebug }),
 
   subnetInput: '',
   setSubnetInput: (subnetInput) => set({ subnetInput }),

@@ -10,5 +10,6 @@ export { UpdateModal } from './Update';
 export { ErrorBoundary, ErrorsModal } from './Errors';
 export { WarningsModal } from './Warnings';
 export { ConnectionModal } from './Connection';
+export { DebugModal } from './Debug';
 export { Footer } from './Footer';
 export { StartupScreen } from './Startup';

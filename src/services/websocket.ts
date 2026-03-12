@@ -385,6 +385,15 @@ class WebSocketService {
   async getAppInfo(): Promise<WSResponse> {
     return this.send('tools.app_info');
   }
+
+  // Debug handler methods
+  async getJobStats(): Promise<WSResponse> {
+    return this.send('debug.job_stats');
+  }
+
+  async resetJobStats(): Promise<WSResponse> {
+    return this.send('debug.job_stats_reset');
+  }
 }
 
 // Singleton instance

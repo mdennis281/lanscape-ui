@@ -11,6 +11,7 @@ import {
   ErrorsModal,
   WarningsModal,
   ConnectionModal,
+  DebugModal,
   Footer,
   StartupScreen
 } from './components';
@@ -90,6 +91,8 @@ function MainApp() {
     setShowWarnings,
     showConnection,
     setShowConnection,
+    showDebug,
+    setShowDebug,
     setSubnetInput,
   } = useUIStore();
 
@@ -377,6 +380,11 @@ function MainApp() {
       <WarningsModal
         isOpen={showWarnings}
         onClose={() => setShowWarnings(false)}
+      />
+
+      <DebugModal
+        isOpen={showDebug}
+        onClose={() => setShowDebug(false)}
       />
 
       {/* Connection modal — blocking when connection is lost, closeable when manually opened */}

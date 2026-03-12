@@ -22,6 +22,7 @@ export function Header() {
 
   const subnetInput = useUIStore((s) => s.subnetInput);
   const setShowSettings = useUIStore((s) => s.setShowSettings);
+  const setShowDebug = useUIStore((s) => s.setShowDebug);
 
   const [isLoading, setIsLoading] = useState(false);
   const [subnetValidation, setSubnetValidation] = useState<SubnetTestResult | null>(null);
@@ -140,7 +141,14 @@ export function Header() {
   return (
     <header className="header">
       <div className="header-content">
-        <a href="/" className="header-logo">
+        <a 
+          href="/" 
+          className="header-logo"
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setShowDebug(true);
+          }}
+        >
           <span className="logo-text">
             <span className="logo-accent">LAN</span>scape
           </span>
