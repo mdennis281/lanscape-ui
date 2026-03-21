@@ -1,10 +1,29 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
-import { readFileSync } from 'fs'
+import { readFileSync, writeFileSync } from 'fs'
 
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'));
+
+/**
+ * Emit a version.json alongside the build so the backend can advertise
+ * what UI build it is serving.  The frontend compares its baked-in
+ * __APP_VERSION__ against this file on startup to detect stale caches.
+ */
+function versionFilePlugin(): Plugin {
+  return {
+    name: 'version-file',
+    writeBundle(options) {
+      const dir = options.dir ?? resolve(__dirname, 'dist');
+      const content = JSON.stringify({
+        version: pkg.version,
+        buildTime: new Date().toISOString(),
+      });
+      writeFileSync(resolve(dir, 'version.json'), content);
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -13,6 +32,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    versionFilePlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
