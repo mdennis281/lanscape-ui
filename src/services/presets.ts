@@ -6,7 +6,7 @@
  * come from the backend; user presets are stored locally.
  */
 
-import type { ScanConfig, DefaultConfigs } from '../types';
+import type { ScanConfig, DefaultConfigs, PipelineConfig, StageEntry, StageType } from '../types';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ export interface PresetMeta {
 
 export interface UserPreset extends PresetMeta {
   builtIn: false;
-  config: ScanConfig;
+  config: PipelineConfig;
   createdAt: number;
   updatedAt: number;
 }
@@ -61,6 +61,77 @@ export const BUILT_IN_PRESETS: BuiltInPreset[] = [
   },
 ];
 
+// ── ScanConfig → PipelineConfig migration ────────────────────────────
+
+const LOOKUP_TYPE_TO_STAGE: Record<string, StageType> = {
+  ICMP: 'icmp_discovery',
+  ARP_LOOKUP: 'arp_discovery',
+  POKE_THEN_ARP: 'poke_arp_discovery',
+  ICMP_THEN_ARP: 'icmp_arp_discovery',
+};
+
+/** Convert a legacy ScanConfig to a PipelineConfig. */
+export function scanConfigToPipeline(sc: ScanConfig): PipelineConfig {
+  const stages: StageEntry[] = [];
+
+  // Map lookup types to discovery stages
+  if (sc.lookup_type) {
+    for (const lt of sc.lookup_type) {
+      const stageType = LOOKUP_TYPE_TO_STAGE[lt];
+      if (!stageType) continue;
+
+      const config: Record<string, unknown> = {};
+      if (sc.t_cnt_isalive != null) config.t_cnt = sc.t_cnt_isalive;
+
+      if (stageType === 'icmp_discovery' || stageType === 'icmp_arp_discovery') {
+        if (sc.ping_config) config.ping_config = sc.ping_config;
+      }
+      if (stageType === 'arp_discovery') {
+        if (sc.arp_config) config.arp_config = sc.arp_config;
+      }
+      if (stageType === 'poke_arp_discovery') {
+        if (sc.poke_config) config.poke_config = sc.poke_config;
+        if (sc.arp_cache_config) config.arp_cache_config = sc.arp_cache_config;
+      }
+      if (stageType === 'icmp_arp_discovery') {
+        if (sc.arp_cache_config) config.arp_cache_config = sc.arp_cache_config;
+      }
+
+      stages.push({ stage_type: stageType, config });
+    }
+  }
+
+  // Map port scanning to port_scan stage
+  if (sc.task_scan_ports) {
+    const config: Record<string, unknown> = {};
+    if (sc.port_list) config.port_list = sc.port_list;
+    if (sc.port_scan_config) config.port_scan_config = sc.port_scan_config;
+    if (sc.service_scan_config) config.service_scan_config = sc.service_scan_config;
+    if (sc.task_scan_port_services != null) config.scan_services = sc.task_scan_port_services;
+    if (sc.t_cnt_port_scan != null) config.t_cnt_device = sc.t_cnt_port_scan;
+    if (sc.t_cnt_port_test != null) config.t_cnt_port = sc.t_cnt_port_test;
+    stages.push({ stage_type: 'port_scan', config });
+  }
+
+  const pipeline: PipelineConfig = { stages };
+  if (sc.subnet) pipeline.subnet = sc.subnet;
+  if (sc.t_multiplier != null) {
+    pipeline.resilience = { t_multiplier: sc.t_multiplier };
+  }
+
+  return pipeline;
+}
+
+/** Check if a stored config object is legacy ScanConfig (no `stages` key). */
+function isLegacyScanConfig(obj: unknown): obj is ScanConfig {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    !Array.isArray(obj) &&
+    !('stages' in obj)
+  );
+}
+
 // ── Persistence helpers ──────────────────────────────────────────────
 
 function loadUserPresets(): UserPreset[] {
@@ -69,7 +140,19 @@ function loadUserPresets(): UserPreset[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed as UserPreset[];
+
+    // Migrate any legacy ScanConfig presets to PipelineConfig
+    let migrated = false;
+    const presets = (parsed as UserPreset[]).map((p) => {
+      if (isLegacyScanConfig(p.config)) {
+        migrated = true;
+        return { ...p, config: scanConfigToPipeline(p.config) };
+      }
+      return p;
+    });
+    if (migrated) saveUserPresets(presets);
+
+    return presets;
   } catch {
     return [];
   }
@@ -104,15 +187,17 @@ export function getPresetById(id: string): Preset | undefined {
 }
 
 /**
- * Resolve the ScanConfig for a preset.
- * Built-in presets need the backend defaultConfigs; user presets carry their own.
+ * Resolve the PipelineConfig for a preset.
+ * Built-in presets are converted from the backend defaultConfigs.
  */
 export function resolvePresetConfig(
   preset: Preset,
   defaultConfigs: DefaultConfigs | null
-): ScanConfig | null {
+): PipelineConfig | null {
   if (preset.builtIn) {
-    return defaultConfigs?.[preset.id] ?? null;
+    const sc = defaultConfigs?.[preset.id];
+    if (!sc) return null;
+    return scanConfigToPipeline(sc);
   }
   return preset.config;
 }
@@ -122,7 +207,7 @@ export function resolvePresetConfig(
  */
 export function createUserPreset(
   name: string,
-  config: ScanConfig,
+  config: PipelineConfig,
   icon?: string,
   description?: string
 ): UserPreset {
@@ -149,7 +234,7 @@ export function createUserPreset(
  */
 export function updateUserPreset(
   id: string,
-  updates: { name?: string; config?: ScanConfig; icon?: string; description?: string }
+  updates: { name?: string; config?: PipelineConfig; icon?: string; description?: string }
 ): UserPreset | null {
   const presets = loadUserPresets();
   const idx = presets.findIndex((p) => p.id === id);
@@ -204,8 +289,8 @@ export function clearActivePresetId(): void {
  * drifted from it (i.e. made manual changes).
  */
 export function configMatchesPreset(
-  config: ScanConfig,
-  presetConfig: ScanConfig
+  config: PipelineConfig,
+  presetConfig: PipelineConfig
 ): boolean {
   return JSON.stringify(config) === JSON.stringify(presetConfig);
 }
@@ -216,18 +301,21 @@ export function configMatchesPreset(
  * Persist the exact config the user saved, so it survives page reload
  * even if they've drifted from a preset.
  */
-export function saveLastConfig(config: ScanConfig): void {
+export function saveLastConfig(config: PipelineConfig): void {
   localStorage.setItem(LAST_CONFIG_KEY, JSON.stringify(config));
 }
 
 /**
  * Retrieve the last config the user explicitly saved.
  */
-export function getLastConfig(): ScanConfig | null {
+export function getLastConfig(): PipelineConfig | null {
   try {
     const raw = localStorage.getItem(LAST_CONFIG_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as ScanConfig;
+    const parsed = JSON.parse(raw);
+    // Migrate legacy last-config
+    if (isLegacyScanConfig(parsed)) return scanConfigToPipeline(parsed);
+    return parsed as PipelineConfig;
   } catch {
     return null;
   }
@@ -237,7 +325,7 @@ export function getLastConfig(): ScanConfig | null {
  * Save current config and, if the active preset is a user preset,
  * auto-update that preset to match. Call this from the modal's Save button.
  */
-export function persistConfigOnSave(config: ScanConfig): void {
+export function persistConfigOnSave(config: PipelineConfig): void {
   saveLastConfig(config);
 
   const activeId = getActivePresetId();

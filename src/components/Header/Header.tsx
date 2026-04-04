@@ -11,7 +11,7 @@ export function Header() {
 
   const {
     status,
-    config,
+    pipelineConfig,
     currentScanId,
     setCurrentScanId,
     clearDevices,
@@ -106,11 +106,12 @@ export function Header() {
           remaining: 0,
         });
         
-        // Spread config first, then override subnet with user input
-        const response = await ws.startScan({
-          ...config,
+        // Spread pipeline config, then override subnet with user input
+        const scanPayload = {
+          ...pipelineConfig,
           subnet: subnetInput.trim(),
-        });
+        };
+        const response = await ws.startScan(scanPayload);
         // Store the scan ID from the response
         if (response.success && response.data) {
           const data = response.data as { scan_id: string };

@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import type { ScanConfig, DefaultConfigs } from '../../types';
+import type { PipelineConfig, DefaultConfigs } from '../../types';
 import { JsonEditorModal } from '../JsonEditor';
 import {
   getAllPresets,
@@ -31,11 +31,11 @@ import {
 
 interface PresetBarProps {
   /** The live (possibly modified) config in the settings form. */
-  localConfig: ScanConfig;
+  localConfig: PipelineConfig;
   /** Backend-provided default configs keyed by preset name. */
   defaultConfigs: DefaultConfigs | null;
   /** Called when the user picks a preset — parent should setLocalConfig. */
-  onApplyPreset: (config: ScanConfig, presetId: string) => void;
+  onApplyPreset: (config: PipelineConfig, presetId: string) => void;
 }
 
 // ── Icon picker palette ──────────────────────────────────────────────
@@ -127,7 +127,7 @@ export function PresetBar({ localConfig, defaultConfigs, onApplyPreset }: Preset
     if (!cfg) return;
     setActiveId(preset.id);
     setActivePresetId(preset.id);
-    onApplyPreset({ ...cfg }, preset.id);
+    onApplyPreset(structuredClone(cfg), preset.id);
     setContextMenu(null);
   };
 

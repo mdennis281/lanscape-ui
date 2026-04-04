@@ -632,4 +632,235 @@
   }
 
   .help-tip { margin-left: 4px; }
+
+  &--inline {
+    display: inline-flex;
+    margin-left: 12px;
+    font-size: 12px;
+  }
+}
+
+// ── Stage Palette ───────────────────────────────────────────────────
+
+.stage-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stage-palette-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stage-palette-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.stage-palette-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stage-palette-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  i { font-size: 11px; }
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--primary-accent);
+    background: rgba(var(--primary-accent-rgb, 99, 102, 241), 0.08);
+  }
+}
+
+// ── Stage List ──────────────────────────────────────────────────────
+
+.stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stage-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  text-align: center;
+  border: 2px dashed var(--card-border);
+  border-radius: var(--border-radius-sm);
+
+  i {
+    font-size: 24px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 2px 0;
+    font-size: 13px;
+  }
+}
+
+// ── Stage Card ──────────────────────────────────────────────────────
+
+.stage-card {
+  background: var(--body-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  transition: border-color 0.15s ease;
+
+  &--expanded {
+    border-color: var(--primary-accent);
+  }
+}
+
+.stage-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: default;
+}
+
+.stage-card-drag {
+  display: flex;
+  align-items: center;
+  padding: 2px 4px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: grab;
+  font-size: 12px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+
+  &:hover { opacity: 1; }
+  &:active { cursor: grabbing; }
+}
+
+.stage-card-index {
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary-accent);
+  background: rgba(var(--primary-accent-rgb, 99, 102, 241), 0.12);
+  border-radius: 50%;
+}
+
+.stage-card-icon {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.stage-card-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stage-card-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.stage-card-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--input-bg);
+    border-color: var(--card-border);
+  }
+
+  &--danger:hover {
+    color: var(--error-accent);
+    border-color: var(--error-accent);
+  }
+}
+
+.stage-card-body {
+  padding: 4px 12px 12px;
+  border-top: 1px solid var(--card-border);
+}
+
+// ── Stage Settings ──────────────────────────────────────────────────
+
+.stage-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.stage-settings-group {
+  padding: 8px 12px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+}
+
+.stage-settings-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stage-settings-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  .form-group {
+    flex: 1;
+    min-width: 100px;
+  }
+}
+
+.stage-count {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
 }

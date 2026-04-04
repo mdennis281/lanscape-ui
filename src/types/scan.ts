@@ -43,7 +43,108 @@ export interface NeighborTableConfig {
   command_timeout?: number;
 }
 
+export interface HostnameConfig {
+  retries?: number;
+  retry_delay?: number;
+}
+
 export type LookupType = 'ICMP' | 'ARP_LOOKUP' | 'POKE_THEN_ARP' | 'ICMP_THEN_ARP';
+
+// ── Pipeline / Stage types (matching backend enums & models) ─────────
+
+export type StageType =
+  | 'icmp_discovery'
+  | 'arp_discovery'
+  | 'poke_arp_discovery'
+  | 'icmp_arp_discovery'
+  | 'ipv6_ndp_discovery'
+  | 'ipv6_mdns_discovery'
+  | 'port_scan';
+
+export interface ICMPDiscoveryConfig {
+  ping_config?: PingConfig;
+  hostname_config?: HostnameConfig;
+  t_cnt?: number;
+}
+
+export interface ARPDiscoveryConfig {
+  arp_config?: ArpConfig;
+  hostname_config?: HostnameConfig;
+  t_cnt?: number;
+}
+
+export interface PokeARPDiscoveryConfig {
+  poke_config?: PokeConfig;
+  arp_cache_config?: ArpCacheConfig;
+  hostname_config?: HostnameConfig;
+  t_cnt?: number;
+}
+
+export interface ICMPARPDiscoveryConfig {
+  ping_config?: PingConfig;
+  arp_cache_config?: ArpCacheConfig;
+  hostname_config?: HostnameConfig;
+  t_cnt?: number;
+}
+
+export interface IPv6NDPDiscoveryConfig {
+  neighbor_table_config?: NeighborTableConfig;
+  hostname_config?: HostnameConfig;
+  t_cnt?: number;
+  interface?: string;
+}
+
+export interface IPv6MDNSDiscoveryConfig {
+  timeout?: number;
+  hostname_config?: HostnameConfig;
+  interface?: string;
+}
+
+export interface PortScanStageConfig {
+  port_list?: string;
+  port_scan_config?: PortScanConfig;
+  service_scan_config?: ServiceScanConfig;
+  scan_services?: boolean;
+  t_cnt_device?: number;
+  t_cnt_port?: number;
+}
+
+export type AnyStageConfig =
+  | ICMPDiscoveryConfig
+  | ARPDiscoveryConfig
+  | PokeARPDiscoveryConfig
+  | ICMPARPDiscoveryConfig
+  | IPv6NDPDiscoveryConfig
+  | IPv6MDNSDiscoveryConfig
+  | PortScanStageConfig;
+
+export interface StageEntry {
+  stage_type: StageType;
+  config: Record<string, unknown>;
+}
+
+export interface ResilienceConfig {
+  t_multiplier?: number;
+  failure_retry_cnt?: number;
+  failure_multiplier_decrease?: number;
+  failure_debounce_sec?: number;
+}
+
+export interface PipelineConfig {
+  subnet?: string;
+  stages: StageEntry[];
+  resilience?: ResilienceConfig;
+  hostname_config?: HostnameConfig;
+}
+
+export interface StageProgress {
+  stage_name: string;
+  stage_type: StageType;
+  total: number;
+  completed: number;
+  finished: boolean;
+  runtime: number;
+}
 
 // ── Scan configuration ───────────────────────────────────────────────
 
@@ -93,6 +194,8 @@ export interface ScanStatus {
   ports_total: number;
   runtime: number;
   remaining: number;
+  stages?: StageProgress[];
+  current_stage_index?: number | null;
 }
 
 export interface ScanErrorInfo {

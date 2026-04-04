@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useScanStore, useUIStore } from '../../store';
 import { Odometer, OdometerTime } from './Odometer';
+import { getStageMeta } from '../Settings/stageRegistry';
+import type { StageProgress } from '../../types';
 
 // Calculate number of digits needed to display a number
 function digitCount(n: number): number {
@@ -107,7 +109,12 @@ export function Overview() {
   const hostDigits = Math.max(digitCount(totalHosts), 1);
   const portDigits = Math.max(digitCount(portsTotal), 1);
 
+  // Per-stage progress from pipeline mode
+  const stageProgresses = status?.stages;
+  const currentStageIndex = status?.current_stage_index;
+
   return (
+    <>
     <div className="scan-stats">
       {/* Progress bar background */}
       {isRunning && (
@@ -181,14 +188,84 @@ export function Overview() {
           </div>
         )}
 
-        {/* Stage */}
-        <div className={`scan-stat stage ${stage === 'complete' ? 'success' : ''} ${isRunning ? 'active' : ''}`}>
-          {isRunning && <i className="fa-solid fa-circle-notch fa-spin scan-stat-icon" />}
-          {stage === 'complete' && <i className="fa-regular fa-circle-check scan-stat-icon" />}
-          {!isRunning && stage !== 'complete' && <i className="fa-regular fa-circle scan-stat-icon" />}
-          <span className="scan-stat-stage">{stage}</span>
-        </div>
+        {/* Stage indicators */}
+        {stageProgresses && stageProgresses.length > 0 && (
+          <StageIndicators stages={stageProgresses} currentIndex={currentStageIndex ?? null} />
+        )}
       </div>
+    </div>
+    </>
+  );
+}
+
+function formatStageRuntime(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
+
+function StageIndicators({
+  stages,
+  currentIndex,
+}: {
+  stages: StageProgress[];
+  currentIndex: number | null;
+}) {
+  const radius = 14;
+  const circumference = 2 * Math.PI * radius;
+
+  return (
+    <div className="stage-indicators">
+      {stages.map((sp, i) => {
+        const meta = getStageMeta(sp.stage_type);
+        const pct = sp.total > 0 ? (sp.completed / sp.total) * 100 : 0;
+        const isCurrent = currentIndex === i;
+        const isDone = sp.finished;
+        const offset = circumference - (pct / 100) * circumference;
+
+        let tooltipContent: string;
+        if (isDone) {
+          tooltipContent = `${meta.label}: ${formatStageRuntime(sp.runtime)}`;
+        } else if (isCurrent) {
+          tooltipContent = `${meta.label}: ${Math.round(pct)}%`;
+        } else {
+          tooltipContent = meta.label;
+        }
+
+        let stateClass = 'stage-indicator--pending';
+        if (isDone) stateClass = 'stage-indicator--done';
+        else if (isCurrent) stateClass = 'stage-indicator--active';
+
+        return (
+          <div
+            key={i}
+            className={`stage-indicator ${stateClass}`}
+            data-tooltip-id="tooltip"
+            data-tooltip-content={tooltipContent}
+          >
+            <svg className="stage-indicator-ring" viewBox="0 0 32 32">
+              <circle className="stage-indicator-bg" cx="16" cy="16" r={radius} />
+              {isDone ? (
+                <circle
+                  className="stage-indicator-fill stage-indicator-fill--done"
+                  cx="16" cy="16" r={radius}
+                  strokeDasharray={circumference}
+                  strokeDashoffset={0}
+                />
+              ) : (
+                <circle
+                  className="stage-indicator-fill"
+                  cx="16" cy="16" r={radius}
+                  strokeDasharray={circumference}
+                  strokeDashoffset={offset}
+                />
+              )}
+            </svg>
+            <i className={`${meta.icon} stage-indicator-icon`} />
+          </div>
+        );
+      })}
     </div>
   );
 }

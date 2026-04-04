@@ -13,6 +13,8 @@ import type {
   PortListSummary,
   ScanErrorInfo,
   ScanWarningInfo,
+  PipelineConfig,
+  StageEntry,
 } from '../types';
 import { processScanEvent } from './eventProcessor';
 
@@ -37,6 +39,14 @@ interface ScanState {
   config: ScanConfig | null;
   setConfig: (config: ScanConfig | null) => void;
   updateConfig: (partial: Partial<ScanConfig>) => void;
+
+  // Pipeline config
+  pipelineConfig: PipelineConfig;
+  setPipelineConfig: (config: PipelineConfig) => void;
+  addStage: (stage: StageEntry) => void;
+  removeStage: (index: number) => void;
+  reorderStages: (from: number, to: number) => void;
+  updateStageConfig: (index: number, config: Record<string, unknown>) => void;
 
   // Scan status
   status: ScanStatus | null;
@@ -88,6 +98,41 @@ export const useScanStore = create<ScanState>((set, get) => ({
     if (current) {
       set({ config: { ...current, ...partial } });
     }
+  },
+
+  // Pipeline config
+  pipelineConfig: { stages: [] },
+  setPipelineConfig: (pipelineConfig) => set({ pipelineConfig }),
+  addStage: (stage) => {
+    const { pipelineConfig } = get();
+    set({
+      pipelineConfig: {
+        ...pipelineConfig,
+        stages: [...pipelineConfig.stages, stage],
+      },
+    });
+  },
+  removeStage: (index) => {
+    const { pipelineConfig } = get();
+    set({
+      pipelineConfig: {
+        ...pipelineConfig,
+        stages: pipelineConfig.stages.filter((_, i) => i !== index),
+      },
+    });
+  },
+  reorderStages: (from, to) => {
+    const { pipelineConfig } = get();
+    const stages = [...pipelineConfig.stages];
+    const [moved] = stages.splice(from, 1);
+    stages.splice(to, 0, moved);
+    set({ pipelineConfig: { ...pipelineConfig, stages } });
+  },
+  updateStageConfig: (index, config) => {
+    const { pipelineConfig } = get();
+    const stages = [...pipelineConfig.stages];
+    stages[index] = { ...stages[index], config };
+    set({ pipelineConfig: { ...pipelineConfig, stages } });
   },
 
   // Scan status

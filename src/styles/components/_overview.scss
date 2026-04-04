@@ -122,40 +122,6 @@
   flex: 1;
 }
 
-// Stage
-
-.scan-stat.stage {
-  padding: 6px 14px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  gap: 8px;
-
-  &.active {
-    background: rgba(255, 214, 10, 0.15);
-
-    .scan-stat-icon,
-    .scan-stat-stage {
-      color: var(--warning-accent);
-    }
-  }
-
-  &.success {
-    background: rgba(48, 209, 88, 0.15);
-
-    .scan-stat-icon,
-    .scan-stat-stage {
-      color: var(--secondary-accent);
-    }
-  }
-}
-
-.scan-stat-stage {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  text-transform: lowercase;
-}
-
 // Odometer — smooth spinning digit wheels
 
 .odometer {
@@ -278,4 +244,77 @@
 .warning-count {
   font-size: 14px;
   font-weight: 600;
+}
+
+// ============================================
+// Inline stage indicators (progress circles)
+// ============================================
+
+.stage-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stage-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  cursor: default;
+
+  &--pending {
+    opacity: 0.35;
+  }
+
+  &--active {
+    opacity: 1;
+  }
+
+  &--done {
+    opacity: 0.85;
+  }
+}
+
+.stage-indicator-ring {
+  position: absolute;
+  inset: 0;
+  width: 32px;
+  height: 32px;
+  transform: rotate(-90deg);
+}
+
+.stage-indicator-bg {
+  fill: none;
+  stroke: var(--input-bg);
+  stroke-width: 2;
+}
+
+.stage-indicator-fill {
+  fill: none;
+  stroke: var(--warning-accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s ease-out;
+
+  &--done {
+    stroke: var(--secondary-accent);
+  }
+}
+
+.stage-indicator-icon {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  color: var(--text-secondary);
+
+  .stage-indicator--active & {
+    color: var(--warning-accent);
+  }
+
+  .stage-indicator--done & {
+    color: var(--secondary-accent);
+  }
 }

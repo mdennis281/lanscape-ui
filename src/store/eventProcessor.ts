@@ -10,6 +10,7 @@ import type {
   ScanStatus,
   ScanErrorInfo,
   ScanWarningInfo,
+  StageProgress,
 } from '../types';
 
 /** The slice of scan state the processor needs to read. */
@@ -75,6 +76,22 @@ export function processScanEvent(
           devices_scanned?: number;
           devices_total?: number;
           devices_alive?: number;
+          ports_scanned?: number;
+          ports_total?: number;
+          stages?: StageProgress[];
+          current_stage_index?: number | null;
+          metadata?: {
+            running?: boolean;
+            stage?: string;
+            run_time?: number;
+            devices_scanned?: number;
+            devices_total?: number;
+            devices_alive?: number;
+            ports_scanned?: number;
+            ports_total?: number;
+            stages?: StageProgress[];
+            current_stage_index?: number | null;
+          };
         };
       } | undefined;
 
@@ -104,18 +121,26 @@ export function processScanEvent(
       }));
       patch.devices = updatedDevices;
 
-      const meta = finishedDelta?.metadata;
+      // Handle both flat and nested metadata structures (same as update/delta)
+      const outerMeta = finishedDelta?.metadata;
+      const innerMeta = outerMeta?.metadata;
+      const scanMeta = innerMeta ?? outerMeta;
       const currentStatus = snapshot.status;
+
       patch.status = {
         ...currentStatus,
         is_running: false,
         stage: finalStage,
-        runtime: meta?.run_time ?? currentStatus?.runtime ?? 0,
-        scanned_hosts: meta?.devices_scanned ?? currentStatus?.scanned_hosts ?? 0,
-        total_hosts: meta?.devices_total ?? currentStatus?.total_hosts ?? 0,
-        found_hosts: meta?.devices_alive ?? updatedDevices.length,
+        runtime: scanMeta?.run_time ?? currentStatus?.runtime ?? 0,
+        scanned_hosts: scanMeta?.devices_scanned ?? currentStatus?.scanned_hosts ?? 0,
+        total_hosts: scanMeta?.devices_total ?? currentStatus?.total_hosts ?? 0,
+        found_hosts: scanMeta?.devices_alive ?? updatedDevices.length,
+        ports_scanned: scanMeta?.ports_scanned ?? currentStatus?.ports_scanned ?? 0,
+        ports_total: scanMeta?.ports_total ?? currentStatus?.ports_total ?? 0,
         progress: action === 'complete' ? 1 : currentStatus?.progress ?? 0,
         remaining: 0,
+        stages: scanMeta?.stages ?? currentStatus?.stages,
+        current_stage_index: scanMeta?.current_stage_index ?? currentStatus?.current_stage_index,
       } as ScanStatus;
       break;
     }
@@ -136,6 +161,8 @@ export function processScanEvent(
           ports_total?: number;
           errors?: ScanErrorInfo[];
           warnings?: ScanWarningInfo[];
+          stages?: StageProgress[];
+          current_stage_index?: number | null;
           metadata?: {
             running?: boolean;
             stage?: string;
@@ -148,6 +175,8 @@ export function processScanEvent(
             ports_total?: number;
             errors?: ScanErrorInfo[];
             warnings?: ScanWarningInfo[];
+            stages?: StageProgress[];
+            current_stage_index?: number | null;
           };
         };
         has_changes?: boolean;
@@ -194,6 +223,8 @@ export function processScanEvent(
           ports_total: scanMeta.ports_total ?? currentStatus?.ports_total ?? 0,
           progress: pctComplete / 100,
           remaining: remainingSec,
+          stages: scanMeta.stages ?? currentStatus?.stages,
+          current_stage_index: scanMeta.current_stage_index ?? currentStatus?.current_stage_index,
         } as ScanStatus;
 
         if (scanMeta.errors && scanMeta.errors.length > 0) {
