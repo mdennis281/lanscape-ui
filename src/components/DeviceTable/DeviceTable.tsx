@@ -185,11 +185,13 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
                   <td className="mac-cell">{device.mac_addr || '—'}</td>
                   <td className="vendor-cell">{device.manufacturer || '—'}</td>
                   <td className={portsExpanded ? 'ports-expanded' : ''}>
-                    {/* Show dash if port scanning hasn't started yet */}
-                    {!scanStage.toLowerCase().includes('port') && 
+                    {/* Show dash only if no port scan has touched this device yet */}
+                    {portsSorted.length === 0 &&
+                     !scanStage.toLowerCase().includes('port') && 
                      !scanStage.toLowerCase().includes('service') && 
                      scanStage !== 'complete' && 
-                     scanStage !== 'terminated' ? (
+                     scanStage !== 'terminated' &&
+                     !device.ports_to_scan ? (
                       <span className="ports-cell">—</span>
                     ) : portsSorted.length > 0 ? (
                       portsExpanded ? (

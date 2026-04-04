@@ -184,6 +184,37 @@
   justify-content: center;
   cursor: pointer;
 
+  // Resolving — soft amber pulsing dot (resolving hostname/MAC)
+  &.resolving .stage-pulse {
+    position: relative;
+    width: 22px;
+    height: 22px;
+  }
+
+  &.resolving .resolving-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    background: var(--warning-accent);
+    border-radius: 50%;
+    animation: resolving-glow 1.2s ease-in-out infinite;
+  }
+
+  &.resolving .resolving-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    border: 2px solid var(--warning-accent);
+    border-radius: 50%;
+    animation: pulse-expand 1.5s ease-out infinite;
+  }
+
   // Found — pulsing radar
   &.found .stage-pulse {
     position: relative;
@@ -292,6 +323,12 @@
 @keyframes pulse-expand {
   0%   { width: 6px;  height: 6px;  opacity: 1; }
   100% { width: 20px; height: 20px; opacity: 0; }
+}
+
+@keyframes resolving-glow {
+  0%   { opacity: 0.6; box-shadow: none; }
+  50%  { opacity: 1;   box-shadow: 0 0 6px var(--warning-accent); }
+  100% { opacity: 0.6; box-shadow: none; }
 }
 
 @keyframes yellow-fade-out {

@@ -352,6 +352,10 @@ class WebSocketService {
     return this.send('scan.list');
   }
 
+  async appendStages(scanId: string, stages: { stage_type: string; config: Record<string, unknown> }[]): Promise<WSResponse> {
+    return this.send('scan.append_stages', { scan_id: scanId, stages });
+  }
+
   // Port handler methods
   async listPorts(): Promise<WSResponse> {
     return this.send('port.list');
@@ -376,6 +380,10 @@ class WebSocketService {
 
   async getConfigDefaults(): Promise<WSResponse> {
     return this.send('tools.config_defaults');
+  }
+
+  async getStageDefaults(): Promise<WSResponse> {
+    return this.send('tools.stage_defaults');
   }
 
   async isArpSupported(): Promise<WSResponse> {

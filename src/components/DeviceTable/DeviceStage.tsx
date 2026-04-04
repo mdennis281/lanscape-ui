@@ -1,4 +1,3 @@
-import { useScanStore } from '../../store';
 import type { DeviceResult } from '../../types';
 
 interface DeviceStageProps {
@@ -12,21 +11,12 @@ interface DeviceStageProps {
  * - Complete: animated checkmark
  */
 export function DeviceStage({ device }: DeviceStageProps) {
-  const config = useScanStore((state) => state.config);
-  const portLists = useScanStore((state) => state.portLists);
-  
   const stage = device.stage || 'found';
   const portsScanned = device.ports_scanned || 0;
+  const portsToScan = device.ports_to_scan || 0;
   
-  // Get the actual port count from the portLists loaded from backend
-  const portListName = config?.port_list || 'medium';
-  const portListInfo = portLists.find(
-    (pl) => pl.name.toLowerCase() === portListName.toLowerCase()
-  );
-  const totalPorts = portListInfo?.count || 100; // Fallback to 100 if not found
-  
-  const progress = totalPorts > 0 
-    ? Math.min((portsScanned / totalPorts) * 100, 100)
+  const progress = portsToScan > 0 
+    ? Math.min((portsScanned / portsToScan) * 100, 100)
     : 0;
 
   if (stage === 'complete') {
@@ -97,7 +87,24 @@ export function DeviceStage({ device }: DeviceStageProps) {
     );
   }
 
+  if (stage === 'resolving') {
+    // Device just discovered, resolving hostname/MAC
+    return (
+      <div 
+        className="device-stage resolving"
+        data-tooltip-id="tooltip"
+        data-tooltip-content="Resolving device info..."
+      >
+        <div className="stage-pulse">
+          <div className="pulse-ring resolving-ring"></div>
+          <div className="pulse-core resolving-core"></div>
+        </div>
+      </div>
+    );
+  }
+
   // Default: 'found' stage - pulsing radar effect
+  // Also used as fallback for unknown stages
   return (
     <div 
       className="device-stage found"

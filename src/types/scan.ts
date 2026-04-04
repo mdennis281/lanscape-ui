@@ -288,6 +288,7 @@ export interface DeviceResult {
   ports?: number[];
   stage?: string;
   ports_scanned?: number;
+  ports_to_scan?: number;
   services?: Record<string, number[]>;
   service_info?: ServiceInfo[];
   caught_errors?: Array<string | { basic: string; traceback?: string }>;

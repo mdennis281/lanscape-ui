@@ -1,6 +1,9 @@
 /**
  * Stage metadata registry — maps StageType values to display info and
  * default configs for the pipeline builder UI.
+ *
+ * Default configs are fetched from the backend via `tools.stage_defaults`
+ * and applied at startup via {@link applyStageDefaults}.
  */
 
 import type { StageType } from '../../types';
@@ -69,12 +72,22 @@ export const STAGE_REGISTRY: StageMeta[] = [
     description: 'Scan discovered hosts for open ports and services',
     icon: 'fa-solid fa-door-open',
     category: 'scanning',
-    defaultConfig: {
-      port_list: 'medium',
-      scan_services: true,
-    },
+    defaultConfig: {},
   },
 ];
+
+/**
+ * Apply backend-provided default configs to the stage registry.
+ * Called once on initial connection.
+ */
+export function applyStageDefaults(defaults: Record<string, Record<string, unknown>>): void {
+  for (const meta of STAGE_REGISTRY) {
+    const cfg = defaults[meta.type];
+    if (cfg) {
+      meta.defaultConfig = { ...cfg };
+    }
+  }
+}
 
 export function getStageMeta(type: StageType): StageMeta {
   return STAGE_REGISTRY.find((s) => s.type === type)!;

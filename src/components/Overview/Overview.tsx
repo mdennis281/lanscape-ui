@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useScanStore, useUIStore } from '../../store';
 import { Odometer, OdometerTime } from './Odometer';
+import { AddStageModal } from './AddStageModal';
 import { getStageMeta } from '../Settings/stageRegistry';
-import type { StageProgress } from '../../types';
+import type { StageProgress, StageEntry } from '../../types';
 
 // Calculate number of digits needed to display a number
 function digitCount(n: number): number {
@@ -59,17 +60,46 @@ export function Overview() {
   const status = useScanStore((state) => state.status);
   const scanErrors = useScanStore((state) => state.scanErrors);
   const scanWarnings = useScanStore((state) => state.scanWarnings);
+  const currentScanId = useScanStore((state) => state.currentScanId);
+  const pipelineConfig = useScanStore((state) => state.pipelineConfig);
   const setShowErrors = useUIStore((state) => state.setShowErrors);
   const setShowWarnings = useUIStore((state) => state.setShowWarnings);
 
   const isRunning = status?.is_running ?? false;
-  const scannedHosts = status?.scanned_hosts ?? 0;
-  const totalHosts = status?.total_hosts ?? 0;
-  const portsTotal = status?.ports_total ?? 0;
   const serverRuntime = status?.runtime ?? 0;
   const remaining = status?.remaining ?? 0;
   const stage = status?.stage ?? 'idle';
   const progress = status?.progress ?? 0;
+
+  // Per-stage progress from pipeline mode
+  const stageProgresses = status?.stages;
+  const currentStageIndex = status?.current_stage_index;
+
+  // Derive current stage (running) or last stage (complete) for header counter
+  const currentStage = (stageProgresses && currentStageIndex != null)
+    ? stageProgresses[currentStageIndex]
+    : null;
+  const lastStage = stageProgresses?.length
+    ? stageProgresses[stageProgresses.length - 1]
+    : null;
+  const activeStage = currentStage ?? lastStage;
+
+  // Determine which counter to show based on current/last stage type
+  const isPortScanStage = activeStage
+    ? activeStage.stage_type === 'port_scan'
+    : PORT_SCAN_STAGES.includes(stage);
+  const showPortProgress = isPortScanStage;
+
+  // Header counters: use current stage's progress when running, cumulative when done
+  const scannedHosts = (currentStage && !isPortScanStage)
+    ? currentStage.completed
+    : (status?.scanned_hosts ?? 0);
+  const totalHosts = (currentStage && !isPortScanStage)
+    ? currentStage.total
+    : (status?.total_hosts ?? 0);
+  const portsTotal = (currentStage && isPortScanStage)
+    ? currentStage.total
+    : (status?.ports_total ?? 0);
 
   // Use local runtime for smooth counting instead of choppy server updates
   const runtime = useLocalRuntime(isRunning, serverRuntime);
@@ -77,12 +107,11 @@ export function Overview() {
   // When scan completes normally (stage='complete'), snap ports_scanned to ports_total
   // so the odometer animates to the final count instead of stopping short.
   // Don't snap on termination - show actual ports scanned.
-  const rawPortsScanned = status?.ports_scanned ?? 0;
+  const rawPortsScanned = (currentStage && isPortScanStage)
+    ? currentStage.completed
+    : (status?.ports_scanned ?? 0);
   const scanCompleted = stage === 'complete';
   const portsScanned = (scanCompleted && portsTotal > 0) ? portsTotal : rawPortsScanned;
-
-  // Show port progress once we enter port scanning
-  const showPortProgress = PORT_SCAN_STAGES.includes(stage);
 
   // Track scan start to reset odometer instantly.
   // Uses React's recommended "adjust state during render" pattern
@@ -109,9 +138,8 @@ export function Overview() {
   const hostDigits = Math.max(digitCount(totalHosts), 1);
   const portDigits = Math.max(digitCount(portsTotal), 1);
 
-  // Per-stage progress from pipeline mode
-  const stageProgresses = status?.stages;
-  const currentStageIndex = status?.current_stage_index;
+  // Add-stage modal state (lifted here so it renders outside .scan-stats)
+  const [showAddStage, setShowAddStage] = useState(false);
 
   return (
     <>
@@ -189,11 +217,27 @@ export function Overview() {
         )}
 
         {/* Stage indicators */}
-        {stageProgresses && stageProgresses.length > 0 && (
-          <StageIndicators stages={stageProgresses} currentIndex={currentStageIndex ?? null} />
+        {stageProgresses && stageProgresses.length > 0 ? (
+          <StageIndicators
+            stages={stageProgresses}
+            currentIndex={currentStageIndex ?? null}
+            showAddButton={!!currentScanId}
+            onAddStage={() => setShowAddStage(true)}
+          />
+        ) : (
+          pipelineConfig.stages.length > 0 && (
+            <StagePreview stages={pipelineConfig.stages} onAddStage={() => setShowAddStage(true)} />
+          )
         )}
       </div>
     </div>
+
+    {/* Add-stage modal — rendered outside .scan-stats to avoid overflow clipping */}
+    <AddStageModal
+      isOpen={showAddStage}
+      onClose={() => setShowAddStage(false)}
+      scanId={currentScanId ?? undefined}
+    />
     </>
   );
 }
@@ -208,9 +252,13 @@ function formatStageRuntime(seconds: number): string {
 function StageIndicators({
   stages,
   currentIndex,
+  showAddButton,
+  onAddStage,
 }: {
   stages: StageProgress[];
   currentIndex: number | null;
+  showAddButton: boolean;
+  onAddStage: () => void;
 }) {
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
@@ -266,6 +314,55 @@ function StageIndicators({
           </div>
         );
       })}
+
+      {/* Add stage button */}
+      {showAddButton && (
+        <button
+          className="stage-indicator-add"
+          onClick={onAddStage}
+          data-tooltip-id="tooltip"
+          data-tooltip-content="Add stage"
+        >
+          <i className="fa-solid fa-plus" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function StagePreview({
+  stages,
+  onAddStage,
+}: {
+  stages: StageEntry[];
+  onAddStage: () => void;
+}) {
+  return (
+    <div className="stage-indicators stage-indicators--preview">
+      {stages.map((entry, i) => {
+        const meta = getStageMeta(entry.stage_type);
+        return (
+          <div
+            key={i}
+            className="stage-indicator stage-indicator--preview"
+            data-tooltip-id="tooltip"
+            data-tooltip-content={meta.label}
+          >
+            <svg className="stage-indicator-ring" viewBox="0 0 32 32">
+              <circle className="stage-indicator-bg" cx="16" cy="16" r={14} />
+            </svg>
+            <i className={`${meta.icon} stage-indicator-icon`} />
+          </div>
+        );
+      })}
+      <button
+        className="stage-indicator-add"
+        onClick={onAddStage}
+        data-tooltip-id="tooltip"
+        data-tooltip-content="Add stage"
+      >
+        <i className="fa-solid fa-plus" />
+      </button>
     </div>
   );
 }
