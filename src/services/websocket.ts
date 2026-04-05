@@ -386,6 +386,10 @@ class WebSocketService {
     return this.send('tools.stage_defaults');
   }
 
+  async getStagePresets(): Promise<WSResponse> {
+    return this.send('tools.stage_presets');
+  }
+
   async isArpSupported(): Promise<WSResponse> {
     return this.send('tools.arp_supported');
   }

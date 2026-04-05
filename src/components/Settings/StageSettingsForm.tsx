@@ -680,6 +680,37 @@ function PortScanSettings({ config, onChange, portLists }: StageSettingsProps) {
 // ── Dispatcher ───────────────────────────────────────────────────────
 
 import type { StageType } from '../../types';
+import { getStageMeta } from './stageRegistry';
+import type { PresetName } from './stageRegistry';
+
+const PRESET_OPTIONS: { key: PresetName; label: string; icon: string }[] = [
+  { key: 'fast', label: 'Fast', icon: 'fa-solid fa-rabbit-running' },
+  { key: 'balanced', label: 'Balanced', icon: 'fa-solid fa-scale-balanced' },
+  { key: 'accurate', label: 'Accurate', icon: 'fa-solid fa-bullseye' },
+];
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== typeof b || a == null || b == null) return false;
+  if (typeof a !== 'object') return false;
+  const aObj = a as Record<string, unknown>;
+  const bObj = b as Record<string, unknown>;
+  const keys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
+  for (const k of keys) {
+    if (!deepEqual(aObj[k], bObj[k])) return false;
+  }
+  return true;
+}
+
+function detectActivePreset(
+  config: Record<string, unknown>,
+  presets: Record<PresetName, Record<string, unknown>>,
+): PresetName | null {
+  for (const name of PRESET_OPTIONS.map((p) => p.key)) {
+    if (presets[name] && deepEqual(config, presets[name])) return name;
+  }
+  return null;
+}
 
 export function StageSettingsForm({
   stageType,
@@ -692,20 +723,50 @@ export function StageSettingsForm({
   onChange: (config: Record<string, unknown>) => void;
   portLists?: PortListSummary[];
 }) {
-  switch (stageType) {
-    case 'icmp_discovery':
-      return <ICMPDiscoverySettings config={config} onChange={onChange} />;
-    case 'arp_discovery':
-      return <ARPDiscoverySettings config={config} onChange={onChange} />;
-    case 'poke_arp_discovery':
-      return <PokeARPDiscoverySettings config={config} onChange={onChange} />;
-    case 'icmp_arp_discovery':
-      return <ICMPARPDiscoverySettings config={config} onChange={onChange} />;
-    case 'ipv6_ndp_discovery':
-      return <IPv6NDPDiscoverySettings config={config} onChange={onChange} />;
-    case 'ipv6_mdns_discovery':
-      return <IPv6MDNSDiscoverySettings config={config} onChange={onChange} />;
-    case 'port_scan':
-      return <PortScanSettings config={config} onChange={onChange} portLists={portLists} />;
-  }
+  const meta = getStageMeta(stageType);
+  const hasPresets = meta.presets && Object.keys(meta.presets).length > 0;
+  const activePreset = hasPresets ? detectActivePreset(config, meta.presets) : null;
+
+  const formContent = (() => {
+    switch (stageType) {
+      case 'icmp_discovery':
+        return <ICMPDiscoverySettings config={config} onChange={onChange} />;
+      case 'arp_discovery':
+        return <ARPDiscoverySettings config={config} onChange={onChange} />;
+      case 'poke_arp_discovery':
+        return <PokeARPDiscoverySettings config={config} onChange={onChange} />;
+      case 'icmp_arp_discovery':
+        return <ICMPARPDiscoverySettings config={config} onChange={onChange} />;
+      case 'ipv6_ndp_discovery':
+        return <IPv6NDPDiscoverySettings config={config} onChange={onChange} />;
+      case 'ipv6_mdns_discovery':
+        return <IPv6MDNSDiscoverySettings config={config} onChange={onChange} />;
+      case 'port_scan':
+        return <PortScanSettings config={config} onChange={onChange} portLists={portLists} />;
+    }
+  })();
+
+  return (
+    <>
+      {hasPresets && (
+        <div className="preset-selector">
+          {PRESET_OPTIONS.map((p) => (
+            <button
+              key={p.key}
+              className={`preset-btn${activePreset === p.key ? ' preset-btn--active' : ''}`}
+              onClick={() => onChange({ ...meta.presets[p.key] })}
+              data-tooltip-id="tooltip"
+              data-tooltip-content={`Apply ${p.label} preset`}
+            >
+              <i className={p.icon} /> {p.label}
+            </button>
+          ))}
+          {activePreset === null && (
+            <span className="preset-custom-badge">Custom</span>
+          )}
+        </div>
+      )}
+      {formContent}
+    </>
+  );
 }

@@ -864,3 +864,56 @@
   font-size: 12px;
   font-weight: 400;
 }
+
+// ── Preset Selector ─────────────────────────────────────────────────
+
+.preset-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0 8px;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 8px;
+}
+
+.preset-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+  }
+
+  &--active {
+    background: var(--accent-bg, rgba(99, 102, 241, 0.12));
+    color: var(--accent, #818cf8);
+    border-color: var(--accent, #818cf8);
+    font-weight: 600;
+  }
+
+  i {
+    font-size: 11px;
+  }
+}
+
+.preset-custom-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0 6px;
+  white-space: nowrap;
+}

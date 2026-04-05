@@ -21,7 +21,7 @@ import type { WebSocketService } from './services';
 import { useConnectionStore, useScanStore, useUIStore } from './store';
 import { resolveWebSocketURL } from './utils';
 import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig } from './types';
-import { applyStageDefaults } from './components/Settings/stageRegistry';
+import { applyStageDefaults, applyStagePresets } from './components/Settings/stageRegistry';
 import './types/electron'; // Import electron types for global Window augmentation
 import '@awesome.me/kit-d0b7f59243/icons/css/fontawesome.min.css';
 import '@awesome.me/kit-d0b7f59243/icons/css/solid.min.css';
@@ -106,17 +106,23 @@ function MainApp() {
    * Extracted so we can call it both on first load and after a reconnect.
    */
   const loadInitialData = useCallback(async (ws: WebSocketService) => {
-    const [subnetListRes, configDefaultsRes, appInfoRes, portListsRes, stageDefaultsRes] = await Promise.all([
+    const [subnetListRes, configDefaultsRes, appInfoRes, portListsRes, stageDefaultsRes, stagePresetsRes] = await Promise.all([
       ws.listSubnets(),
       ws.getConfigDefaults(),
       ws.getAppInfo(),
       ws.listPortsSummary(),
       ws.getStageDefaults(),
+      ws.getStagePresets(),
     ]);
 
     // Apply stage-level defaults to the stage registry
     if (stageDefaultsRes.success && stageDefaultsRes.data) {
       applyStageDefaults(stageDefaultsRes.data as Record<string, Record<string, unknown>>);
+    }
+
+    // Apply stage presets (fast/balanced/accurate) to the stage registry
+    if (stagePresetsRes.success && stagePresetsRes.data) {
+      applyStagePresets(stagePresetsRes.data as Record<string, Record<string, Record<string, unknown>>>);
     }
 
     // Set available subnets
