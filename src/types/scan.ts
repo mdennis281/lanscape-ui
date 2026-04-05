@@ -144,6 +144,7 @@ export interface StageProgress {
   completed: number;
   finished: boolean;
   runtime: number;
+  counter_label: string;
 }
 
 // ── Scan configuration ───────────────────────────────────────────────

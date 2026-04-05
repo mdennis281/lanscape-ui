@@ -11,9 +11,6 @@ function digitCount(n: number): number {
   return Math.floor(Math.log10(Math.abs(n))) + 1;
 }
 
-// Stages where port scanning is active
-const PORT_SCAN_STAGES = ['testing ports', 'complete', 'terminated'];
-
 /**
  * Hook for smooth local runtime counting.
  * 
@@ -84,34 +81,18 @@ export function Overview() {
     : null;
   const activeStage = currentStage ?? lastStage;
 
-  // Determine which counter to show based on current/last stage type
-  const isPortScanStage = activeStage
-    ? activeStage.stage_type === 'port_scan'
-    : PORT_SCAN_STAGES.includes(stage);
-  const showPortProgress = isPortScanStage;
+  // Counter values driven by the active stage
+  const counterCompleted = activeStage?.completed ?? 0;
+  const counterTotal = activeStage?.total ?? 0;
+  const counterLabel = activeStage?.counter_label ?? 'IPs scanned';
 
-  // Header counters: use current stage's progress when running, cumulative when done
-  const scannedHosts = (currentStage && !isPortScanStage)
-    ? currentStage.completed
-    : (status?.scanned_hosts ?? 0);
-  const totalHosts = (currentStage && !isPortScanStage)
-    ? currentStage.total
-    : (status?.total_hosts ?? 0);
-  const portsTotal = (currentStage && isPortScanStage)
-    ? currentStage.total
-    : (status?.ports_total ?? 0);
+  // When scan completes normally (stage='complete'), snap completed to total
+  // so the odometer animates to the final count instead of stopping short.
+  const scanCompleted = stage === 'complete';
+  const counterValue = (scanCompleted && counterTotal > 0) ? counterTotal : counterCompleted;
 
   // Use local runtime for smooth counting instead of choppy server updates
   const runtime = useLocalRuntime(isRunning, serverRuntime);
-
-  // When scan completes normally (stage='complete'), snap ports_scanned to ports_total
-  // so the odometer animates to the final count instead of stopping short.
-  // Don't snap on termination - show actual ports scanned.
-  const rawPortsScanned = (currentStage && isPortScanStage)
-    ? currentStage.completed
-    : (status?.ports_scanned ?? 0);
-  const scanCompleted = stage === 'complete';
-  const portsScanned = (scanCompleted && portsTotal > 0) ? portsTotal : rawPortsScanned;
 
   // Track scan start to reset odometer instantly.
   // Uses React's recommended "adjust state during render" pattern
@@ -134,9 +115,8 @@ export function Overview() {
   const errorCount = scanErrors.length;
   const warningCount = scanWarnings.length;
   
-  // Use total hosts to determine digit count (so scanned aligns properly)
-  const hostDigits = Math.max(digitCount(totalHosts), 1);
-  const portDigits = Math.max(digitCount(portsTotal), 1);
+  // Use counter total to determine digit count (so completed aligns properly)
+  const counterDigits = Math.max(digitCount(counterTotal), 1);
 
   // Add-stage modal state (lifted here so it renders outside .scan-stats)
   const [showAddStage, setShowAddStage] = useState(false);
@@ -150,24 +130,12 @@ export function Overview() {
       )}
       
       <div className="scan-stats-content">
-        {/* Counter with slide transition between devices and ports */}
-        <div className="scan-stat-slider">
-          <div className={`scan-stat-slide ${showPortProgress ? 'slide-out' : 'slide-in'}`}>
-            <div className="scan-stat">
-              <Odometer value={scannedHosts} digits={hostDigits} className="scan-stat-value" />
-              <span className="scan-stat-sep">/</span>
-              <Odometer value={totalHosts} digits={hostDigits} className="scan-stat-value muted" />
-              <span className="scan-stat-label">IPs scanned</span>
-            </div>
-          </div>
-          <div className={`scan-stat-slide ${showPortProgress ? 'slide-in' : 'slide-out-down'}`}>
-            <div className="scan-stat">
-              <Odometer value={portsScanned} digits={portDigits} className="scan-stat-value" />
-              <span className="scan-stat-sep">/</span>
-              <Odometer value={portsTotal} digits={portDigits} className="scan-stat-value muted" />
-              <span className="scan-stat-label">ports scanned</span>
-            </div>
-          </div>
+        {/* Counter driven by the active stage */}
+        <div className="scan-stat">
+          <Odometer value={counterValue} digits={counterDigits} className="scan-stat-value" />
+          <span className="scan-stat-sep">/</span>
+          <Odometer value={counterTotal} digits={counterDigits} className="scan-stat-value muted" />
+          <span className="scan-stat-label">{counterLabel}</span>
         </div>
 
         <div className="scan-stat-spacer" />
@@ -225,9 +193,7 @@ export function Overview() {
             onAddStage={() => setShowAddStage(true)}
           />
         ) : (
-          pipelineConfig.stages.length > 0 && (
-            <StagePreview stages={pipelineConfig.stages} onAddStage={() => setShowAddStage(true)} />
-          )
+          <StagePreview stages={pipelineConfig.stages} onAddStage={() => setShowAddStage(true)} />
         )}
       </div>
     </div>
