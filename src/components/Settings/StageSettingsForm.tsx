@@ -679,9 +679,11 @@ function PortScanSettings({ config, onChange, portLists }: StageSettingsProps) {
 
 // ── Dispatcher ───────────────────────────────────────────────────────
 
+import { useState } from 'react';
 import type { StageType } from '../../types';
 import { getStageMeta } from './stageRegistry';
 import type { PresetName } from './stageRegistry';
+import { estimateStageTime, formatEstimate } from './stageEstimates';
 
 const PRESET_OPTIONS: { key: PresetName; label: string; icon: string }[] = [
   { key: 'fast', label: 'Fast', icon: 'fa-solid fa-rabbit-running' },
@@ -723,9 +725,12 @@ export function StageSettingsForm({
   onChange: (config: Record<string, unknown>) => void;
   portLists?: PortListSummary[];
 }) {
+  const [congestion, setCongestion] = useState(10);
   const meta = getStageMeta(stageType);
   const hasPresets = meta.presets && Object.keys(meta.presets).length > 0;
   const activePreset = hasPresets ? detectActivePreset(config, meta.presets) : null;
+  const isPortScan = stageType === 'port_scan';
+  const estimate = estimateStageTime(stageType, config, portLists);
 
   const formContent = (() => {
     switch (stageType) {
@@ -764,6 +769,34 @@ export function StageSettingsForm({
           {activePreset === null && (
             <span className="preset-custom-badge">Custom</span>
           )}
+        </div>
+      )}
+      {isPortScan && (
+        <div className="congestion-slider">
+          <div className="congestion-slider-header">
+            <label className="form-label">
+              <i className="fa-solid fa-gauge" /> Network Congestion
+              <HelpTip text="Estimated percentage of IPs on the subnet with an active device. Affects time estimate only — does not change scan behavior." />
+            </label>
+            <span className="congestion-slider-value">{congestion}%</span>
+          </div>
+          <input
+            type="range"
+            className="congestion-slider-input"
+            min="1"
+            max="100"
+            value={congestion}
+            onChange={(e) => setCongestion(parseInt(e.target.value))}
+          />
+          <div className="congestion-slider-estimate">
+            <i className="fa-solid fa-clock" />
+            <span>
+              ~{formatEstimate(
+                Math.ceil((254 * congestion / 100) / Math.max(1, (config.t_cnt_device as number) ?? 4))
+                * estimate
+              )} estimated for /24 subnet
+            </span>
+          </div>
         </div>
       )}
       {formContent}

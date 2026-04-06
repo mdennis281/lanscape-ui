@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { getStageMeta } from './stageRegistry';
+import { estimateStageTime, estimateUnit, formatEstimate } from './stageEstimates';
 import { StageSettingsForm } from './StageSettingsForm';
 import type { StageEntry, PortListSummary } from '../../types';
 
@@ -23,6 +24,8 @@ interface StageCardProps {
 export function StageCard({ stage, index, id, onRemove, onConfigChange, portLists }: StageCardProps) {
   const [expanded, setExpanded] = useState(false);
   const meta = getStageMeta(stage.stage_type);
+  const estimate = estimateStageTime(stage.stage_type, stage.config, portLists);
+  const unit = estimateUnit(stage.stage_type);
 
   const {
     attributes,
@@ -58,6 +61,14 @@ export function StageCard({ stage, index, id, onRemove, onConfigChange, portList
         <span className="stage-card-index">{index + 1}</span>
         <i className={`${meta.icon} stage-card-icon`} />
         <span className="stage-card-label">{meta.label}</span>
+        <span
+          className="stage-card-estimate"
+          data-tooltip-id="tooltip"
+          data-tooltip-content={`Worst-case ${formatEstimate(estimate)} ${unit}`}
+        >
+          <i className="fa-solid fa-clock" />
+          {formatEstimate(estimate)}
+        </span>
         <div className="stage-card-actions">
           <button
             className="stage-card-btn"

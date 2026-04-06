@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Modal } from '../Modal';
 import { STAGE_REGISTRY, type StageMeta } from '../Settings/stageRegistry';
 import { StageSettingsForm } from '../Settings/StageSettingsForm';
+import { estimateStageTime, estimateUnit, formatEstimate } from '../Settings/stageEstimates';
 import { useScanStore } from '../../store';
 import { getWebSocketService } from '../../services';
 import type { StageType, PortListSummary } from '../../types';
@@ -149,6 +150,9 @@ function SelectedStageConfig({
   onChange: (config: Record<string, unknown>) => void;
   portLists: PortListSummary[];
 }) {
+  const estimate = estimateStageTime(meta.type as StageType, config, portLists);
+  const unit = estimateUnit(meta.type as StageType);
+
   return (
     <div className="add-stage-config">
       <div className="add-stage-config-header">
@@ -157,6 +161,14 @@ function SelectedStageConfig({
           <div className="add-stage-config-label">{meta.label}</div>
           <div className="add-stage-config-desc">{meta.description}</div>
         </div>
+        <span
+          className="stage-card-estimate"
+          data-tooltip-id="tooltip"
+          data-tooltip-content={`Worst-case ${formatEstimate(estimate)} ${unit}`}
+        >
+          <i className="fa-solid fa-clock" />
+          {formatEstimate(estimate)}
+        </span>
       </div>
       <div className="add-stage-config-form">
         <StageSettingsForm

@@ -390,6 +390,10 @@ class WebSocketService {
     return this.send('tools.stage_presets');
   }
 
+  async getStageEstimate(stageType: string, config: Record<string, unknown>): Promise<WSResponse> {
+    return this.send('tools.stage_estimate', { stage_type: stageType, config });
+  }
+
   async isArpSupported(): Promise<WSResponse> {
     return this.send('tools.arp_supported');
   }
