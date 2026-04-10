@@ -51,8 +51,6 @@ function MainApp() {
   const [isLoading, setIsLoading] = useState(true);
   /** Status message displayed during phased loading. */
   const [loadingStatus, setLoadingStatus] = useState('Connecting to server…');
-  /** Progress percentage (0–100) for the loading bar. */
-  const [loadingProgress, setLoadingProgress] = useState(0);
   /** Tracks whether the app has ever fully loaded (for detecting mid-session drops). */
   const hasLoadedOnce = useRef(false);
   /** Ref to the current WS service for the reconnect-reload helper. */
@@ -109,7 +107,6 @@ function MainApp() {
   const loadInitialData = useCallback(async (ws: WebSocketService) => {
     // ── Phase 1: Fast batch (instant responses) ──────────────────────
     setLoadingStatus('Loading configuration…');
-    setLoadingProgress((prev) => Math.max(prev, 20));
 
     const [subnetListRes, configDefaultsRes, appInfoRes, portListsRes, stageDefaultsRes, stagePresetsRes] = await Promise.all([
       ws.listSubnets(),
@@ -197,7 +194,6 @@ function MainApp() {
 
     // ── Phase 2: ARP capability check ────────────────────────────────
     setLoadingStatus('Checking system capabilities…');
-    setLoadingProgress((prev) => Math.max(prev, 50));
 
     const arpRes = await ws.isArpSupported();
     const arpSupported = !!(arpRes.success && arpRes.data && (arpRes.data as { supported: boolean }).supported);
@@ -223,7 +219,6 @@ function MainApp() {
 
     // ── Phase 3: Update check ────────────────────────────────────────
     setLoadingStatus('Checking for updates…');
-    setLoadingProgress((prev) => Math.max(prev, 75));
 
     const updateRes = await ws.checkForUpdates();
     if (updateRes.success && updateRes.data) {
@@ -233,8 +228,6 @@ function MainApp() {
       };
       mergeAppInfo({ update_available, latest_version: latest_version ?? undefined });
     }
-
-    setLoadingProgress((prev) => Math.max(prev, 100));
   }, [setSubnets, setSubnetInput, setPortLists, setDefaultConfigs, setConfig, setAppInfo, mergeAppInfo]);
 
   // When status transitions back to 'connected' after the initial load,
@@ -304,7 +297,6 @@ function MainApp() {
 
         // Switch from indeterminate to determinate progress
         setLoadingStatus('Loading configuration…');
-        setLoadingProgress(10);
 
         // Connected — load initial data
         await loadInitialData(ws);
@@ -371,10 +363,7 @@ function MainApp() {
                   {loadingStatus}
                 </p>
                 <div className="loading-bar">
-                  {loadingProgress > 0
-                    ? <div className="loading-bar-fill" style={{ width: `${loadingProgress}%` }} />
-                    : <div className="loading-bar-fill loading-bar-indeterminate" />
-                  }
+                  <div className="loading-bar-fill loading-bar-indeterminate" />
                 </div>
                 <button className="loading-btn-link" onClick={() => setShowConnection(true)}>
                   <i className="fa-solid fa-gear"></i>
