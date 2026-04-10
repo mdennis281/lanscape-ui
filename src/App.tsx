@@ -113,7 +113,7 @@ function MainApp() {
   const loadInitialData = useCallback(async (ws: WebSocketService) => {
     // ── Phase 1: Fast batch (instant responses) ──────────────────────
     setLoadingStatus('Loading configuration…');
-    setLoadingProgress(20);
+    setLoadingProgress((prev) => Math.max(prev, 20));
 
     const [subnetListRes, configDefaultsRes, appInfoRes, portListsRes, stageDefaultsRes, stagePresetsRes] = await Promise.all([
       ws.listSubnets(),
@@ -201,7 +201,7 @@ function MainApp() {
 
     // ── Phase 2: ARP capability check ────────────────────────────────
     setLoadingStatus('Checking system capabilities…');
-    setLoadingProgress(50);
+    setLoadingProgress((prev) => Math.max(prev, 50));
 
     const arpRes = await ws.isArpSupported();
     const arpSupported = !!(arpRes.success && arpRes.data && (arpRes.data as { supported: boolean }).supported);
@@ -227,7 +227,7 @@ function MainApp() {
 
     // ── Phase 3: Update check ────────────────────────────────────────
     setLoadingStatus('Checking for updates…');
-    setLoadingProgress(75);
+    setLoadingProgress((prev) => Math.max(prev, 75));
 
     const updateRes = await ws.checkForUpdates();
     if (updateRes.success && updateRes.data) {
@@ -238,7 +238,7 @@ function MainApp() {
       mergeAppInfo({ update_available, latest_version: latest_version ?? undefined });
     }
 
-    setLoadingProgress(100);
+    setLoadingProgress((prev) => Math.max(prev, 100));
   }, [setSubnets, setSubnetInput, setPortLists, setDefaultConfigs, setConfig, setAppInfo, mergeAppInfo]);
 
   // When status transitions back to 'connected' after the initial load,
@@ -309,6 +309,10 @@ function MainApp() {
       try {
         await ws.connect();
         if (cancelled) return;
+
+        // Switch from indeterminate to determinate progress
+        setLoadingStatus('Loading configuration…');
+        setLoadingProgress(10);
 
         // Connected — load initial data
         await loadInitialData(ws);
