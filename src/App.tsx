@@ -49,10 +49,6 @@ function MainApp() {
   // Show startup screen when running in Electron
   const [showStartup, setShowStartup] = useState(isElectron);
   const [isLoading, setIsLoading] = useState(true);
-  /** Retry state shown on the loading screen during initial connection attempts. */
-  const [loadingRetry, setLoadingRetry] = useState<{ attempt: number; max: number; failed: boolean }>({
-    attempt: 0, max: 8, failed: false,
-  });
   /** Status message displayed during phased loading. */
   const [loadingStatus, setLoadingStatus] = useState('Connecting to server…');
   /** Progress percentage (0–100) for the loading bar. */
@@ -302,10 +298,6 @@ function MainApp() {
       wsRef.current = ws;
       setWsService(ws);
 
-      // Single connection attempt — the WebSocket service handles retries
-      // via its built-in exponential backoff reconnect logic.
-      setLoadingRetry({ attempt: 1, max: 1, failed: false });
-
       try {
         await ws.connect();
         if (cancelled) return;
@@ -322,11 +314,9 @@ function MainApp() {
         setIsLoading(false);
       } catch {
         if (cancelled) return;
-        // First attempt failed — show as loading with reconnect in progress.
-        // The service's auto-reconnect will keep trying in the background.
-        // Listen for the eventual connected status to finish loading.
-        setLoadingRetry({ attempt: 1, max: 1, failed: true });
-        setConnectionError('Unable to reach the backend server');
+        // First attempt failed — the WS service's built-in auto-reconnect
+        // (exponential backoff) keeps trying in the background.
+        // The connectionStatus effect will finish loading once it connects.
       }
     };
 
@@ -364,11 +354,11 @@ function MainApp() {
             <p className="loading-subtitle">Local Network Scanner</p>
           </div>
           <div className="loading-progress">
-            {loadingRetry.failed ? (
+            {connectionStatus === 'error' && !hasLoadedOnce.current ? (
               <>
                 <div className="loading-error">
                   <i className="fa-solid fa-plug-circle-xmark"></i>
-                  <span>Could not connect to backend server</span>
+                  <span>Unable to reach backend server</span>
                 </div>
                 <button className="loading-btn" onClick={() => setShowConnection(true)}>
                   <i className="fa-solid fa-gear"></i>
