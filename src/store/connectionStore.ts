@@ -20,6 +20,7 @@ interface ConnectionState {
 
   appInfo: AppInfo | null;
   setAppInfo: (info: AppInfo | null) => void;
+  mergeAppInfo: (partial: Partial<AppInfo>) => void;
 }
 
 export const useConnectionStore = create<ConnectionState>((set) => ({
@@ -34,4 +35,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
 
   appInfo: null,
   setAppInfo: (appInfo) => set({ appInfo }),
+  mergeAppInfo: (partial) => set((state) => ({
+    appInfo: state.appInfo ? { ...state.appInfo, ...partial } : partial as AppInfo,
+  })),
 }));

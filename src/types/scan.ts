@@ -315,7 +315,7 @@ export interface SubnetTestResult {
 export interface AppInfo {
   version: string;
   name: string;
-  arp_supported: boolean;
+  arp_supported?: boolean;
   update_available?: boolean;
   latest_version?: string;
   runtime_args?: Record<string, unknown>;

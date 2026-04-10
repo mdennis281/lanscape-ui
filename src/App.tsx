@@ -20,7 +20,7 @@ import { createWebSocketService } from './services';
 import type { WebSocketService } from './services';
 import { useConnectionStore, useScanStore, useUIStore } from './store';
 import { resolveWebSocketURL } from './utils';
-import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig } from './types';
+import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig, AppInfo } from './types';
 import { applyStageDefaults, applyStagePresets } from './components/Settings/stageRegistry';
 import './types/electron'; // Import electron types for global Window augmentation
 import '@awesome.me/kit-d0b7f59243/icons/css/fontawesome.min.css';
@@ -53,6 +53,10 @@ function MainApp() {
   const [loadingRetry, setLoadingRetry] = useState<{ attempt: number; max: number; failed: boolean }>({
     attempt: 0, max: 8, failed: false,
   });
+  /** Status message displayed during phased loading. */
+  const [loadingStatus, setLoadingStatus] = useState('Connecting to server…');
+  /** Progress percentage (0–100) for the loading bar. */
+  const [loadingProgress, setLoadingProgress] = useState(0);
   /** Tracks whether the app has ever fully loaded (for detecting mid-session drops). */
   const hasLoadedOnce = useRef(false);
   /** Ref to the current WS service for the reconnect-reload helper. */
@@ -65,6 +69,7 @@ function MainApp() {
     setConnectionError,
     setWsService,
     setAppInfo,
+    mergeAppInfo,
   } = useConnectionStore();
 
   // --- Scan store ---
@@ -103,9 +108,13 @@ function MainApp() {
 
   /**
    * Fetch initial data from backend after a (re-)connection is established.
-   * Extracted so we can call it both on first load and after a reconnect.
+   * Runs in phases so the loading screen can show meaningful status updates.
    */
   const loadInitialData = useCallback(async (ws: WebSocketService) => {
+    // ── Phase 1: Fast batch (instant responses) ──────────────────────
+    setLoadingStatus('Loading configuration…');
+    setLoadingProgress(20);
+
     const [subnetListRes, configDefaultsRes, appInfoRes, portListsRes, stageDefaultsRes, stagePresetsRes] = await Promise.all([
       ws.listSubnets(),
       ws.getConfigDefaults(),
@@ -139,7 +148,7 @@ function MainApp() {
       setPortLists(portListsRes.data as { name: string; count: number }[]);
     }
 
-    // Set default configs
+    // Set default configs (ARP-optimistic — may be re-fetched in Phase 2)
     if (configDefaultsRes.success && configDefaultsRes.data) {
       const configs = configDefaultsRes.data as DefaultConfigs;
       setDefaultConfigs(configs);
@@ -185,18 +194,52 @@ function MainApp() {
       }
     }
 
-    // Set app info from backend
+    // Set fast app info from backend (no ARP/update fields yet)
     if (appInfoRes.success && appInfoRes.data) {
-      setAppInfo(appInfoRes.data as {
-        version: string;
-        name: string;
-        arp_supported: boolean;
-        update_available?: boolean;
-        latest_version?: string;
-        runtime_args?: Record<string, unknown>;
-      });
+      setAppInfo(appInfoRes.data as AppInfo);
     }
-  }, [setSubnets, setSubnetInput, setPortLists, setDefaultConfigs, setConfig, setAppInfo]);
+
+    // ── Phase 2: ARP capability check ────────────────────────────────
+    setLoadingStatus('Checking system capabilities…');
+    setLoadingProgress(50);
+
+    const arpRes = await ws.isArpSupported();
+    const arpSupported = !!(arpRes.success && arpRes.data && (arpRes.data as { supported: boolean }).supported);
+    mergeAppInfo({ arp_supported: arpSupported });
+
+    // If ARP is not supported, re-fetch configs with fallback presets
+    if (!arpSupported) {
+      const fallbackRes = await ws.getConfigDefaults({ arp_supported: false });
+      if (fallbackRes.success && fallbackRes.data) {
+        const configs = fallbackRes.data as DefaultConfigs;
+        setDefaultConfigs(configs);
+
+        // Re-apply config only if user hasn't saved a custom config
+        const hasLastConfig = !!localStorage.getItem('lanscape:lastConfig');
+        if (!hasLastConfig) {
+          const savedPresetId = localStorage.getItem('lanscape:activePreset') ?? 'balanced';
+          if (configs[savedPresetId]) {
+            setConfig(configs[savedPresetId]);
+          }
+        }
+      }
+    }
+
+    // ── Phase 3: Update check ────────────────────────────────────────
+    setLoadingStatus('Checking for updates…');
+    setLoadingProgress(75);
+
+    const updateRes = await ws.checkForUpdates();
+    if (updateRes.success && updateRes.data) {
+      const { update_available, latest_version } = updateRes.data as {
+        update_available: boolean;
+        latest_version: string | null;
+      };
+      mergeAppInfo({ update_available, latest_version: latest_version ?? undefined });
+    }
+
+    setLoadingProgress(100);
+  }, [setSubnets, setSubnetInput, setPortLists, setDefaultConfigs, setConfig, setAppInfo, mergeAppInfo]);
 
   // When status transitions back to 'connected' after the initial load,
   // re-fetch data (handles reconnects and server-URL changes).
@@ -331,10 +374,13 @@ function MainApp() {
             ) : (
               <>
                 <p className="loading-status">
-                  Connecting to server{loadingRetry.attempt > 1 ? ` (attempt ${loadingRetry.attempt}/${loadingRetry.max})` : ''}…
+                  {loadingStatus}
                 </p>
                 <div className="loading-bar">
-                  <div className="loading-bar-fill loading-bar-indeterminate" />
+                  {loadingProgress > 0
+                    ? <div className="loading-bar-fill" style={{ width: `${loadingProgress}%` }} />
+                    : <div className="loading-bar-fill loading-bar-indeterminate" />
+                  }
                 </div>
                 <button className="loading-btn-link" onClick={() => setShowConnection(true)}>
                   <i className="fa-solid fa-gear"></i>
