@@ -84,8 +84,7 @@ class WebSocketService {
         const connectTimeout = setTimeout(() => {
           if (!settled) {
             settled = true;
-            this.ws?.close();
-            this.setStatus('error');
+            this.ws?.close(); // triggers onclose which handles reconnect
             reject(new Error('WebSocket connection timeout'));
           }
         }, 4000); // 4 second timeout
@@ -102,15 +101,15 @@ class WebSocketService {
 
         this.ws.onclose = (event) => {
           clearTimeout(connectTimeout);
-          // Only reject if we haven't resolved yet (connection failed before opening)
+          // Reject if we haven't resolved yet (connection failed before opening)
           if (!settled) {
             settled = true;
-            this.setStatus('error');
             reject(new Error(`WebSocket connection failed (code: ${event.code})`));
-          } else {
-            this.setStatus('disconnected');
-            this.scheduleReconnect();
           }
+          // Always mark disconnected and retry — 'error' is only set when
+          // scheduleReconnect exhausts all attempts.
+          this.setStatus('disconnected');
+          this.scheduleReconnect();
         };
 
         this.ws.onerror = () => {
