@@ -59,13 +59,13 @@ export default defineConfig({
             },
           },
           {
-            // JS/CSS/font bundles — revalidate in the background so a new
-            // LANscape version always gets picked up on the next load.
-            urlPattern: /\/assets\/.+\.(js|css|woff2?)$/i,
-            handler: 'StaleWhileRevalidate',
+            // Content-hashed /assets/ bundles are immutable — cache-first is fine
+            // because their URLs change with every build.
+            urlPattern: /\/assets\/.+\.[a-f0-9]{8}\.(js|css|woff2?)$/i,
+            handler: 'CacheFirst',
             options: {
-              cacheName: 'app-assets',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheName: 'immutable-assets',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
