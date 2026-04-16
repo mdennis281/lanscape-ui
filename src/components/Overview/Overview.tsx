@@ -38,6 +38,14 @@ function useLocalRuntime(isRunning: boolean, serverRuntime: number): number {
     }
   }, [isRunning]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally only react to isRunning, not serverRuntime
 
+  // When viewing a completed scan (not running), sync to its runtime value
+  useEffect(() => {
+    if (!isRunning) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync completed scan runtime from server
+      setLocalRuntime(serverRuntime);
+    }
+  }, [isRunning, serverRuntime]);
+
   // Increment local runtime smoothly while scan is running (0.1s precision)
   useEffect(() => {
     if (!isRunning || startTimeRef.current === null) return;

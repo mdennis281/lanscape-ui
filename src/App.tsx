@@ -73,7 +73,10 @@ function MainApp() {
     setDefaultConfigs,
     setPortLists,
     handleEvent,
+    fetchScanHistory,
   } = useScanStore();
+
+  const isTransitioning = useScanStore((s) => s.isTransitioning);
 
   // --- UI store ---
   const {
@@ -192,6 +195,9 @@ function MainApp() {
       setAppInfo(appInfoRes.data as AppInfo);
     }
 
+    // Restore scan history from backend (ScanManager retains state across refreshes)
+    await fetchScanHistory();
+
     // ── Phase 2: ARP capability check ────────────────────────────────
     setLoadingStatus('Checking system capabilities…');
 
@@ -228,7 +234,7 @@ function MainApp() {
       };
       mergeAppInfo({ update_available, latest_version: latest_version ?? undefined });
     }
-  }, [setSubnets, setSubnetInput, setPortLists, setDefaultConfigs, setConfig, setAppInfo, mergeAppInfo]);
+  }, [setSubnets, setSubnetInput, setPortLists, setDefaultConfigs, setConfig, setAppInfo, mergeAppInfo, fetchScanHistory]);
 
   // When status transitions back to 'connected' after the initial load,
   // re-fetch data (handles reconnects and server-URL changes).
@@ -391,7 +397,7 @@ function MainApp() {
     <div className="app-container">
       <Header />
       
-      <main className="app-main">
+      <main className={`app-main ${isTransitioning ? 'scan-transitioning' : 'scan-visible'}`}>
         <Overview />
         <DeviceTable onDeviceClick={handleDeviceClick} />
       </main>

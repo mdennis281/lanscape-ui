@@ -295,6 +295,20 @@ export interface DeviceResult {
   caught_errors?: Array<string | { basic: string; traceback?: string }>;
 }
 
+// ── Scan history (context switching) ─────────────────────────────────
+
+export interface ScanHistoryEntry {
+  scan_id: string;
+  subnet: string;
+  running: boolean;
+  stage: string;
+  percent_complete: number;
+  devices_alive: number;
+  devices_total: number;
+  runtime: number;
+  stages?: StageProgress[];
+}
+
 // ── Network / tools ──────────────────────────────────────────────────
 
 export interface SubnetInfo {

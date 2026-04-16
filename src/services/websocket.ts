@@ -351,6 +351,10 @@ class WebSocketService {
     return this.send('scan.list');
   }
 
+  async getScanHistory(): Promise<WSResponse> {
+    return this.send('scan.history');
+  }
+
   async appendStages(scanId: string, stages: { stage_type: string; config: Record<string, unknown> }[]): Promise<WSResponse> {
     return this.send('scan.append_stages', { scan_id: scanId, stages });
   }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, type FormEvent } from 'react'
 import { useConnectionStore, useScanStore, useUIStore } from '../../store';
 import { getWebSocketService } from '../../services';
 import { SubnetInput } from './SubnetInput';
+import { ScanHistory } from './ScanHistory';
 import type { SubnetTestResult } from '../../types';
 
 export function Header() {
@@ -18,6 +19,7 @@ export function Header() {
     clearScanErrors,
     clearScanWarnings,
     setStatus,
+    addScanToHistory,
   } = useScanStore();
 
   const subnetInput = useUIStore((s) => s.subnetInput);
@@ -25,9 +27,11 @@ export function Header() {
   const setShowDebug = useUIStore((s) => s.setShowDebug);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isTerminating, setIsTerminating] = useState(false);
   const [subnetValidation, setSubnetValidation] = useState<SubnetTestResult | null>(null);
 
   const isScanning = status?.is_running ?? false;
+  const hasStages = pipelineConfig.stages.length > 0;
 
   // Validate subnet when input changes
   const validateSubnet = useCallback(async (subnet: string) => {
@@ -63,7 +67,17 @@ export function Header() {
     return () => clearTimeout(timer);
   }, [subnetInput, validateSubnet, connectionStatus]);
 
-  const canSubmit = isScanning || (subnetInput.trim() && subnetValidation?.valid);
+  const canSubmit = isScanning || (subnetInput.trim() && subnetValidation?.valid && hasStages);
+
+  // Contextual tooltip for the submit button when disabled
+  const getSubmitTooltip = (): string | undefined => {
+    if (isTerminating) return 'Terminating scan, waiting for completion before starting a new scan';
+    if (isScanning) return undefined; // Stop is always allowed
+    if (!hasStages) return 'No scan stages set, configure them in settings';
+    if (!subnetInput.trim()) return 'Enter a subnet to scan';
+    if (subnetValidation && !subnetValidation.valid) return 'Invalid subnet';
+    return undefined;
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,6 +88,7 @@ export function Header() {
     try {
       if (isScanning && currentScanId) {
         // Terminate the current scan
+        setIsTerminating(true);
         await ws.terminateScan(currentScanId);
         setCurrentScanId(null);
         setStatus({
@@ -88,6 +103,7 @@ export function Header() {
           runtime: status?.runtime ?? 0,
           remaining: 0,
         });
+        setIsTerminating(false);
       } else {
         // Clear previous results and start a new scan
         clearDevices();
@@ -116,12 +132,14 @@ export function Header() {
         if (response.success && response.data) {
           const data = response.data as { scan_id: string };
           setCurrentScanId(data.scan_id);
+          addScanToHistory(data.scan_id, subnetInput.trim(), subnetValidation?.count ?? 0);
           // Subscribe to updates for this scan
           await ws.subscribeScan(data.scan_id);
         }
       }
     } catch (error) {
       console.error('Scan action failed:', error);
+      setIsTerminating(false);
       setStatus({
         is_running: false,
         stage: 'error',
@@ -156,25 +174,42 @@ export function Header() {
         </a>
 
         <form className="subnet-form" onSubmit={handleSubmit} ref={formRef}>
+          <ScanHistory onNewScan={() => {
+            if (currentScanId) {
+              const ws = getWebSocketService();
+              ws?.unsubscribeScan(currentScanId).catch(() => {});
+            }
+            clearDevices();
+            clearScanErrors();
+            clearScanWarnings();
+            setCurrentScanId(null);
+            setStatus(null);
+          }} />
           <SubnetInput 
             disabled={isLoading} 
             onSettingsClick={() => setShowSettings(true)}
             validation={subnetValidation}
             onSubmit={() => formRef.current?.requestSubmit()}
           />
-          <button
-            type="submit"
-            className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'} scan-submit-btn`}
-            disabled={isLoading || !canSubmit}
+          <span
+            data-tooltip-id="tooltip"
+            data-tooltip-content={getSubmitTooltip()}
+            className="scan-submit-wrapper"
           >
-            {isLoading && <span className="spinner"></span>}
-            {!isLoading && (
-              <>
-                <i className={`fa-solid ${isScanning ? 'fa-circle-stop' : 'fa-circle-play'}`}></i>
-                <span>{isScanning ? 'Stop' : 'Scan'}</span>
-              </>
-            )}
-          </button>
+            <button
+              type="submit"
+              className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'} scan-submit-btn`}
+              disabled={isLoading || isTerminating || !canSubmit}
+            >
+              {isLoading && <span className="spinner"></span>}
+              {!isLoading && (
+                <>
+                  <i className={`fa-solid ${isScanning ? 'fa-circle-stop' : 'fa-circle-play'}`}></i>
+                  <span>{isScanning ? 'Stop' : 'Scan'}</span>
+                </>
+              )}
+            </button>
+          </span>
         </form>
       </div>
     </header>
