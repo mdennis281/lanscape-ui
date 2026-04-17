@@ -32,11 +32,11 @@ const enterVariants: Variants = {
   exit: { opacity: 0, x: -16, scale: 0.8, transition: { duration: 0.2 } },
 };
 
-/** Flip for replaced stages (Y-axis rotation) */
+/** Fade down for replaced stages */
 const replaceVariants: Variants = {
-  initial: { opacity: 0, rotateY: 90, scale: 0.9 },
-  animate: { opacity: 1, rotateY: 0, scale: 1, transition: { ...SPRING, stiffness: 400 } },
-  exit: { opacity: 0, rotateY: -90, scale: 0.9, transition: { duration: 0.2 } },
+  initial: { opacity: 0, y: -12, scale: 0.9 },
+  animate: { opacity: 1, y: 0, scale: 1, transition: SPRING },
+  exit: { opacity: 0, y: 12, scale: 0.9, transition: { duration: 0.2 } },
 };
 
 /** Default (no animation — already present) */
