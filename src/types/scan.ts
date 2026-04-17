@@ -48,10 +48,6 @@ export interface HostnameConfig {
   retry_delay?: number;
 }
 
-export type LookupType = 'ICMP' | 'ARP_LOOKUP' | 'POKE_THEN_ARP' | 'ICMP_THEN_ARP';
-
-// ── Pipeline / Stage types (matching backend enums & models) ─────────
-
 export type StageType =
   | 'icmp_discovery'
   | 'arp_discovery'
@@ -148,33 +144,6 @@ export interface StageProgress {
   runtime: number;
   counter_label: string;
 }
-
-// ── Scan configuration ───────────────────────────────────────────────
-
-export interface ScanConfig {
-  subnet?: string;
-  port_list?: string;
-  t_multiplier?: number;
-  t_cnt_port_scan?: number;
-  t_cnt_port_test?: number;
-  t_cnt_isalive?: number;
-
-  task_scan_ports?: boolean;
-  task_scan_port_services?: boolean;
-
-  lookup_type?: LookupType[];
-
-  ping_config?: PingConfig;
-  arp_config?: ArpConfig;
-  arp_cache_config?: ArpCacheConfig;
-  poke_config?: PokeConfig;
-  neighbor_table_config?: NeighborTableConfig;
-  port_scan_config?: PortScanConfig;
-  service_scan_config?: ServiceScanConfig;
-}
-
-/** Default configs keyed by preset name (e.g. "fast", "balanced", "accurate"). */
-export type DefaultConfigs = Record<string, ScanConfig>;
 
 // ── Port lists ───────────────────────────────────────────────────────
 

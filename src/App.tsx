@@ -20,8 +20,9 @@ import { createWebSocketService } from './services';
 import type { WebSocketService } from './services';
 import { useConnectionStore, useScanStore, useUIStore } from './store';
 import { resolveWebSocketURL } from './utils';
-import type { DeviceResult, WSEvent, SubnetInfo, DefaultConfigs, ScanConfig, AppInfo } from './types';
-import { applyStageDefaults, applyStagePresets } from './components/Settings/stageRegistry';
+import type { DeviceResult, WSEvent, SubnetInfo, AppInfo } from './types';
+import { applyStageDefaults, applyStagePresets, STAGE_REGISTRY } from './components/Settings/stageRegistry';
+import { getLastConfig, getActivePresetId, getPresetById, resolvePresetConfig } from './services/presets';
 import './types/electron'; // Import electron types for global Window augmentation
 import '@awesome.me/kit-d0b7f59243/icons/css/fontawesome.min.css';
 import '@awesome.me/kit-d0b7f59243/icons/css/solid.min.css';
@@ -68,10 +69,9 @@ function MainApp() {
 
   // --- Scan store ---
   const {
-    setConfig,
     setSubnets,
-    setDefaultConfigs,
     setPortLists,
+    setPipelineConfig,
     handleEvent,
     fetchScanHistory,
   } = useScanStore();
@@ -111,9 +111,8 @@ function MainApp() {
     // ── Phase 1: Fast batch (instant responses) ──────────────────────
     setLoadingStatus('Loading configuration…');
 
-    const [subnetListRes, configDefaultsRes, appInfoRes, portListsRes, stageDefaultsRes, stagePresetsRes] = await Promise.all([
+    const [subnetListRes, appInfoRes, portListsRes, stageDefaultsRes, stagePresetsRes] = await Promise.all([
       ws.listSubnets(),
-      ws.getConfigDefaults(),
       ws.getAppInfo(),
       ws.listPortsSummary(),
       ws.getStageDefaults(),
@@ -144,49 +143,22 @@ function MainApp() {
       setPortLists(portListsRes.data as { name: string; count: number }[]);
     }
 
-    // Set default configs (ARP-optimistic — may be re-fetched in Phase 2)
-    if (configDefaultsRes.success && configDefaultsRes.data) {
-      const configs = configDefaultsRes.data as DefaultConfigs;
-      setDefaultConfigs(configs);
-
-      // 1. Try the exact config the user last saved (preserves tweaks)
-      const lastConfig = (() => {
-        try {
-          const raw = localStorage.getItem('lanscape:lastConfig');
-          return raw ? (JSON.parse(raw) as ScanConfig) : null;
-        } catch { return null; }
-      })();
-
-      if (lastConfig) {
-        setConfig(lastConfig);
-      } else {
-        // 2. Fall back to resolving the active preset
-        const savedPresetId = localStorage.getItem('lanscape:activePreset');
-        let restored = false;
-
-        if (savedPresetId) {
-          if (configs[savedPresetId]) {
-            setConfig(configs[savedPresetId]);
-            restored = true;
-          } else {
-            try {
-              const raw = localStorage.getItem('lanscape:userPresets');
-              if (raw) {
-                const userPresets = JSON.parse(raw) as { id: string; config: ScanConfig }[];
-                const match = userPresets.find((p) => p.id === savedPresetId);
-                if (match?.config) {
-                  setConfig(match.config);
-                  restored = true;
-                }
-              }
-            } catch { /* ignore malformed data */ }
-          }
-        }
-
-        if (!restored && configs.balanced) {
-          setConfig(configs.balanced);
-          localStorage.setItem('lanscape:activePreset', 'balanced');
-        }
+    // Restore pipeline config from last save or active preset
+    const lastConfig = getLastConfig();
+    if (lastConfig) {
+      setPipelineConfig(lastConfig);
+    } else {
+      // Try resolving from active preset using stage registry defaults
+      const activeId = getActivePresetId();
+      const preset = activeId ? getPresetById(activeId) : getPresetById('balanced');
+      if (preset) {
+        // Build default stage list from stage registry
+        const defaultStages = STAGE_REGISTRY.map((meta) => ({
+          stage_type: meta.type,
+          config: structuredClone(meta.defaultConfig),
+        }));
+        const resolved = resolvePresetConfig(preset, defaultStages);
+        if (resolved) setPipelineConfig(resolved);
       }
     }
 
@@ -205,24 +177,6 @@ function MainApp() {
     const arpSupported = !!(arpRes.success && arpRes.data && (arpRes.data as { supported: boolean }).supported);
     mergeAppInfo({ arp_supported: arpSupported });
 
-    // If ARP is not supported, re-fetch configs with fallback presets
-    if (!arpSupported) {
-      const fallbackRes = await ws.getConfigDefaults({ arp_supported: false });
-      if (fallbackRes.success && fallbackRes.data) {
-        const configs = fallbackRes.data as DefaultConfigs;
-        setDefaultConfigs(configs);
-
-        // Re-apply config only if user hasn't saved a custom config
-        const hasLastConfig = !!localStorage.getItem('lanscape:lastConfig');
-        if (!hasLastConfig) {
-          const savedPresetId = localStorage.getItem('lanscape:activePreset') ?? 'balanced';
-          if (configs[savedPresetId]) {
-            setConfig(configs[savedPresetId]);
-          }
-        }
-      }
-    }
-
     // ── Phase 3: Update check ────────────────────────────────────────
     setLoadingStatus('Checking for updates…');
 
@@ -234,7 +188,7 @@ function MainApp() {
       };
       mergeAppInfo({ update_available, latest_version: latest_version ?? undefined });
     }
-  }, [setSubnets, setSubnetInput, setPortLists, setDefaultConfigs, setConfig, setAppInfo, mergeAppInfo, fetchScanHistory]);
+  }, [setSubnets, setSubnetInput, setPortLists, setPipelineConfig, setAppInfo, mergeAppInfo, fetchScanHistory]);
 
   // When status transitions back to 'connected' after the initial load,
   // re-fetch data (handles reconnects and server-URL changes).
@@ -324,7 +278,7 @@ function MainApp() {
       cancelled = true;
       if (wsRef.current) wsRef.current.disconnect();
     };
-  }, [setConnectionStatus, setConnectionError, setWsService, setAppInfo, setConfig, setSubnets, setDefaultConfigs, setSubnetInput, setPortLists, setShowConnection, onEvent, showStartup, loadInitialData]);
+  }, [setConnectionStatus, setConnectionError, setWsService, setAppInfo, setSubnets, setSubnetInput, setPortLists, setShowConnection, onEvent, showStartup, loadInitialData]);
 
   const handleDeviceClick = (device: DeviceResult) => {
     setSelectedDevice(device);

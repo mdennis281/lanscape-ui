@@ -36,7 +36,6 @@ const EMPTY_PIPELINE: PipelineConfig = { stages: [] };
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const pipelineConfig = useScanStore((s) => s.pipelineConfig);
-  const defaultConfigs = useScanStore((s) => s.defaultConfigs);
   const setPipelineConfig = useScanStore((s) => s.setPipelineConfig);
   const portLists = useScanStore((s) => s.portLists);
   const autoStagesEnabled = useScanStore((s) => s.autoStagesEnabled);
@@ -85,7 +84,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const handleStageConfigChange = useCallback((index: number, config: Record<string, unknown>) => {
     setLocalConfig((prev) => {
       const stages = [...prev.stages];
-      stages[index] = { ...stages[index], config };
+      const { auto: _, reason: __, ...rest } = stages[index];
+      stages[index] = { ...rest, config };
       return { ...prev, stages };
     });
   }, []);
@@ -128,10 +128,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     if (!activeId) return hasChanges;
     const preset = getPresetById(activeId);
     if (!preset) return hasChanges;
-    const presetCfg = resolvePresetConfig(preset, defaultConfigs);
+    const presetCfg = resolvePresetConfig(preset, localConfig.stages);
     if (!presetCfg) return hasChanges;
     return JSON.stringify(localConfig) !== JSON.stringify(presetCfg);
-  }, [localConfig, defaultConfigs, hasChanges]);
+  }, [localConfig, hasChanges]);
 
   const activeUserPreset = useMemo(() => {
     const activeId = getActivePresetId();
@@ -140,7 +140,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     if (!preset || preset.builtIn) return null;
     return preset;
   }, // eslint-disable-next-line react-hooks/exhaustive-deps
-  [localConfig, defaultConfigs]);
+  [localConfig]);
 
   const handleClose = useCallback(() => {
     setShowSaveDialog(false);
@@ -258,7 +258,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       {/* Preset bar */}
       <PresetBar
         localConfig={localConfig}
-        defaultConfigs={defaultConfigs}
         onApplyPreset={handleApplyPreset}
       />
 

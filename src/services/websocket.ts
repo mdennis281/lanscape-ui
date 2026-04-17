@@ -381,10 +381,6 @@ class WebSocketService {
     return this.send('tools.subnet_list');
   }
 
-  async getConfigDefaults(params?: Record<string, unknown>): Promise<WSResponse> {
-    return this.send('tools.config_defaults', params);
-  }
-
   async getStageDefaults(): Promise<WSResponse> {
     return this.send('tools.stage_defaults');
   }

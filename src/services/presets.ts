@@ -3,10 +3,12 @@
  *
  * Manages built-in and user-created scan configuration presets with
  * localStorage persistence. Built-in presets (fast/balanced/accurate)
- * come from the backend; user presets are stored locally.
+ * apply per-stage config tuning from the stage registry. User presets
+ * are stored locally as full PipelineConfig objects.
  */
 
-import type { ScanConfig, DefaultConfigs, PipelineConfig, StageEntry, StageType } from '../types';
+import type { PipelineConfig, StageEntry } from '../types';
+import { getStageMeta, type PresetName } from '../components/Settings/stageRegistry';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -61,77 +63,6 @@ export const BUILT_IN_PRESETS: BuiltInPreset[] = [
   },
 ];
 
-// ── ScanConfig → PipelineConfig migration ────────────────────────────
-
-const LOOKUP_TYPE_TO_STAGE: Record<string, StageType> = {
-  ICMP: 'icmp_discovery',
-  ARP_LOOKUP: 'arp_discovery',
-  POKE_THEN_ARP: 'poke_arp_discovery',
-  ICMP_THEN_ARP: 'icmp_arp_discovery',
-};
-
-/** Convert a legacy ScanConfig to a PipelineConfig. */
-export function scanConfigToPipeline(sc: ScanConfig): PipelineConfig {
-  const stages: StageEntry[] = [];
-
-  // Map lookup types to discovery stages
-  if (sc.lookup_type) {
-    for (const lt of sc.lookup_type) {
-      const stageType = LOOKUP_TYPE_TO_STAGE[lt];
-      if (!stageType) continue;
-
-      const config: Record<string, unknown> = {};
-      if (sc.t_cnt_isalive != null) config.t_cnt = sc.t_cnt_isalive;
-
-      if (stageType === 'icmp_discovery' || stageType === 'icmp_arp_discovery') {
-        if (sc.ping_config) config.ping_config = sc.ping_config;
-      }
-      if (stageType === 'arp_discovery') {
-        if (sc.arp_config) config.arp_config = sc.arp_config;
-      }
-      if (stageType === 'poke_arp_discovery') {
-        if (sc.poke_config) config.poke_config = sc.poke_config;
-        if (sc.arp_cache_config) config.arp_cache_config = sc.arp_cache_config;
-      }
-      if (stageType === 'icmp_arp_discovery') {
-        if (sc.arp_cache_config) config.arp_cache_config = sc.arp_cache_config;
-      }
-
-      stages.push({ stage_type: stageType, config });
-    }
-  }
-
-  // Map port scanning to port_scan stage
-  if (sc.task_scan_ports) {
-    const config: Record<string, unknown> = {};
-    if (sc.port_list) config.port_list = sc.port_list;
-    if (sc.port_scan_config) config.port_scan_config = sc.port_scan_config;
-    if (sc.service_scan_config) config.service_scan_config = sc.service_scan_config;
-    if (sc.task_scan_port_services != null) config.scan_services = sc.task_scan_port_services;
-    if (sc.t_cnt_port_scan != null) config.t_cnt_device = sc.t_cnt_port_scan;
-    if (sc.t_cnt_port_test != null) config.t_cnt_port = sc.t_cnt_port_test;
-    stages.push({ stage_type: 'port_scan', config });
-  }
-
-  const pipeline: PipelineConfig = { stages };
-  if (sc.subnet) pipeline.subnet = sc.subnet;
-  if (sc.t_multiplier != null) {
-    pipeline.resilience = { t_multiplier: sc.t_multiplier };
-  }
-
-  return pipeline;
-}
-
-/** Check if a stored config object is legacy ScanConfig (no `stages` key). */
-function isLegacyScanConfig(obj: unknown): obj is ScanConfig {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    !Array.isArray(obj) &&
-    !('stages' in obj)
-  );
-}
-
 // ── Persistence helpers ──────────────────────────────────────────────
 
 function loadUserPresets(): UserPreset[] {
@@ -140,19 +71,7 @@ function loadUserPresets(): UserPreset[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-
-    // Migrate any legacy ScanConfig presets to PipelineConfig
-    let migrated = false;
-    const presets = (parsed as UserPreset[]).map((p) => {
-      if (isLegacyScanConfig(p.config)) {
-        migrated = true;
-        return { ...p, config: scanConfigToPipeline(p.config) };
-      }
-      return p;
-    });
-    if (migrated) saveUserPresets(presets);
-
-    return presets;
+    return parsed as UserPreset[];
   } catch {
     return [];
   }
@@ -180,7 +99,6 @@ export function getUserPresets(): UserPreset[] {
 
 /**
  * Look up a single preset by id.
- * For built-in presets, the config must be resolved from defaultConfigs separately.
  */
 export function getPresetById(id: string): Preset | undefined {
   return getAllPresets().find((p) => p.id === id);
@@ -188,16 +106,24 @@ export function getPresetById(id: string): Preset | undefined {
 
 /**
  * Resolve the PipelineConfig for a preset.
- * Built-in presets are converted from the backend defaultConfigs.
+ * Built-in presets apply per-stage config tuning from the stage registry
+ * onto the current pipeline stages. User presets return their stored config.
  */
 export function resolvePresetConfig(
   preset: Preset,
-  defaultConfigs: DefaultConfigs | null
+  currentStages: StageEntry[]
 ): PipelineConfig | null {
   if (preset.builtIn) {
-    const sc = defaultConfigs?.[preset.id];
-    if (!sc) return null;
-    return scanConfigToPipeline(sc);
+    const presetName = preset.id as PresetName;
+    const stages: StageEntry[] = currentStages.map((s) => {
+      const meta = getStageMeta(s.stage_type);
+      const presetConfig = meta?.presets?.[presetName];
+      if (presetConfig) {
+        return { stage_type: s.stage_type, config: structuredClone(presetConfig) };
+      }
+      return structuredClone(s);
+    });
+    return { stages };
   }
   return preset.config;
 }
@@ -313,9 +239,8 @@ export function getLastConfig(): PipelineConfig | null {
     const raw = localStorage.getItem(LAST_CONFIG_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    // Migrate legacy last-config
-    if (isLegacyScanConfig(parsed)) return scanConfigToPipeline(parsed);
-    return parsed as PipelineConfig;
+    if (parsed && Array.isArray(parsed.stages)) return parsed as PipelineConfig;
+    return null;
   } catch {
     return null;
   }

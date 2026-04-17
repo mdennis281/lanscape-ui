@@ -4,12 +4,10 @@
 
 import { create } from 'zustand';
 import type {
-  ScanConfig,
   DeviceResult,
   ScanStatus,
   WSEvent,
   SubnetInfo,
-  DefaultConfigs,
   PortListSummary,
   ScanErrorInfo,
   ScanWarningInfo,
@@ -27,10 +25,6 @@ interface ScanState {
   subnets: SubnetInfo[];
   setSubnets: (subnets: SubnetInfo[]) => void;
 
-  // Default configs from backend
-  defaultConfigs: DefaultConfigs | null;
-  setDefaultConfigs: (configs: DefaultConfigs | null) => void;
-
   // Port lists from backend
   portLists: PortListSummary[];
   setPortLists: (portLists: PortListSummary[]) => void;
@@ -38,11 +32,6 @@ interface ScanState {
   // Current scan
   currentScanId: string | null;
   setCurrentScanId: (scanId: string | null) => void;
-
-  // Scan config
-  config: ScanConfig | null;
-  setConfig: (config: ScanConfig | null) => void;
-  updateConfig: (partial: Partial<ScanConfig>) => void;
 
   // Pipeline config
   pipelineConfig: PipelineConfig;
@@ -101,10 +90,6 @@ export const useScanStore = create<ScanState>((set, get) => ({
   subnets: [],
   setSubnets: (subnets) => set({ subnets }),
 
-  // Default configs
-  defaultConfigs: null,
-  setDefaultConfigs: (defaultConfigs) => set({ defaultConfigs }),
-
   // Port lists from backend
   portLists: [],
   setPortLists: (portLists) => set({ portLists }),
@@ -112,16 +97,6 @@ export const useScanStore = create<ScanState>((set, get) => ({
   // Current scan ID
   currentScanId: null,
   setCurrentScanId: (currentScanId) => set({ currentScanId }),
-
-  // Scan config
-  config: null,
-  setConfig: (config) => set({ config }),
-  updateConfig: (partial) => {
-    const current = get().config;
-    if (current) {
-      set({ config: { ...current, ...partial } });
-    }
-  },
 
   // Pipeline config
   pipelineConfig: { stages: [] },

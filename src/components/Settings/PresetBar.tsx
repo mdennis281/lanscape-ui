@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import type { PipelineConfig, DefaultConfigs } from '../../types';
+import type { PipelineConfig } from '../../types';
 import { JsonEditorModal } from '../JsonEditor';
 import {
   getAllPresets,
@@ -32,8 +32,6 @@ import {
 interface PresetBarProps {
   /** The live (possibly modified) config in the settings form. */
   localConfig: PipelineConfig;
-  /** Backend-provided default configs keyed by preset name. */
-  defaultConfigs: DefaultConfigs | null;
   /** Called when the user picks a preset — parent should setLocalConfig. */
   onApplyPreset: (config: PipelineConfig, presetId: string) => void;
 }
@@ -57,7 +55,7 @@ const ICON_OPTIONS = [
 
 // ── Component ────────────────────────────────────────────────────────
 
-export function PresetBar({ localConfig, defaultConfigs, onApplyPreset }: PresetBarProps) {
+export function PresetBar({ localConfig, onApplyPreset }: PresetBarProps) {
   const [presets, setPresets] = useState<Preset[]>(getAllPresets);
   const [activeId, setActiveId] = useState<string | null>(getActivePresetId);
 
@@ -94,10 +92,10 @@ export function PresetBar({ localConfig, defaultConfigs, onApplyPreset }: Preset
     if (!activeId) return false;
     const preset = presets.find((p) => p.id === activeId);
     if (!preset) return false;
-    const presetCfg = resolvePresetConfig(preset, defaultConfigs);
+    const presetCfg = resolvePresetConfig(preset, localConfig.stages);
     if (!presetCfg) return false;
     return !configMatchesPreset(localConfig, presetCfg);
-  }, [localConfig, activeId, presets, defaultConfigs]);
+  }, [localConfig, activeId, presets]);
 
   // ── Close context menu on outside click ──────────────────────────
 
@@ -123,7 +121,7 @@ export function PresetBar({ localConfig, defaultConfigs, onApplyPreset }: Preset
   // ── Handlers ─────────────────────────────────────────────────────
 
   const handleSelect = (preset: Preset) => {
-    const cfg = resolvePresetConfig(preset, defaultConfigs);
+    const cfg = resolvePresetConfig(preset, localConfig.stages);
     if (!cfg) return;
     setActiveId(preset.id);
     setActivePresetId(preset.id);
@@ -383,7 +381,7 @@ export function PresetBar({ localConfig, defaultConfigs, onApplyPreset }: Preset
         isOpen={!!jsonViewPreset}
         onClose={() => setJsonViewPreset(null)}
         title={jsonViewPreset ? `${jsonViewPreset.name} — Scan Config` : ''}
-        value={jsonViewPreset ? resolvePresetConfig(jsonViewPreset, defaultConfigs) : {}}
+        value={jsonViewPreset ? resolvePresetConfig(jsonViewPreset, localConfig.stages) : {}}
         readOnly
       />
     </div>
