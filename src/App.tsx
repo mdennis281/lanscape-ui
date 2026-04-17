@@ -194,6 +194,13 @@ function MainApp() {
   // re-fetch data (handles reconnects and server-URL changes).
   // Also handles completing initial load when auto-reconnect succeeds.
   useEffect(() => {
+    if (connectionStatus === 'disconnected' || connectionStatus === 'connecting') {
+      // Surface reconnection attempts so the user knows we're still trying
+      if (!hasLoadedOnce.current) {
+        setLoadingStatus('Connecting to server…');
+      }
+      return;
+    }
     if (connectionStatus !== 'connected') return;
     const ws = wsRef.current;
     if (!ws) return;
@@ -231,6 +238,9 @@ function MainApp() {
 
       const ws = createWebSocketService({
         url: wsUrl,
+        // 0 = unlimited retries — never give up during initial startup.
+        // Once loaded, the ConnectionModal handles manual reconnection.
+        maxReconnectAttempts: 0,
         onStatusChange: (status) => {
           if (!cancelled) {
             setConnectionStatus(status);
@@ -306,31 +316,16 @@ function MainApp() {
             <p className="loading-subtitle">Local Network Scanner</p>
           </div>
           <div className="loading-progress">
-            {connectionStatus === 'error' && !hasLoadedOnce.current ? (
-              <>
-                <div className="loading-error">
-                  <i className="fa-solid fa-plug-circle-xmark"></i>
-                  <span>Unable to reach backend server</span>
-                </div>
-                <button className="loading-btn" onClick={() => setShowConnection(true)}>
-                  <i className="fa-solid fa-gear"></i>
-                  Connection Settings
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="loading-status">
-                  {loadingStatus}
-                </p>
-                <div className="loading-bar">
-                  <div className="loading-bar-fill loading-bar-indeterminate" />
-                </div>
-                <button className="loading-btn-link" onClick={() => setShowConnection(true)}>
-                  <i className="fa-solid fa-gear"></i>
-                  Connection Settings
-                </button>
-              </>
-            )}
+            <p className="loading-status">
+              {loadingStatus}
+            </p>
+            <div className="loading-bar">
+              <div className="loading-bar-fill loading-bar-indeterminate" />
+            </div>
+            <button className="loading-btn-link" onClick={() => setShowConnection(true)}>
+              <i className="fa-solid fa-gear"></i>
+              Connection Settings
+            </button>
           </div>
         </div>
         {/* Connection modal shown as blocking overlay when initial connect fails */}

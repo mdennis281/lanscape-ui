@@ -197,7 +197,8 @@ class WebSocketService {
       return;
     }
     const maxAttempts = this.config.maxReconnectAttempts ?? 10;
-    if (this.reconnectAttempts >= maxAttempts) {
+    // 0 means unlimited retries (never give up)
+    if (maxAttempts > 0 && this.reconnectAttempts >= maxAttempts) {
       this.setStatus('error');
       return;
     }
