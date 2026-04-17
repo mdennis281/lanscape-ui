@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useScanStore, useUIStore } from '../../store';
 import { Odometer, OdometerTime } from './Odometer';
-import { AddStageModal } from './AddStageModal';
-import { getStageMeta } from '../Settings/stageRegistry';
-import type { StageProgress, StageEntry } from '../../types';
+import { StageTimeline } from './StageTimeline';
+import type { ActiveStageCounter } from './useStageManager';
 
 // Calculate number of digits needed to display a number
 function digitCount(n: number): number {
@@ -65,39 +64,17 @@ export function Overview() {
   const status = useScanStore((state) => state.status);
   const scanErrors = useScanStore((state) => state.scanErrors);
   const scanWarnings = useScanStore((state) => state.scanWarnings);
-  const currentScanId = useScanStore((state) => state.currentScanId);
-  const pipelineConfig = useScanStore((state) => state.pipelineConfig);
   const setShowErrors = useUIStore((state) => state.setShowErrors);
   const setShowWarnings = useUIStore((state) => state.setShowWarnings);
 
   const isRunning = status?.is_running ?? false;
   const serverRuntime = status?.runtime ?? 0;
   const remaining = status?.remaining ?? 0;
-  const stage = status?.stage ?? 'idle';
   const progress = status?.progress ?? 0;
 
-  // Per-stage progress from pipeline mode
-  const stageProgresses = status?.stages;
-  const currentStageIndex = status?.current_stage_index;
-
-  // Derive current stage (running) or last stage (complete) for header counter
-  const currentStage = (stageProgresses && currentStageIndex != null)
-    ? stageProgresses[currentStageIndex]
-    : null;
-  const lastStage = stageProgresses?.length
-    ? stageProgresses[stageProgresses.length - 1]
-    : null;
-  const activeStage = currentStage ?? lastStage;
-
-  // Counter values driven by the active stage
-  const counterCompleted = activeStage?.completed ?? 0;
-  const counterTotal = activeStage?.total ?? 0;
-  const counterLabel = activeStage?.counter_label ?? 'IPs scanned';
-
-  // When scan completes normally (stage='complete'), snap completed to total
-  // so the odometer animates to the final count instead of stopping short.
-  const scanCompleted = stage === 'complete';
-  const counterValue = (scanCompleted && counterTotal > 0) ? counterTotal : counterCompleted;
+  // Counter state driven by StageTimeline via callback
+  const [counter, setCounter] = useState<ActiveStageCounter>({ completed: 0, total: 0, label: 'IPs scanned' });
+  const handleActiveStageChange = useCallback((c: ActiveStageCounter) => setCounter(c), []);
 
   // Use local runtime for smooth counting instead of choppy server updates
   const runtime = useLocalRuntime(isRunning, serverRuntime);
@@ -124,10 +101,7 @@ export function Overview() {
   const warningCount = scanWarnings.length;
   
   // Use counter total to determine digit count (so completed aligns properly)
-  const counterDigits = Math.max(digitCount(counterTotal), 1);
-
-  // Add-stage modal state (lifted here so it renders outside .scan-stats)
-  const [showAddStage, setShowAddStage] = useState(false);
+  const counterDigits = Math.max(digitCount(counter.total), 1);
 
   return (
     <>
@@ -140,10 +114,10 @@ export function Overview() {
       <div className="scan-stats-content">
         {/* Counter driven by the active stage */}
         <div className="scan-stat">
-          <Odometer value={counterValue} digits={counterDigits} className="scan-stat-value" />
+          <Odometer value={counter.completed} digits={counterDigits} className="scan-stat-value" />
           <span className="scan-stat-sep">/</span>
-          <Odometer value={counterTotal} digits={counterDigits} className="scan-stat-value muted" />
-          <span className="scan-stat-label">{counterLabel}</span>
+          <Odometer value={counter.total} digits={counterDigits} className="scan-stat-value muted" />
+          <span className="scan-stat-label">{counter.label}</span>
         </div>
 
         <div className="scan-stat-spacer" />
@@ -192,154 +166,10 @@ export function Overview() {
           </div>
         )}
 
-        {/* Stage indicators */}
-        {stageProgresses && stageProgresses.length > 0 ? (
-          <StageIndicators
-            stages={stageProgresses}
-            currentIndex={currentStageIndex ?? null}
-            showAddButton={!!currentScanId}
-            onAddStage={() => setShowAddStage(true)}
-          />
-        ) : (
-          <StagePreview stages={pipelineConfig.stages} onAddStage={() => setShowAddStage(true)} />
-        )}
+        {/* Stage timeline — animated stage indicators with add-stage modal */}
+        <StageTimeline onActiveStageChange={handleActiveStageChange} />
       </div>
     </div>
-
-    {/* Add-stage modal — rendered outside .scan-stats to avoid overflow clipping */}
-    <AddStageModal
-      isOpen={showAddStage}
-      onClose={() => setShowAddStage(false)}
-      scanId={currentScanId ?? undefined}
-    />
     </>
-  );
-}
-
-function formatStageRuntime(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
-  return s > 0 ? `${m}m ${s}s` : `${m}m`;
-}
-
-function StageIndicators({
-  stages,
-  currentIndex,
-  showAddButton,
-  onAddStage,
-}: {
-  stages: StageProgress[];
-  currentIndex: number | null;
-  showAddButton: boolean;
-  onAddStage: () => void;
-}) {
-  const radius = 14;
-  const circumference = 2 * Math.PI * radius;
-
-  return (
-    <div className="stage-indicators">
-      {stages.map((sp, i) => {
-        const meta = getStageMeta(sp.stage_type);
-        const pct = sp.total > 0 ? (sp.completed / sp.total) * 100 : 0;
-        const isCurrent = currentIndex === i;
-        const isDone = sp.finished;
-        const offset = circumference - (pct / 100) * circumference;
-
-        let tooltipContent: string;
-        if (isDone) {
-          tooltipContent = `${meta.label}: ${formatStageRuntime(sp.runtime)}`;
-        } else if (isCurrent) {
-          tooltipContent = `${meta.label}: ${Math.round(pct)}%`;
-        } else {
-          tooltipContent = meta.label;
-        }
-
-        let stateClass = 'stage-indicator--pending';
-        if (isDone) stateClass = 'stage-indicator--done';
-        else if (isCurrent) stateClass = 'stage-indicator--active';
-
-        return (
-          <div
-            key={i}
-            className={`stage-indicator ${stateClass}`}
-            data-tooltip-id="tooltip"
-            data-tooltip-content={tooltipContent}
-          >
-            <svg className="stage-indicator-ring" viewBox="0 0 32 32">
-              <circle className="stage-indicator-bg" cx="16" cy="16" r={radius} />
-              {isDone ? (
-                <circle
-                  className="stage-indicator-fill stage-indicator-fill--done"
-                  cx="16" cy="16" r={radius}
-                  strokeDasharray={circumference}
-                  strokeDashoffset={0}
-                />
-              ) : (
-                <circle
-                  className="stage-indicator-fill"
-                  cx="16" cy="16" r={radius}
-                  strokeDasharray={circumference}
-                  strokeDashoffset={offset}
-                />
-              )}
-            </svg>
-            <i className={`${meta.icon} stage-indicator-icon`} />
-          </div>
-        );
-      })}
-
-      {/* Add stage button */}
-      {showAddButton && (
-        <button
-          className="stage-indicator-add"
-          onClick={onAddStage}
-          data-tooltip-id="tooltip"
-          data-tooltip-content="Add stage"
-        >
-          <i className="fa-solid fa-plus" />
-        </button>
-      )}
-    </div>
-  );
-}
-
-function StagePreview({
-  stages,
-  onAddStage,
-}: {
-  stages: StageEntry[];
-  onAddStage: () => void;
-}) {
-  return (
-    <div className="stage-indicators stage-indicators--preview">
-      {stages.map((entry, i) => {
-        const meta = getStageMeta(entry.stage_type);
-        const tooltipText = entry.auto
-          ? `${meta.label} (auto: ${entry.reason})`
-          : meta.label;
-        return (
-          <div
-            key={i}
-            className={`stage-indicator stage-indicator--preview${entry.auto ? ' stage-indicator--auto' : ''}`}
-            data-tooltip-id="tooltip"
-            data-tooltip-content={tooltipText}
-          >
-            <svg className="stage-indicator-ring" viewBox="0 0 32 32">
-              <circle className={`stage-indicator-bg${entry.auto ? ' stage-indicator-bg--auto' : ''}`} cx="16" cy="16" r={14} />
-            </svg>
-            <i className={`${meta.icon} stage-indicator-icon`} />
-          </div>
-        );
-      })}
-      <button
-        className="stage-indicator-add"
-        onClick={onAddStage}
-        data-tooltip-id="tooltip"
-        data-tooltip-content="Add stage"
-      >
-        <i className="fa-solid fa-plus" />
-      </button>
-    </div>
   );
 }

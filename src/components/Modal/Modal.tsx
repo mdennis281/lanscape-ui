@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode, MouseEvent } from 'react';
 
 interface ModalProps {
@@ -26,7 +27,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'medium
     mouseDownTarget.current = null;
   };
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
       <div className={`modal modal-${size}`}>
         <div className="modal-header">
@@ -38,6 +39,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'medium
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-footer">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

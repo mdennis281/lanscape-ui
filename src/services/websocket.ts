@@ -360,6 +360,10 @@ class WebSocketService {
     return this.send('scan.append_stages', { scan_id: scanId, stages });
   }
 
+  async updateStage(scanId: string, index: number, stageType: string, config: Record<string, unknown>): Promise<WSResponse> {
+    return this.send('scan.update_stage', { scan_id: scanId, index, stage_type: stageType, config });
+  }
+
   // Port handler methods
   async listPorts(): Promise<WSResponse> {
     return this.send('port.list');
