@@ -401,6 +401,10 @@ class WebSocketService {
     return this.send('tools.arp_supported');
   }
 
+  async getAutoStages(subnet: string): Promise<WSResponse> {
+    return this.send('tools.auto_stages', { subnet });
+  }
+
   async getAppInfo(): Promise<WSResponse> {
     return this.send('tools.app_info');
   }

@@ -39,6 +39,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const defaultConfigs = useScanStore((s) => s.defaultConfigs);
   const setPipelineConfig = useScanStore((s) => s.setPipelineConfig);
   const portLists = useScanStore((s) => s.portLists);
+  const autoStagesEnabled = useScanStore((s) => s.autoStagesEnabled);
+  const setAutoStagesEnabled = useScanStore((s) => s.setAutoStagesEnabled);
 
   const [localConfig, setLocalConfig] = useState<PipelineConfig>(EMPTY_PIPELINE);
 
@@ -259,6 +261,22 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         defaultConfigs={defaultConfigs}
         onApplyPreset={handleApplyPreset}
       />
+
+      {/* Smart stage selection toggle */}
+      <div className="settings-section settings-auto-stages-toggle">
+        <label className="toggle-row">
+          <span className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={autoStagesEnabled}
+              onChange={(e) => setAutoStagesEnabled(e.target.checked)}
+            />
+            <span className="toggle-switch-slider" />
+          </span>
+          <span>Smart stage selection</span>
+          <HelpTip text="Automatically recommend scan stages based on subnet characteristics, OS, and network context. Disable to always choose stages manually." />
+        </label>
+      </div>
 
       {/* Stage Palette — add stages */}
       <div className="settings-section">

@@ -733,6 +733,10 @@
   &--expanded {
     border-color: var(--primary-accent);
   }
+
+  &--auto {
+    border-left: 3px solid var(--warning-accent);
+  }
 }
 
 .stage-card-header {
@@ -919,6 +923,84 @@
 }
 
 // ── Stage Estimate Badge ────────────────────────────────────────────
+
+.stage-card-auto-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--warning-accent);
+  background: rgba(var(--warning-accent-rgb, 234, 179, 8), 0.12);
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.settings-auto-stages-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+
+  label {
+    cursor: pointer;
+    user-select: none;
+  }
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+}
+
+.toggle-switch-slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 2px;
+    bottom: 2px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+
+  input:checked + & {
+    background: var(--primary-accent);
+    border-color: var(--primary-accent);
+
+    &::before {
+      transform: translateX(16px);
+      background: white;
+    }
+  }
+}
 
 .stage-card-estimate {
   display: flex;

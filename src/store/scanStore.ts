@@ -17,6 +17,7 @@ import type {
   StageEntry,
   ScanHistoryEntry,
   ScanMetadata,
+  AutoStageRecommendation,
 } from '../types';
 import { processScanEvent } from './eventProcessor';
 import { getWebSocketService } from '../services';
@@ -84,6 +85,15 @@ interface ScanState {
   isTransitioning: boolean;
   fetchScanHistory: () => Promise<void>;
   switchToScan: (scanId: string) => Promise<void>;
+
+  // Auto-stage recommendations
+  autoStagesEnabled: boolean;
+  setAutoStagesEnabled: (enabled: boolean) => void;
+  autoStages: AutoStageRecommendation[] | null;
+  setAutoStages: (stages: AutoStageRecommendation[] | null) => void;
+  applyAutoStages: (stages: AutoStageRecommendation[]) => void;
+  clearAutoStages: () => void;
+  fetchAutoStages: (subnet: string) => Promise<void>;
 }
 
 export const useScanStore = create<ScanState>((set, get) => ({
@@ -409,5 +419,70 @@ export const useScanStore = create<ScanState>((set, get) => ({
 
     // Phase 3: end transition (entry animation kicks in)
     set({ isTransitioning: false });
+  },
+
+  // ── Auto-stage recommendations ────────────────────────────────────
+
+  autoStagesEnabled: (() => {
+    try {
+      const stored = localStorage.getItem('lanscape_auto_stages_enabled');
+      return stored !== null ? stored === 'true' : true;
+    } catch {
+      return true;
+    }
+  })(),
+  setAutoStagesEnabled: (enabled) => {
+    set({ autoStagesEnabled: enabled });
+    try { localStorage.setItem('lanscape_auto_stages_enabled', String(enabled)); } catch { /* noop */ }
+    if (!enabled) {
+      // Remove auto-flagged stages from pipeline
+      get().clearAutoStages();
+    }
+  },
+  autoStages: null,
+  setAutoStages: (stages) => set({ autoStages: stages }),
+  applyAutoStages: (stages) => {
+    const { pipelineConfig } = get();
+    // Remove existing auto stages, then prepend new auto stages
+    const manualStages = pipelineConfig.stages.filter((s) => !s.auto);
+    const autoEntries: StageEntry[] = stages.map((r) => ({
+      stage_type: r.stage_type,
+      config: r.config,
+      auto: true,
+      reason: r.reason,
+    }));
+    set({
+      autoStages: stages,
+      pipelineConfig: {
+        ...pipelineConfig,
+        stages: [...autoEntries, ...manualStages],
+      },
+    });
+  },
+  clearAutoStages: () => {
+    const { pipelineConfig } = get();
+    set({
+      autoStages: null,
+      pipelineConfig: {
+        ...pipelineConfig,
+        stages: pipelineConfig.stages.filter((s) => !s.auto),
+      },
+    });
+  },
+  fetchAutoStages: async (subnet) => {
+    const ws = getWebSocketService();
+    if (!ws || !get().autoStagesEnabled) return;
+
+    try {
+      const response = await ws.getAutoStages(subnet);
+      if (response.success && response.data) {
+        const data = response.data as { stages: AutoStageRecommendation[] };
+        if (data.stages?.length) {
+          get().applyAutoStages(data.stages);
+        }
+      }
+    } catch {
+      // Best effort — don't block the user
+    }
   },
 }));

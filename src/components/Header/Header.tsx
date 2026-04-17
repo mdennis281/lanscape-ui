@@ -20,6 +20,9 @@ export function Header() {
     clearScanWarnings,
     setStatus,
     addScanToHistory,
+    autoStagesEnabled,
+    fetchAutoStages,
+    clearAutoStages,
   } = useScanStore();
 
   const subnetInput = useUIStore((s) => s.subnetInput);
@@ -37,6 +40,7 @@ export function Header() {
   const validateSubnet = useCallback(async (subnet: string) => {
     if (!subnet.trim()) {
       setSubnetValidation(null);
+      clearAutoStages();
       return;
     }
 
@@ -46,14 +50,20 @@ export function Header() {
     try {
       const response = await ws.testSubnet(subnet);
       if (response.success && response.data) {
-        setSubnetValidation(response.data as SubnetTestResult);
+        const result = response.data as SubnetTestResult;
+        setSubnetValidation(result);
+
+        // Fetch auto-stage recommendations when subnet is valid
+        if (result.valid && autoStagesEnabled) {
+          fetchAutoStages(subnet);
+        }
       }
     } catch {
       // WS was likely disconnected — clear validation instead of showing an
       // error.  The effect below will re-validate once the connection is back.
       setSubnetValidation(null);
     }
-  }, []);
+  }, [autoStagesEnabled, fetchAutoStages, clearAutoStages]);
 
   // Debounced validation — re-runs when input changes *or* when the WS
   // connection is (re-)established so we recover from transient drops.

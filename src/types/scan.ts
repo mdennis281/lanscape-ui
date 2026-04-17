@@ -121,6 +121,8 @@ export type AnyStageConfig =
 export interface StageEntry {
   stage_type: StageType;
   config: Record<string, unknown>;
+  auto?: boolean;
+  reason?: string;
 }
 
 export interface ResilienceConfig {
@@ -317,11 +319,21 @@ export interface SubnetInfo {
   description?: string;
 }
 
+export interface AutoStageRecommendation {
+  stage_type: StageType;
+  preset: string;
+  config: Record<string, unknown>;
+  reason: string;
+}
+
 export interface SubnetTestResult {
   valid: boolean;
   msg: string;
   count: number;
   error?: string;
+  is_ipv6?: boolean;
+  is_local?: boolean;
+  matching_interface?: string | null;
 }
 
 // ── App info ─────────────────────────────────────────────────────────

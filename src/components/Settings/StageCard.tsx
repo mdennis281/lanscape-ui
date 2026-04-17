@@ -46,7 +46,7 @@ export function StageCard({ stage, index, id, onRemove, onConfigChange, portList
     <div
       ref={setNodeRef}
       style={style}
-      className={`stage-card${expanded ? ' stage-card--expanded' : ''}`}
+      className={`stage-card${expanded ? ' stage-card--expanded' : ''}${stage.auto ? ' stage-card--auto' : ''}`}
     >
       <div className="stage-card-header">
         <button
@@ -61,6 +61,15 @@ export function StageCard({ stage, index, id, onRemove, onConfigChange, portList
         <span className="stage-card-index">{index + 1}</span>
         <i className={`${meta.icon} stage-card-icon`} />
         <span className="stage-card-label">{meta.label}</span>
+        {stage.auto && (
+          <span
+            className="stage-card-auto-badge"
+            data-tooltip-id="tooltip"
+            data-tooltip-content={stage.reason ?? 'Auto-recommended'}
+          >
+            Auto
+          </span>
+        )}
         <span
           className="stage-card-estimate"
           data-tooltip-id="tooltip"

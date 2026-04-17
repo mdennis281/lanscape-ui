@@ -315,15 +315,18 @@ function StagePreview({
     <div className="stage-indicators stage-indicators--preview">
       {stages.map((entry, i) => {
         const meta = getStageMeta(entry.stage_type);
+        const tooltipText = entry.auto
+          ? `${meta.label} (auto: ${entry.reason})`
+          : meta.label;
         return (
           <div
             key={i}
-            className="stage-indicator stage-indicator--preview"
+            className={`stage-indicator stage-indicator--preview${entry.auto ? ' stage-indicator--auto' : ''}`}
             data-tooltip-id="tooltip"
-            data-tooltip-content={meta.label}
+            data-tooltip-content={tooltipText}
           >
             <svg className="stage-indicator-ring" viewBox="0 0 32 32">
-              <circle className="stage-indicator-bg" cx="16" cy="16" r={14} />
+              <circle className={`stage-indicator-bg${entry.auto ? ' stage-indicator-bg--auto' : ''}`} cx="16" cy="16" r={14} />
             </svg>
             <i className={`${meta.icon} stage-indicator-icon`} />
           </div>

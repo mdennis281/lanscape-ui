@@ -291,6 +291,16 @@
 // Add-stage button (inline with stage indicators)
 // ================================================
 
+.stage-indicator-bg--auto {
+  stroke: var(--warning-accent);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+
+.stage-indicator--auto {
+  opacity: 0.85;
+}
+
 .stage-indicator-add {
   display: inline-flex;
   align-items: center;
