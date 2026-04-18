@@ -228,7 +228,12 @@ export function configMatchesPreset(
  * even if they've drifted from a preset.
  */
 export function saveLastConfig(config: PipelineConfig): void {
-  localStorage.setItem(LAST_CONFIG_KEY, JSON.stringify(config));
+  // Strip auto-stages — they're ephemeral recommendations re-fetched per session
+  const cleaned: PipelineConfig = {
+    ...config,
+    stages: config.stages.filter((s) => !s.auto),
+  };
+  localStorage.setItem(LAST_CONFIG_KEY, JSON.stringify(cleaned));
 }
 
 /**
@@ -239,7 +244,11 @@ export function getLastConfig(): PipelineConfig | null {
     const raw = localStorage.getItem(LAST_CONFIG_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed && Array.isArray(parsed.stages)) return parsed as PipelineConfig;
+    if (parsed && Array.isArray(parsed.stages)) {
+      // Strip any auto-stages leaked into older localStorage data
+      parsed.stages = parsed.stages.filter((s: Record<string, unknown>) => !s.auto);
+      return parsed as PipelineConfig;
+    }
     return null;
   } catch {
     return null;
