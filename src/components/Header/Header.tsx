@@ -3,7 +3,8 @@ import { useConnectionStore, useScanStore, useUIStore } from '../../store';
 import { getWebSocketService } from '../../services';
 import { SubnetInput } from './SubnetInput';
 import { ScanHistory } from './ScanHistory';
-import type { SubnetTestResult } from '../../types';
+import { ConfigPromptModal } from './ConfigPromptModal';
+import type { SubnetTestResult, AutoStageRecommendation } from '../../types';
 
 export function Header() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -23,6 +24,7 @@ export function Header() {
     autoStagesEnabled,
     fetchAutoStages,
     clearAutoStages,
+    applyAutoStages,
   } = useScanStore();
 
   const subnetInput = useUIStore((s) => s.subnetInput);
@@ -32,6 +34,8 @@ export function Header() {
   const [isLoading, setIsLoading] = useState(false);
   const [isTerminating, setIsTerminating] = useState(false);
   const [subnetValidation, setSubnetValidation] = useState<SubnetTestResult | null>(null);
+  const [showConfigPrompt, setShowConfigPrompt] = useState(false);
+  const [pendingAutoStages, setPendingAutoStages] = useState<AutoStageRecommendation[] | null>(null);
 
   const isScanning = status?.is_running ?? false;
   const hasStages = pipelineConfig.stages.length > 0;
@@ -78,6 +82,74 @@ export function Header() {
   }, [subnetInput, validateSubnet, connectionStatus]);
 
   const canSubmit = isScanning || (subnetInput.trim() && subnetValidation?.valid && hasStages);
+
+  // Shared logic: clear state and transition to a fresh scan slate
+  const proceedWithNewScan = useCallback(() => {
+    if (currentScanId) {
+      const ws = getWebSocketService();
+      ws?.unsubscribeScan(currentScanId).catch(() => {});
+    }
+    clearDevices();
+    clearScanErrors();
+    clearScanWarnings();
+    setCurrentScanId(null);
+    setStatus(null);
+  }, [currentScanId, clearDevices, clearScanErrors, clearScanWarnings, setCurrentScanId, setStatus]);
+
+  // Called when user clicks "New Scan" in the history dropdown
+  const handleNewScan = useCallback(async () => {
+    if (!currentScanId || !autoStagesEnabled || !subnetInput.trim()) {
+      proceedWithNewScan();
+      return;
+    }
+
+    const ws = getWebSocketService();
+    if (!ws) {
+      proceedWithNewScan();
+      return;
+    }
+
+    try {
+      const response = await ws.getAutoStages(subnetInput.trim());
+      if (response.success && response.data) {
+        const data = response.data as { stages: AutoStageRecommendation[] };
+        if (data.stages?.length) {
+          const currentTypes = new Set(pipelineConfig.stages.map((s) => s.stage_type));
+          const recommendedTypes = new Set(data.stages.map((s) => s.stage_type));
+
+          const isDifferent =
+            currentTypes.size !== recommendedTypes.size ||
+            [...currentTypes].some((t) => !recommendedTypes.has(t));
+
+          if (isDifferent) {
+            setPendingAutoStages(data.stages);
+            setShowConfigPrompt(true);
+            return;
+          }
+        }
+      }
+    } catch {
+      // Best effort — proceed without prompt
+    }
+
+    proceedWithNewScan();
+  }, [currentScanId, autoStagesEnabled, subnetInput, pipelineConfig.stages, proceedWithNewScan]);
+
+  // Config prompt modal handlers
+  const handleUseRecommended = useCallback(() => {
+    setShowConfigPrompt(false);
+    if (pendingAutoStages) {
+      applyAutoStages(pendingAutoStages);
+    }
+    setPendingAutoStages(null);
+    proceedWithNewScan();
+  }, [pendingAutoStages, applyAutoStages, proceedWithNewScan]);
+
+  const handleKeepCurrent = useCallback(() => {
+    setShowConfigPrompt(false);
+    setPendingAutoStages(null);
+    proceedWithNewScan();
+  }, [proceedWithNewScan]);
 
   // Contextual tooltip for the submit button when disabled
   const getSubmitTooltip = (): string | undefined => {
@@ -184,17 +256,7 @@ export function Header() {
         </a>
 
         <form className="subnet-form" onSubmit={handleSubmit} ref={formRef}>
-          <ScanHistory onNewScan={() => {
-            if (currentScanId) {
-              const ws = getWebSocketService();
-              ws?.unsubscribeScan(currentScanId).catch(() => {});
-            }
-            clearDevices();
-            clearScanErrors();
-            clearScanWarnings();
-            setCurrentScanId(null);
-            setStatus(null);
-          }} />
+          <ScanHistory onNewScan={handleNewScan} />
           <SubnetInput 
             disabled={isLoading} 
             onSettingsClick={() => setShowSettings(true)}
@@ -222,6 +284,15 @@ export function Header() {
           </span>
         </form>
       </div>
+
+      <ConfigPromptModal
+        isOpen={showConfigPrompt}
+        onClose={() => { setShowConfigPrompt(false); setPendingAutoStages(null); }}
+        onUseRecommended={handleUseRecommended}
+        onKeepCurrent={handleKeepCurrent}
+        recommendedStages={pendingAutoStages ?? []}
+        currentStages={pipelineConfig.stages}
+      />
     </header>
   );
 }

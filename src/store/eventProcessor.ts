@@ -69,6 +69,7 @@ export function processScanEvent(
     case 'terminated': {
       const finishedDelta = eventData as {
         devices?: DeviceResult[];
+        removed_ips?: string[];
         metadata?: {
           running?: boolean;
           stage?: string;
@@ -106,6 +107,10 @@ export function processScanEvent(
             updatedDevices.push(device);
           }
         }
+      }
+      if (finishedDelta?.removed_ips) {
+        const removedSet = new Set(finishedDelta.removed_ips as string[]);
+        updatedDevices = updatedDevices.filter((d) => !removedSet.has(d.ip));
       }
 
       // Use the event action as the authoritative stage for completion events
@@ -149,6 +154,7 @@ export function processScanEvent(
     case 'delta': {
       const delta = eventData as {
         devices?: DeviceResult[];
+        removed_ips?: string[];
         metadata?: {
           running?: boolean;
           stage?: string;
@@ -188,15 +194,21 @@ export function processScanEvent(
       const scanMeta = innerMeta ?? outerMeta;
 
       // Collect device updates
-      if (delta?.devices) {
-        const updatedDevices = [...snapshot.devices];
-        for (const device of delta.devices) {
-          const idx = updatedDevices.findIndex((d) => d.ip === device.ip);
-          if (idx >= 0) {
-            updatedDevices[idx] = device;
-          } else {
-            updatedDevices.push(device);
+      if (delta?.devices || delta?.removed_ips) {
+        let updatedDevices = [...snapshot.devices];
+        if (delta?.devices) {
+          for (const device of delta.devices) {
+            const idx = updatedDevices.findIndex((d) => d.ip === device.ip);
+            if (idx >= 0) {
+              updatedDevices[idx] = device;
+            } else {
+              updatedDevices.push(device);
+            }
           }
+        }
+        if (delta?.removed_ips) {
+          const removedSet = new Set(delta.removed_ips as string[]);
+          updatedDevices = updatedDevices.filter((d) => !removedSet.has(d.ip));
         }
         patch.devices = updatedDevices;
       }
