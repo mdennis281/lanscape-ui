@@ -245,6 +245,10 @@
     opacity: 0.85;
   }
 
+  &--skipped {
+    opacity: 0.25;
+  }
+
   &--preview {
     opacity: 0.3;
   }
@@ -262,6 +266,10 @@
   fill: none;
   stroke: var(--input-bg);
   stroke-width: 2;
+
+  &--skipped {
+    stroke-dasharray: 3 3;
+  }
 }
 
 .stage-indicator-fill {
@@ -288,6 +296,10 @@
 
   .stage-indicator--done & {
     color: var(--secondary-accent);
+  }
+
+  .stage-indicator--skipped & {
+    color: var(--text-muted, rgba(255, 255, 255, 0.25));
   }
 }
 

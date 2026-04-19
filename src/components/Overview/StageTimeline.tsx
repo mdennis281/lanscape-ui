@@ -166,12 +166,15 @@ function LiveStageIndicator({
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
   const pct = stage.total > 0 ? (stage.completed / stage.total) * 100 : 0;
+  const isSkipped = stage.skipped === true;
   const isDone = stage.finished;
   const offset = circumference - (pct / 100) * circumference;
   const meta = getStageMeta(stage.stage_type);
 
   let tooltipContent: string;
-  if (isDone) {
+  if (isSkipped) {
+    tooltipContent = `${meta.label}: Skipped — ${stage.skip_reason ?? 'incompatible'}`;
+  } else if (isDone) {
     tooltipContent = `${meta.label}: ${formatStageRuntime(stage.runtime)}`;
   } else if (isCurrent) {
     tooltipContent = `${meta.label}: ${Math.round(pct)}%`;
@@ -180,7 +183,8 @@ function LiveStageIndicator({
   }
 
   let stateClass = 'stage-indicator--pending';
-  if (isDone) stateClass = 'stage-indicator--done';
+  if (isSkipped) stateClass = 'stage-indicator--skipped';
+  else if (isDone) stateClass = 'stage-indicator--done';
   else if (isCurrent) stateClass = 'stage-indicator--active';
 
   const variants = getVariants(item.intent);
@@ -202,22 +206,25 @@ function LiveStageIndicator({
       style={{ transformStyle: 'preserve-3d' }}
     >
       <svg className="stage-indicator-ring" viewBox="0 0 32 32">
-        <circle className="stage-indicator-bg" cx="16" cy="16" r={radius} />
-        {isDone ? (
+        <circle
+          className={`stage-indicator-bg${isSkipped ? ' stage-indicator-bg--skipped' : ''}`}
+          cx="16" cy="16" r={radius}
+        />
+        {!isSkipped && isDone ? (
           <circle
             className="stage-indicator-fill stage-indicator-fill--done"
             cx="16" cy="16" r={radius}
             strokeDasharray={circumference}
             strokeDashoffset={0}
           />
-        ) : (
+        ) : !isSkipped ? (
           <circle
             className="stage-indicator-fill"
             cx="16" cy="16" r={radius}
             strokeDasharray={circumference}
             strokeDashoffset={offset}
           />
-        )}
+        ) : null}
       </svg>
       <i className={`${meta.icon} stage-indicator-icon`} />
     </motion.div>

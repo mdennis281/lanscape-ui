@@ -188,7 +188,12 @@ export function useStageManager(): StageManagerResult {
   const lastStage = stageProgresses?.length
     ? stageProgresses[stageProgresses.length - 1]
     : null;
-  const activeStage = currentStage ?? lastStage;
+  // Skip over skipped stages when determining the active counter source
+  const activeStage = (currentStage && !currentStage.skipped)
+    ? currentStage
+    : (lastStage && !lastStage.skipped)
+      ? lastStage
+      : stageProgresses?.findLast((s) => !s.skipped) ?? null;
 
   const counterCompleted = activeStage?.completed ?? 0;
   const counterTotal = activeStage?.total ?? 0;

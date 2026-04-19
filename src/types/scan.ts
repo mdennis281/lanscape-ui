@@ -141,6 +141,8 @@ export interface StageProgress {
   total: number;
   completed: number;
   finished: boolean;
+  skipped?: boolean;
+  skip_reason?: string;
   runtime: number;
   counter_label: string;
 }
