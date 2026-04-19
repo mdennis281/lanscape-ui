@@ -31,19 +31,9 @@ function useLocalRuntime(isRunning: boolean, serverRuntime: number): number {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- sync to scan lifecycle
       setLocalRuntime(serverRuntime);
     } else {
-      // Scan stopped - sync to final server value
       startTimeRef.current = null;
-      setLocalRuntime(serverRuntime);
     }
   }, [isRunning]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally only react to isRunning, not serverRuntime
-
-  // When viewing a completed scan (not running), sync to its runtime value
-  useEffect(() => {
-    if (!isRunning) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync completed scan runtime from server
-      setLocalRuntime(serverRuntime);
-    }
-  }, [isRunning, serverRuntime]);
 
   // Increment local runtime smoothly while scan is running (0.1s precision)
   useEffect(() => {
@@ -56,6 +46,11 @@ function useLocalRuntime(isRunning: boolean, serverRuntime: number): number {
 
     return () => clearInterval(interval);
   }, [isRunning]);
+
+  // When not running, return server value directly (synchronous) so that
+  // `runtime` and `timeLocked` update in the same render — avoids the
+  // OdometerTime locking to 00:00 before the real value arrives via effect.
+  if (!isRunning) return serverRuntime;
 
   return localRuntime;
 }

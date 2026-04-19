@@ -1,0 +1,45 @@
+// ============================================
+// Export Modal (JSON / CSV preview + download)
+// ============================================
+
+.export-modal-backdrop {
+  z-index: 1100;
+}
+
+.export-modal {
+  max-width: 720px;
+  height: 70vh;
+  max-height: 680px;
+  display: flex;
+  flex-direction: column;
+
+  .modal-header {
+    flex-shrink: 0;
+  }
+}
+
+.export-modal-icon {
+  margin-right: 8px;
+  color: var(--primary-accent);
+  font-size: 16px;
+}
+
+.export-modal-body {
+  flex: 1 1 0;
+  min-height: 0;
+  border-top: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--card-border);
+
+  .monaco-editor,
+  .monaco-editor .overflow-guard {
+    border-radius: 0;
+  }
+}
+
+.export-modal-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}

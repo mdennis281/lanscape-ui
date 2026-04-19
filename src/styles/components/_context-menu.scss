@@ -1,0 +1,97 @@
+// ============================================
+// Context Menu
+// ============================================
+
+.ctx-menu {
+  position: fixed;
+  z-index: 2000;
+  min-width: 180px;
+  max-width: 280px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-lg);
+  padding: 4px 0;
+  animation: ctxMenuFadeIn 0.1s ease;
+  user-select: none;
+
+  &--sub {
+    position: absolute;
+    animation: ctxMenuFadeIn 0.08s ease;
+  }
+}
+
+@keyframes ctxMenuFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+// ── Section label ────────────────────────────────────────────────────
+
+.ctx-menu-section-label {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+// ── Divider ──────────────────────────────────────────────────────────
+
+.ctx-menu-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--card-border);
+}
+
+// ── Menu item ────────────────────────────────────────────────────────
+
+.ctx-menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(var(--primary-accent-rgb), 0.1);
+  }
+
+  &--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+
+    &:hover {
+      background: none;
+    }
+  }
+
+  &--submenu {
+    padding-right: 24px;
+  }
+}
+
+.ctx-menu-item-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.ctx-menu-item-label {
+  flex: 1;
+}
+
+.ctx-menu-chevron {
+  position: absolute;
+  right: 8px;
+  font-size: 9px;
+  color: var(--text-muted);
+}

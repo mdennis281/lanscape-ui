@@ -169,51 +169,99 @@ export const useScanStore = create<ScanState>((set, get) => ({
   // Handle WebSocket events — delegates to the event processor
   handleEvent: (event) => {
     const state = get();
-    const patch = processScanEvent(event, {
-      status: state.status,
-      devices: state.devices,
-    });
 
-    const update: Partial<ScanState> = {};
+    // Extract scan_id from event data to determine which scan this belongs to
+    const eventData = event.data as Record<string, unknown> | undefined;
+    const eventScanId = (eventData?.scan_id as string)
+      ?? (eventData?.metadata as Record<string, unknown> | undefined)?.scan_id as string | undefined;
+    const isForCurrentScan = !eventScanId || eventScanId === state.currentScanId;
 
-    if (patch.clearErrorsAndWarnings) {
-      update.scanErrors = [];
-      update.scanWarnings = [];
-    }
-    if (patch.status !== undefined) update.status = patch.status;
-    if (patch.devices !== undefined) update.devices = patch.devices;
-    if (patch.scanErrors !== undefined) update.scanErrors = patch.scanErrors;
-    if (patch.scanWarnings !== undefined) update.scanWarnings = patch.scanWarnings;
+    // Only apply full state updates (devices, status, errors) for the current scan
+    if (isForCurrentScan) {
+      const patch = processScanEvent(event, {
+        status: state.status,
+        devices: state.devices,
+      });
 
-    if (Object.keys(update).length > 0) {
-      set(update);
-    }
+      const update: Partial<ScanState> = {};
 
-    // Keep history entries in sync with live events
-    const eventName = (event as { event?: string }).event ?? '';
+      if (patch.clearErrorsAndWarnings) {
+        update.scanErrors = [];
+        update.scanWarnings = [];
+      }
+      if (patch.status !== undefined) update.status = patch.status;
+      if (patch.devices !== undefined) update.devices = patch.devices;
+      if (patch.scanErrors !== undefined) update.scanErrors = patch.scanErrors;
+      if (patch.scanWarnings !== undefined) update.scanWarnings = patch.scanWarnings;
 
-    if (
-      (eventName === 'scan.complete' ||
+      if (Object.keys(update).length > 0) {
+        set(update);
+      }
+
+      // Update history for current scan from processed status
+      const eventName = event.event ?? '';
+      if (
+        (eventName === 'scan.complete' ||
+          eventName === 'scan.terminated' ||
+          eventName === 'scan.update' ||
+          eventName === 'scan.delta') &&
+        state.currentScanId
+      ) {
+        const updatedStatus = update.status ?? state.status;
+        const currentDevices = update.devices ?? state.devices;
+        if (updatedStatus) {
+          get().updateHistoryEntry({
+            scan_id: state.currentScanId,
+            subnet: '',
+            running: updatedStatus.is_running,
+            stage: updatedStatus.stage,
+            percent_complete: updatedStatus.progress * 100,
+            devices_alive: currentDevices.length,
+            devices_total: updatedStatus.total_hosts,
+            runtime: updatedStatus.runtime,
+            stages: updatedStatus.stages,
+          });
+        }
+      }
+    } else {
+      // Background scan event — update history entry only
+      const eventName = event.event ?? '';
+      if (
+        eventName === 'scan.complete' ||
         eventName === 'scan.terminated' ||
         eventName === 'scan.update' ||
-        eventName === 'scan.delta') &&
-      state.currentScanId
-    ) {
-      const updatedStatus = update.status ?? state.status;
-      const currentDevices = update.devices ?? state.devices;
-      if (updatedStatus) {
-        const entry: ScanHistoryEntry = {
-          scan_id: state.currentScanId,
-          subnet: '',
-          running: updatedStatus.is_running,
-          stage: updatedStatus.stage,
-          percent_complete: updatedStatus.progress * 100,
-          devices_alive: currentDevices.length,
-          devices_total: updatedStatus.total_hosts,
-          runtime: updatedStatus.runtime,
-          stages: updatedStatus.stages,
-        };
-        get().updateHistoryEntry(entry);
+        eventName === 'scan.delta'
+      ) {
+        const meta = (eventData?.metadata as Record<string, unknown> | undefined);
+        const innerMeta = (meta?.metadata as Record<string, unknown> | undefined) ?? meta;
+
+        if (innerMeta) {
+          const pct = (innerMeta.percent_complete as number) ?? 0;
+          const running = eventName !== 'scan.complete' && eventName !== 'scan.terminated'
+            ? (innerMeta.running as boolean | undefined) ?? true
+            : false;
+          const stage = eventName === 'scan.complete' ? 'complete'
+            : eventName === 'scan.terminated' ? 'terminated'
+            : (innerMeta.stage as string) ?? '';
+
+          get().updateHistoryEntry({
+            scan_id: eventScanId!,
+            subnet: '',
+            running,
+            stage,
+            percent_complete: pct,
+            devices_alive: (innerMeta.devices_alive as number) ?? 0,
+            devices_total: (innerMeta.devices_total as number) ?? 0,
+            runtime: (innerMeta.run_time as number) ?? 0,
+            stages: (innerMeta.stages as ScanHistoryEntry['stages']),
+          });
+        }
+
+        // Auto-unsubscribe from background scans once they finish
+        if (eventName === 'scan.complete' || eventName === 'scan.terminated') {
+          const ws = getWebSocketService();
+          ws?.unsubscribeScan(eventScanId!).catch(() => {});
+        }
       }
     }
   },
@@ -324,12 +372,18 @@ export const useScanStore = create<ScanState>((set, get) => ({
     // Phase 1: begin transition
     set({ isTransitioning: true });
 
-    // Unsubscribe from current scan if we have one
+    // Only unsubscribe from the old scan if it's no longer running.
+    // Running scans stay subscribed so their events keep history up to date.
     if (state.currentScanId) {
-      try {
-        await ws.unsubscribeScan(state.currentScanId);
-      } catch {
-        // Best effort
+      const oldRunning = state.scanHistory.find(
+        (h) => h.scan_id === state.currentScanId
+      )?.running;
+      if (!oldRunning) {
+        try {
+          await ws.unsubscribeScan(state.currentScanId);
+        } catch {
+          // Best effort
+        }
       }
     }
 

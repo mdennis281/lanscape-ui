@@ -1,10 +1,34 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useScanStore } from '../../store';
 import { DeviceStage } from './DeviceStage';
+import { ContextMenu, useContextMenu, getGlobalSection } from '../ContextMenu';
+import { ExportModal } from '../ExportModal';
+import type { ContextMenuSection } from '../ContextMenu';
 import type { DeviceResult } from '../../types';
 
 interface DeviceTableProps {
   onDeviceClick?: (device: DeviceResult) => void;
+}
+
+// ── CSV generation ───────────────────────────────────────────────────
+
+function escapeCSV(value: string): string {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function devicesToCSV(devices: DeviceResult[]): string {
+  const headers = ['IP', 'Hostname', 'MAC', 'Vendor', 'Ports'];
+  const rows = devices.map((d) => [
+    d.ip,
+    d.hostname || '',
+    d.mac_addr || '',
+    d.manufacturer || '',
+    (d.ports?.slice().sort((a, b) => a - b).join('; ')) || '',
+  ].map(escapeCSV).join(','));
+  return [headers.join(','), ...rows].join('\n');
 }
 
 // Simple animation delay calculator - just assigns stagger based on position in batch
@@ -22,6 +46,133 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
   const scanStage = useScanStore((state) => state.status?.stage || '');
   const [filter, setFilter] = useState('');
   const [portsExpanded, setPortsExpanded] = useState(false);
+  
+  // Context menu
+  const ctxMenu = useContextMenu();
+  const ctxDeviceRef = useRef<DeviceResult | null>(null);
+
+  // Export modal
+  const [exportModal, setExportModal] = useState<{
+    title: string;
+    content: string;
+    filename: string;
+    language: 'json' | 'plaintext';
+  } | null>(null);
+
+  const openExport = useCallback((title: string, content: string, filename: string, language: 'json' | 'plaintext' = 'json') => {
+    setExportModal({ title, content, filename, language });
+  }, []);
+
+  // ── Build context menu sections ──────────────────────────────────
+
+  const getDeviceSections = useCallback((device: DeviceResult): ContextMenuSection[] => {
+    const allIps = Array.from(new Set([
+      device.ip,
+      ...(device.ipv4_addresses || []),
+      ...(device.ipv6_addresses || []),
+    ]));
+
+    return [
+      {
+        label: device.hostname || device.ip,
+        items: [
+          {
+            label: 'View Details',
+            icon: 'fa-solid fa-eye',
+            onClick: () => onDeviceClick?.(device),
+          },
+          {
+            label: 'Export',
+            icon: 'fa-solid fa-file-export',
+            items: [
+              {
+                label: 'JSON',
+                icon: 'fa-solid fa-braces',
+                onClick: () => openExport(
+                  `Export — ${device.ip}`,
+                  JSON.stringify(device, null, 2),
+                  `${device.ip}.json`,
+                ),
+              },
+            ],
+          },
+          {
+            label: 'Copy',
+            icon: 'fa-solid fa-copy',
+            items: [
+              {
+                label: 'IP',
+                onClick: () => { navigator.clipboard.writeText(device.ip); },
+              },
+              {
+                label: 'MAC',
+                disabled: !device.mac_addr,
+                onClick: () => { if (device.mac_addr) navigator.clipboard.writeText(device.mac_addr); },
+              },
+              {
+                label: 'IP list (CSV)',
+                onClick: () => { navigator.clipboard.writeText(allIps.join(', ')); },
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  }, [onDeviceClick, openExport]);
+
+  const getScanSections = useCallback((): ContextMenuSection[] => {
+    return [
+      {
+        label: 'Scan',
+        items: [
+          {
+            label: 'Export',
+            icon: 'fa-solid fa-file-export',
+            items: [
+              {
+                label: 'JSON',
+                icon: 'fa-solid fa-braces',
+                onClick: () => openExport(
+                  'Export — Scan Results',
+                  JSON.stringify(devices, null, 2),
+                  'lanscape-scan.json',
+                ),
+              },
+              {
+                label: 'CSV',
+                icon: 'fa-solid fa-file-csv',
+                onClick: () => openExport(
+                  'Export — Scan Results',
+                  devicesToCSV(devices),
+                  'lanscape-scan.csv',
+                  'plaintext',
+                ),
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  }, [devices, openExport]);
+
+  const handleRowContextMenu = useCallback((e: React.MouseEvent, device: DeviceResult) => {
+    ctxDeviceRef.current = device;
+    ctxMenu.handleContextMenu(e, () => [
+      ...getDeviceSections(device),
+      ...getScanSections(),
+      getGlobalSection(),
+    ]);
+  }, [ctxMenu, getDeviceSections, getScanSections]);
+
+  const handleTableContextMenu = useCallback((e: React.MouseEvent) => {
+    // Only fire if not on a device row (rows handle their own)
+    const target = e.target as HTMLElement;
+    if (target.closest('.device-row')) return;
+    ctxMenu.handleContextMenu(e, () => [
+      ...getScanSections(),
+      getGlobalSection(),
+    ]);
+  }, [ctxMenu, getScanSections]);
   
   // Track which device IPs are "new" (recently added) with their animation delay
   const [newDevices, setNewDevices] = useState<Map<string, number>>(new Map());
@@ -96,7 +247,7 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
   }, [devices, filter]);
 
   return (
-    <div className="table-container">
+    <div className="table-container" onContextMenu={handleTableContextMenu}>
       <div className="table-header">
         <span className="table-title">
           <i className="fa-solid fa-desktop"></i> Discovered Devices ({devices.length})
@@ -165,6 +316,7 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
                   className={`device-row${isNew ? ' device-row-new' : ''}`}
                   style={isNew ? { animationDelay: `${delay}ms` } : undefined}
                   onClick={() => onDeviceClick?.(device)}
+                  onContextMenu={(e) => handleRowContextMenu(e, device)}
                 >
                   <td>
                     <DeviceStage device={device} />
@@ -222,6 +374,21 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
           </tbody>
         </table>
         </div>
+      )}
+
+      {ctxMenu.visible && (
+        <ContextMenu sections={ctxMenu.sections} position={ctxMenu.position} onClose={ctxMenu.close} />
+      )}
+
+      {exportModal && (
+        <ExportModal
+          isOpen
+          onClose={() => setExportModal(null)}
+          title={exportModal.title}
+          content={exportModal.content}
+          filename={exportModal.filename}
+          language={exportModal.language}
+        />
       )}
     </div>
   );

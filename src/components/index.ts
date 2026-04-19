@@ -13,3 +13,5 @@ export { ConnectionModal } from './Connection';
 export { DebugModal } from './Debug';
 export { Footer } from './Footer';
 export { StartupScreen } from './Startup';
+export { ContextMenu, useContextMenu, getGlobalSection } from './ContextMenu';
+export { ExportModal } from './ExportModal';

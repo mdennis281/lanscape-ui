@@ -4,10 +4,12 @@ import { getWebSocketService } from '../../services';
 import { SubnetInput } from './SubnetInput';
 import { ScanHistory } from './ScanHistory';
 import { ConfigPromptModal } from './ConfigPromptModal';
+import { ContextMenu, useContextMenu, getGlobalSection } from '../ContextMenu';
 import type { SubnetTestResult, AutoStageRecommendation } from '../../types';
 
 export function Header() {
   const formRef = useRef<HTMLFormElement>(null);
+  const logoMenu = useContextMenu();
 
   const connectionStatus = useConnectionStore((s) => s.connectionStatus);
 
@@ -86,15 +88,19 @@ export function Header() {
   // Shared logic: clear state and transition to a fresh scan slate
   const proceedWithNewScan = useCallback(() => {
     if (currentScanId) {
-      const ws = getWebSocketService();
-      ws?.unsubscribeScan(currentScanId).catch(() => {});
+      // Only unsubscribe if the scan is finished — running scans stay
+      // subscribed so their events keep updating the history dropdown.
+      if (!isScanning) {
+        const ws = getWebSocketService();
+        ws?.unsubscribeScan(currentScanId).catch(() => {});
+      }
     }
     clearDevices();
     clearScanErrors();
     clearScanWarnings();
     setCurrentScanId(null);
     setStatus(null);
-  }, [currentScanId, clearDevices, clearScanErrors, clearScanWarnings, setCurrentScanId, setStatus]);
+  }, [currentScanId, isScanning, clearDevices, clearScanErrors, clearScanWarnings, setCurrentScanId, setStatus]);
 
   // Called when user clicks "New Scan" in the history dropdown
   const handleNewScan = useCallback(async () => {
@@ -245,15 +251,22 @@ export function Header() {
         <a 
           href="/" 
           className="header-logo"
-          onContextMenu={(e) => {
-            e.preventDefault();
-            setShowDebug(true);
-          }}
+          onContextMenu={(e) => logoMenu.handleContextMenu(e, () => [
+            {
+              items: [
+                { label: 'Debug Panel', icon: 'fa-solid fa-bug', onClick: () => setShowDebug(true) },
+              ],
+            },
+            getGlobalSection(),
+          ])}
         >
           <span className="logo-text">
             <span className="logo-accent">LAN</span>scape
           </span>
         </a>
+        {logoMenu.visible && (
+          <ContextMenu sections={logoMenu.sections} position={logoMenu.position} onClose={logoMenu.close} />
+        )}
 
         <form className="subnet-form" onSubmit={handleSubmit} ref={formRef}>
           <ScanHistory onNewScan={handleNewScan} />
