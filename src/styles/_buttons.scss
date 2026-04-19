@@ -50,6 +50,15 @@
   }
 }
 
+.btn-warning {
+  background: var(--warning-accent);
+  color: #1b1b1b;
+
+  &:hover:not(:disabled) {
+    background: #e6c109;
+  }
+}
+
 .btn-success {
   background: var(--secondary-accent);
   color: white;

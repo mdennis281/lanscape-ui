@@ -948,6 +948,11 @@
     cursor: pointer;
     user-select: none;
   }
+
+  input:checked + .toggle-switch-slider {
+    background: #b89a07;
+    border-color: #b89a07;
+  }
 }
 
 .toggle-row {

@@ -4,6 +4,7 @@ import { getWebSocketService } from '../../services';
 import { SubnetInput } from './SubnetInput';
 import { ScanHistory } from './ScanHistory';
 import { ConfigPromptModal } from './ConfigPromptModal';
+import { ScanModeModal } from './ScanModeModal';
 import { ContextMenu, useContextMenu, getGlobalSection } from '../ContextMenu';
 import type { SubnetTestResult, AutoStageRecommendation } from '../../types';
 
@@ -38,6 +39,7 @@ export function Header() {
   const [subnetValidation, setSubnetValidation] = useState<SubnetTestResult | null>(null);
   const [showConfigPrompt, setShowConfigPrompt] = useState(false);
   const [pendingAutoStages, setPendingAutoStages] = useState<AutoStageRecommendation[] | null>(null);
+  const [showScanModeModal, setShowScanModeModal] = useState(false);
 
   const isScanning = status?.is_running ?? false;
   const hasStages = pipelineConfig.stages.length > 0;
@@ -167,15 +169,99 @@ export function Header() {
     return undefined;
   };
 
+  // Core scan-start logic — called directly or after modal choice
+  const executeStartScan = useCallback(async () => {
+    const ws = getWebSocketService();
+    if (!ws) return;
+
+    setIsLoading(true);
+    try {
+      clearDevices();
+      clearScanErrors();
+      clearScanWarnings();
+      setStatus({
+        is_running: true,
+        stage: 'starting',
+        progress: 0,
+        total_hosts: subnetValidation?.count ?? 0,
+        scanned_hosts: 0,
+        found_hosts: 0,
+        ports_scanned: 0,
+        ports_total: 0,
+        runtime: 0,
+        remaining: 0,
+      });
+
+      // Read latest pipeline config from store (may have just been updated by applyAutoStages)
+      const latestConfig = useScanStore.getState().pipelineConfig;
+      const scanPayload = {
+        ...latestConfig,
+        subnet: subnetInput.trim(),
+      };
+      const response = await ws.startScan(scanPayload);
+      if (response.success && response.data) {
+        const data = response.data as { scan_id: string };
+        setCurrentScanId(data.scan_id);
+        addScanToHistory(data.scan_id, subnetInput.trim(), subnetValidation?.count ?? 0);
+        await ws.subscribeScan(data.scan_id);
+      }
+    } catch (error) {
+      console.error('Scan start failed:', error);
+      setStatus({
+        is_running: false,
+        stage: 'error',
+        progress: status?.progress ?? 0,
+        total_hosts: status?.total_hosts ?? 0,
+        scanned_hosts: status?.scanned_hosts ?? 0,
+        found_hosts: status?.found_hosts ?? 0,
+        ports_scanned: status?.ports_scanned ?? 0,
+        ports_total: status?.ports_total ?? 0,
+        runtime: status?.runtime ?? 0,
+        remaining: 0,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [subnetInput, subnetValidation, clearDevices, clearScanErrors, clearScanWarnings, setStatus, setCurrentScanId, addScanToHistory, status]);
+
+  // Scan mode modal handlers
+  const handleScanModeExisting = useCallback(() => {
+    setShowScanModeModal(false);
+    executeStartScan();
+  }, [executeStartScan]);
+
+  const handleScanModeAuto = useCallback(async () => {
+    setShowScanModeModal(false);
+    const ws = getWebSocketService();
+    if (!ws) {
+      executeStartScan();
+      return;
+    }
+
+    try {
+      const response = await ws.getAutoStages(subnetInput.trim());
+      if (response.success && response.data) {
+        const data = response.data as { stages: AutoStageRecommendation[] };
+        if (data.stages?.length) {
+          applyAutoStages(data.stages);
+        }
+      }
+    } catch {
+      // Best effort — proceed with whatever stages are set
+    }
+
+    executeStartScan();
+  }, [subnetInput, applyAutoStages, executeStartScan]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const ws = getWebSocketService();
     if (!ws || !canSubmit) return;
 
-    setIsLoading(true);
-    try {
-      if (isScanning && currentScanId) {
-        // Terminate the current scan
+    if (isScanning && currentScanId) {
+      // Terminate the current scan
+      setIsLoading(true);
+      try {
         setIsTerminating(true);
         await ws.terminateScan(currentScanId);
         setCurrentScanId(null);
@@ -192,57 +278,23 @@ export function Header() {
           remaining: 0,
         });
         setIsTerminating(false);
-      } else {
-        // Clear previous results and start a new scan
-        clearDevices();
-        clearScanErrors();
-        clearScanWarnings();
-        setStatus({
-          is_running: true,
-          stage: 'starting',
-          progress: 0,
-          total_hosts: subnetValidation?.count ?? 0,
-          scanned_hosts: 0,
-          found_hosts: 0,
-          ports_scanned: 0,
-          ports_total: 0,
-          runtime: 0,
-          remaining: 0,
-        });
-        
-        // Spread pipeline config, then override subnet with user input
-        const scanPayload = {
-          ...pipelineConfig,
-          subnet: subnetInput.trim(),
-        };
-        const response = await ws.startScan(scanPayload);
-        // Store the scan ID from the response
-        if (response.success && response.data) {
-          const data = response.data as { scan_id: string };
-          setCurrentScanId(data.scan_id);
-          addScanToHistory(data.scan_id, subnetInput.trim(), subnetValidation?.count ?? 0);
-          // Subscribe to updates for this scan
-          await ws.subscribeScan(data.scan_id);
-        }
+      } catch (error) {
+        console.error('Scan termination failed:', error);
+        setIsTerminating(false);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Scan action failed:', error);
-      setIsTerminating(false);
-      setStatus({
-        is_running: false,
-        stage: 'error',
-        progress: status?.progress ?? 0,
-        total_hosts: status?.total_hosts ?? 0,
-        scanned_hosts: status?.scanned_hosts ?? 0,
-        found_hosts: status?.found_hosts ?? 0,
-        ports_scanned: status?.ports_scanned ?? 0,
-        ports_total: status?.ports_total ?? 0,
-        runtime: status?.runtime ?? 0,
-        remaining: 0,
-      });
-    } finally {
-      setIsLoading(false);
+      return;
     }
+
+    // If there's a completed scan being viewed, ask the user which mode to use
+    if (currentScanId && !isScanning && hasStages) {
+      setShowScanModeModal(true);
+      return;
+    }
+
+    // No existing scan — start directly
+    executeStartScan();
   };
 
   return (
@@ -304,6 +356,14 @@ export function Header() {
         onUseRecommended={handleUseRecommended}
         onKeepCurrent={handleKeepCurrent}
         recommendedStages={pendingAutoStages ?? []}
+        currentStages={pipelineConfig.stages}
+      />
+
+      <ScanModeModal
+        isOpen={showScanModeModal}
+        onClose={() => setShowScanModeModal(false)}
+        onUseExisting={handleScanModeExisting}
+        onUseAuto={handleScanModeAuto}
         currentStages={pipelineConfig.stages}
       />
     </header>
