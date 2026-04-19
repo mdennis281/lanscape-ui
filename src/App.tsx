@@ -143,22 +143,27 @@ function MainApp() {
       setPortLists(portListsRes.data as { name: string; count: number }[]);
     }
 
-    // Restore pipeline config from last save or active preset
-    const lastConfig = getLastConfig();
-    if (lastConfig) {
-      setPipelineConfig(lastConfig);
-    } else {
-      // Try resolving from active preset using stage registry defaults
-      const activeId = getActivePresetId();
-      const preset = activeId ? getPresetById(activeId) : getPresetById('balanced');
-      if (preset) {
-        // Build default stage list from stage registry
-        const defaultStages = STAGE_REGISTRY.map((meta) => ({
-          stage_type: meta.type,
-          config: structuredClone(meta.defaultConfig),
-        }));
-        const resolved = resolvePresetConfig(preset, defaultStages);
-        if (resolved) setPipelineConfig(resolved);
+    // Restore pipeline config from last save or active preset.
+    // When smart stage selection is enabled, skip restoring saved stages —
+    // they'll be populated by fetchAutoStages() once the subnet validates.
+    const { autoStagesEnabled } = useScanStore.getState();
+    if (!autoStagesEnabled) {
+      const lastConfig = getLastConfig();
+      if (lastConfig) {
+        setPipelineConfig(lastConfig);
+      } else {
+        // Try resolving from active preset using stage registry defaults
+        const activeId = getActivePresetId();
+        const preset = activeId ? getPresetById(activeId) : getPresetById('balanced');
+        if (preset) {
+          // Build default stage list from stage registry
+          const defaultStages = STAGE_REGISTRY.map((meta) => ({
+            stage_type: meta.type,
+            config: structuredClone(meta.defaultConfig),
+          }));
+          const resolved = resolvePresetConfig(preset, defaultStages);
+          if (resolved) setPipelineConfig(resolved);
+        }
       }
     }
 
