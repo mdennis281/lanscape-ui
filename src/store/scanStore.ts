@@ -472,8 +472,6 @@ export const useScanStore = create<ScanState>((set, get) => ({
   setAutoStages: (stages) => set({ autoStages: stages }),
   applyAutoStages: (stages) => {
     const { pipelineConfig } = get();
-    // Remove existing auto stages, then prepend new auto stages
-    const manualStages = pipelineConfig.stages.filter((s) => !s.auto);
     const autoEntries: StageEntry[] = stages.map((r) => ({
       stage_type: r.stage_type,
       config: r.config,
@@ -484,7 +482,7 @@ export const useScanStore = create<ScanState>((set, get) => ({
       autoStages: stages,
       pipelineConfig: {
         ...pipelineConfig,
-        stages: [...autoEntries, ...manualStages],
+        stages: [...autoEntries],
       },
     });
   },

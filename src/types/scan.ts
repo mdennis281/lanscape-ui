@@ -178,17 +178,11 @@ export interface ScanErrorInfo {
 }
 
 export interface ScanWarningInfo {
-  type: string;
-  message: string;
-  old_multiplier?: number;
-  new_multiplier?: number;
-  decrease_percent?: number;
-  timestamp?: number;
-  failed_job?: string;
-  error_message?: string;
+  category: string;
+  title: string;
+  body?: string;
   stage?: string;
-  retry_attempt?: number;
-  max_retries?: number;
+  timestamp?: number;
 }
 
 export interface ScanSummary {

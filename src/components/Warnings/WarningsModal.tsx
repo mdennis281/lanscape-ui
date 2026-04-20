@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Markdown from 'react-markdown';
 import { Modal } from '../Modal';
 import { useScanStore } from '../../store';
 import type { ScanWarningInfo } from '../../types';
@@ -8,94 +9,52 @@ interface WarningsModalProps {
   onClose: () => void;
 }
 
-interface WarningItemProps {
-  warning: ScanWarningInfo;
-  index: number;
+/** Human-readable labels for warning categories */
+const CATEGORY_LABELS: Record<string, { label: string; icon: string }> = {
+  concurrency: { label: 'Concurrency', icon: 'fa-solid fa-gauge-high' },
+  stage_skip: { label: 'Skipped Stages', icon: 'fa-solid fa-forward' },
+  capability: { label: 'Capability', icon: 'fa-solid fa-puzzle-piece' },
+  resilience: { label: 'Resilience', icon: 'fa-solid fa-shield-halved' },
+};
+
+function getCategoryMeta(category: string) {
+  return CATEGORY_LABELS[category] ?? { label: category, icon: 'fa-solid fa-circle-info' };
 }
 
-/** Map scan stage strings to human-readable labels */
-function formatStage(stage?: string): string {
-  if (!stage) return 'Unknown';
-  const map: Record<string, string> = {
-    'scanning devices': 'Device Discovery',
-    'testing ports': 'Port Scanning',
-    'complete': 'Finalization',
-    'terminating': 'Terminating',
-  };
-  return map[stage] ?? stage;
+/** Group warnings by category, preserving order of first occurrence. */
+function groupByCategory(warnings: ScanWarningInfo[]): Map<string, ScanWarningInfo[]> {
+  const groups = new Map<string, ScanWarningInfo[]>();
+  for (const w of warnings) {
+    const key = w.category;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(w);
+  }
+  return groups;
 }
 
-function WarningItem({ warning, index }: WarningItemProps) {
+function WarningItem({ warning }: { warning: ScanWarningInfo }) {
   const [expanded, setExpanded] = useState(false);
-
-  const hasMultiplier = warning.old_multiplier !== undefined && warning.new_multiplier !== undefined;
-  const hasJobContext = !!warning.failed_job;
-  const hasDetails = hasMultiplier || hasJobContext;
-
-  // Build a short human-readable summary
-  const summary = hasJobContext
-    ? `Job failed on ${warning.failed_job}`
-    : warning.message;
+  const hasBody = !!warning.body;
 
   return (
     <div className="warning-item">
-      <div 
+      <div
         className="warning-item-header"
-        onClick={() => hasDetails && setExpanded(!expanded)}
-        role={hasDetails ? "button" : undefined}
-        tabIndex={hasDetails ? 0 : undefined}
-        onKeyDown={(e) => hasDetails && e.key === 'Enter' && setExpanded(!expanded)}
+        onClick={() => hasBody && setExpanded(!expanded)}
+        role={hasBody ? 'button' : undefined}
+        tabIndex={hasBody ? 0 : undefined}
+        onKeyDown={(e) => hasBody && e.key === 'Enter' && setExpanded(!expanded)}
       >
-        <span className="warning-item-index">#{index + 1}</span>
-        <span className="warning-item-summary">{summary}</span>
-        {hasDetails && (
+        <span className="warning-item-title">
+          <Markdown>{warning.title}</Markdown>
+        </span>
+        {hasBody && (
           <i className={`fa-solid fa-chevron-${expanded ? 'up' : 'down'} warning-item-chevron`} />
         )}
       </div>
-      {expanded && hasDetails && (
-        <div className="warning-item-details">
-          {/* Error context */}
-          {warning.error_message && (
-            <div className="warning-detail-row">
-              <span className="warning-detail-label">Error</span>
-              <span className="warning-detail-value warning-error-msg">{warning.error_message}</span>
-            </div>
-          )}
-
-          {/* Stage */}
-          {warning.stage && (
-            <div className="warning-detail-row">
-              <span className="warning-detail-label">Stage</span>
-              <span className="warning-detail-value">{formatStage(warning.stage)}</span>
-            </div>
-          )}
-
-          {/* Retry info */}
-          {warning.retry_attempt !== undefined && (
-            <div className="warning-detail-row">
-              <span className="warning-detail-label">Attempt</span>
-              <span className="warning-detail-value">
-                {warning.retry_attempt} / {(warning.max_retries ?? 0) + 1}
-              </span>
-            </div>
-          )}
-
-          {/* Multiplier impact */}
-          {hasMultiplier && (
-            <div className="warning-detail-row">
-              <span className="warning-detail-label">Concurrency</span>
-              <span className="warning-detail-value">
-                {Math.round((warning.old_multiplier ?? 0) * 100)}%
-                <i className="fa-solid fa-arrow-right warning-arrow" />
-                <span className="warning-decrease">
-                  {Math.round((warning.new_multiplier ?? 0) * 100)}%
-                </span>
-                <span className="warning-decrease-badge">
-                  &minus;{warning.decrease_percent?.toFixed(0) ?? 0}%
-                </span>
-              </span>
-            </div>
-          )}
+      {expanded && warning.body && (
+        <div className="warning-item-body">
+          <Markdown>{warning.body}</Markdown>
         </div>
       )}
     </div>
@@ -107,9 +66,7 @@ export function WarningsModal({ isOpen, onClose }: WarningsModalProps) {
   const status = useScanStore((state) => state.status);
 
   const warningCount = scanWarnings.length;
-
-  // Count unique failed jobs
-  const failedJobs = new Set(scanWarnings.map(w => w.failed_job).filter(Boolean));
+  const grouped = groupByCategory(scanWarnings);
 
   return (
     <Modal
@@ -119,9 +76,9 @@ export function WarningsModal({ isOpen, onClose }: WarningsModalProps) {
       size="large"
       footer={
         <div className="modal-footer-actions">
-          <a 
-            href="https://github.com/mdennis281/LANscape/issues" 
-            target="_blank" 
+          <a
+            href="https://github.com/mdennis281/LANscape/issues"
+            target="_blank"
             rel="noopener noreferrer"
             className="btn btn-secondary"
           >
@@ -142,25 +99,34 @@ export function WarningsModal({ isOpen, onClose }: WarningsModalProps) {
               {warningCount} warning{warningCount !== 1 ? 's' : ''} occurred during
               {status?.stage === 'complete' ? ' the scan' : ' scanning'}
             </span>
-            {failedJobs.size > 0 && (
-              <span className="warnings-summary-detail">
-                {failedJobs.size} job{failedJobs.size !== 1 ? 's' : ''} required retries &mdash; thread concurrency was reduced to compensate.
-              </span>
-            )}
           </div>
         </div>
 
-        {/* Warning list */}
+        {/* Warning groups */}
         <div className="warnings-list">
-          {scanWarnings.length === 0 ? (
+          {warningCount === 0 ? (
             <div className="warnings-empty">
               <i className="fa-regular fa-circle-check text-success" />
               <span>No warnings recorded</span>
             </div>
           ) : (
-            scanWarnings.map((warning, index) => (
-              <WarningItem key={index} warning={warning} index={index} />
-            ))
+            Array.from(grouped.entries()).map(([category, warnings]) => {
+              const meta = getCategoryMeta(category);
+              return (
+                <div key={category} className="warnings-group">
+                  <div className="warnings-group-header">
+                    <i className={meta.icon} />
+                    <span>{meta.label}</span>
+                    <span className="warnings-group-count">{warnings.length}</span>
+                  </div>
+                  <div className="warnings-group-items">
+                    {warnings.map((warning, i) => (
+                      <WarningItem key={i} warning={warning} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
