@@ -145,6 +145,8 @@ export interface StageProgress {
   skip_reason?: string;
   runtime: number;
   counter_label: string;
+  auto?: boolean;
+  reason?: string;
 }
 
 // ── Port lists ───────────────────────────────────────────────────────

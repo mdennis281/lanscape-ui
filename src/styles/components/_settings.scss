@@ -735,7 +735,7 @@
   }
 
   &--auto {
-    border-left: 3px solid var(--warning-accent);
+    border-left: 3px solid var(--auto-accent);
   }
 }
 
@@ -930,8 +930,8 @@
   padding: 1px 7px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--warning-accent);
-  background: rgba(var(--warning-accent-rgb, 234, 179, 8), 0.12);
+  color: var(--auto-accent);
+  background: rgba(var(--auto-accent-rgb, 191, 90, 242), 0.12);
   border-radius: 9999px;
   white-space: nowrap;
 
@@ -955,8 +955,8 @@
   }
 
   input:checked + .toggle-switch-slider {
-    background: #b89a07;
-    border-color: #b89a07;
+    background: var(--auto-accent);
+    border-color: var(--auto-accent);
   }
 }
 

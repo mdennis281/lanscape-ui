@@ -183,7 +183,12 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
   // Resolve a StageEntry for a given index (falls back to minimal entry from live data)
   const resolveEntry = (index: number): StageEntry | null => {
     if (pipelineConfig.stages[index]) return pipelineConfig.stages[index];
-    if (stageProgresses?.[index]) return { stage_type: stageProgresses[index].stage_type, config: {} };
+    if (stageProgresses?.[index]) return {
+      stage_type: stageProgresses[index].stage_type,
+      config: {},
+      auto: stageProgresses[index].auto,
+      reason: stageProgresses[index].reason,
+    };
     return null;
   };
 
@@ -286,11 +291,15 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
           <AnimatePresence mode="popLayout" initial={false}>
             {manager.liveItems.map((item, i) => {
               const entry = resolveEntry(item.index);
+              // Use pipeline config as the source of truth for auto flag;
+              // falls back to WS broadcast value if pipeline entry is unavailable
+              const isAuto = entry?.auto ?? stageProgresses![item.index]?.auto ?? false;
               return (
                 <LiveStageIndicator
                   key={item.key}
                   item={item}
                   stage={stageProgresses![item.index]}
+                  isAuto={isAuto}
                   isCurrent={currentStageIndex === item.index}
                   staggerIndex={i}
                   onClick={() => entry && setEditorState({ stage: entry, index: item.index })}
@@ -375,6 +384,7 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
 function LiveStageIndicator({
   item,
   stage,
+  isAuto,
   isCurrent,
   staggerIndex,
   onClick,
@@ -382,6 +392,7 @@ function LiveStageIndicator({
 }: {
   item: StageItem;
   stage: StageProgress;
+  isAuto: boolean;
   isCurrent: boolean;
   staggerIndex: number;
   onClick: () => void;
@@ -424,7 +435,7 @@ function LiveStageIndicator({
         ...SPRING,
         delay: staggerIndex * (STAGGER_MS / 1000),
       }}
-      className={`stage-indicator ${stateClass}`}
+      className={`stage-indicator ${stateClass}${isAuto ? ' stage-indicator--auto' : ''}`}
       data-tooltip-id="tooltip"
       data-tooltip-content={tooltipContent}
       style={{ transformStyle: 'preserve-3d', cursor: 'pointer' }}
@@ -433,7 +444,7 @@ function LiveStageIndicator({
     >
       <svg className="stage-indicator-ring" viewBox="0 0 32 32">
         <circle
-          className={`stage-indicator-bg${isSkipped ? ' stage-indicator-bg--skipped' : ''}`}
+          className={`stage-indicator-bg${isSkipped ? ' stage-indicator-bg--skipped' : ''}${isAuto ? ' stage-indicator-bg--auto' : ''}`}
           cx="16" cy="16" r={radius}
         />
         {!isSkipped && isDone ? (

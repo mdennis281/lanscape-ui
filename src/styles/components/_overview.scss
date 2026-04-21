@@ -227,6 +227,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding-right: 2px;
   width: 32px;
   height: 32px;
   cursor: pointer;
@@ -319,9 +320,9 @@
 // ================================================
 
 .stage-indicator-bg--auto {
-  stroke: var(--warning-accent);
-  stroke-width: 1;
-  opacity: 0.45;
+  fill: var(--auto-accent);
+  fill-opacity: 0.15;
+  stroke: var(--input-bg);
 }
 
 .stage-indicator--auto {

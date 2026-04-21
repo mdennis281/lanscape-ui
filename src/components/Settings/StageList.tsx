@@ -40,7 +40,7 @@ export function StageList({ stages, onRemove, onReorder, onConfigChange, portLis
   // Stable React keys that survive reordering — keyed by content fingerprint + nth-occurrence index.
   // When the array is reordered the same entries get the same keys, so React keeps their DOM nodes.
   const stableKeyMapRef = useRef<Map<string, string>>(new Map());
-  const fingerprints = stages.map((s) => `${s.stage_type}:${JSON.stringify(s.config)}`);
+  const fingerprints = stages.map((s) => s.stage_type);
   const fingerprintCount: Record<string, number> = {};
   const stableKeys = fingerprints.map((fp) => {
     const n = fingerprintCount[fp] ?? 0;
