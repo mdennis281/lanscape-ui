@@ -18,6 +18,7 @@ import {
 import { OdometerDebug } from './components/Overview/OdometerDebug';
 import { createWebSocketService } from './services';
 import type { WebSocketService } from './services';
+import { sendLaunchMetric } from './services/analytics';
 import { useConnectionStore, useScanStore, useUIStore } from './store';
 import { resolveWebSocketURL } from './utils';
 import type { DeviceResult, WSEvent, SubnetInfo, AppInfo } from './types';
@@ -170,6 +171,7 @@ function MainApp() {
     // Set fast app info from backend (no ARP/update fields yet)
     if (appInfoRes.success && appInfoRes.data) {
       setAppInfo(appInfoRes.data as AppInfo);
+      void sendLaunchMetric((appInfoRes.data as AppInfo).version);
     }
 
     // Restore scan history from backend (ScanManager retains state across refreshes)

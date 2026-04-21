@@ -1,13 +1,13 @@
 {
   "name": "lanscape-ui",
   "private": true,
-  "version": "2026.03.22.86085",
-  "description": "LANscape Desktop - Local Network Scanner",
+  "version": "0000.00.00.000000",
+  "description": "lanscape-ui is the react app for LANscape python",
   "author": {
     "name": "Michael Dennis",
     "email": "lanscape@dipduo.com"
   },
-  "license": "MIT",
+  "license": "GNU General Public License v3.0",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
