@@ -61,8 +61,11 @@ export function Header() {
         const result = response.data as SubnetTestResult;
         setSubnetValidation(result);
 
-        // Fetch auto-stage recommendations when subnet is valid
-        if (result.valid && autoStagesEnabled) {
+        // Fetch auto-stage recommendations when subnet is valid and there's
+        // no active/completed scan being visualised. While a scan is shown the
+        // pipeline bar is in "isLive" mode and the next-scan config shouldn't
+        // be silently mutated in the background.
+        if (result.valid && autoStagesEnabled && !currentScanId) {
           fetchAutoStages(subnet);
         }
       }
@@ -104,50 +107,40 @@ export function Header() {
     setStatus(null);
   }, [currentScanId, isScanning, clearDevices, clearScanErrors, clearScanWarnings, setCurrentScanId, setStatus]);
 
-  // Called when user clicks "New Scan" in the history dropdown
+  // Called when user clicks "New Scan" in the history dropdown.
+  // Clears the stage queue, resets scan state, then auto-populates stages
+  // if smart stage selection is enabled and the current subnet is valid.
   const handleNewScan = useCallback(async () => {
-    if (!currentScanId || !autoStagesEnabled || !subnetInput.trim()) {
-      proceedWithNewScan();
-      return;
-    }
+    // Wipe all stages so the pipeline is fresh
+    const { pipelineConfig: current, setPipelineConfig } = useScanStore.getState();
+    setPipelineConfig({ ...current, stages: [] });
 
-    const ws = getWebSocketService();
-    if (!ws) {
-      proceedWithNewScan();
-      return;
-    }
+    // Clear devices / status / currentScanId
+    proceedWithNewScan();
 
-    try {
-      const response = await ws.getAutoStages(subnetInput.trim());
-      if (response.success && response.data) {
-        const data = response.data as { stages: AutoStageRecommendation[] };
-        if (data.stages?.length) {
-          const currentTypes = new Set(pipelineConfig.stages.map((s) => s.stage_type));
-          const recommendedTypes = new Set(data.stages.map((s) => s.stage_type));
-
-          const isDifferent =
-            currentTypes.size !== recommendedTypes.size ||
-            [...currentTypes].some((t) => !recommendedTypes.has(t));
-
-          if (isDifferent) {
-            setPendingAutoStages(data.stages);
-            setShowConfigPrompt(true);
-            return;
+    if (autoStagesEnabled && subnetInput.trim() && subnetValidation?.valid) {
+      const ws = getWebSocketService();
+      if (ws) {
+        try {
+          const response = await ws.getAutoStages(subnetInput.trim());
+          if (response.success && response.data) {
+            const data = response.data as { stages: AutoStageRecommendation[] };
+            if (data.stages?.length) {
+              applyAutoStages(data.stages, { force: true });
+            }
           }
+        } catch {
+          // Best effort — leave pipeline empty if fetch fails
         }
       }
-    } catch {
-      // Best effort — proceed without prompt
     }
-
-    proceedWithNewScan();
-  }, [currentScanId, autoStagesEnabled, subnetInput, pipelineConfig.stages, proceedWithNewScan]);
+  }, [proceedWithNewScan, autoStagesEnabled, subnetInput, subnetValidation, applyAutoStages]);
 
   // Config prompt modal handlers
   const handleUseRecommended = useCallback(() => {
     setShowConfigPrompt(false);
     if (pendingAutoStages) {
-      applyAutoStages(pendingAutoStages);
+      applyAutoStages(pendingAutoStages, { force: true });
     }
     setPendingAutoStages(null);
     proceedWithNewScan();
@@ -243,7 +236,9 @@ export function Header() {
       if (response.success && response.data) {
         const data = response.data as { stages: AutoStageRecommendation[] };
         if (data.stages?.length) {
-          applyAutoStages(data.stages);
+          // Force-apply: user explicitly chose Auto Mode, so always replace
+          // the current pipeline regardless of what's there.
+          applyAutoStages(data.stages, { force: true });
         }
       }
     } catch {

@@ -32,6 +32,7 @@
 .device-info-row {
   display: flex;
   justify-content: flex-start;
+  align-items: center;
   gap: 16px;
 }
 
@@ -46,6 +47,34 @@
   font-size: 14px;
   color: var(--text-primary);
   font-weight: 500;
+}
+
+// Found-with stage icons
+
+.device-found-with {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-found-with-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: default;
+  transition: color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    color: var(--primary-accent);
+    border-color: var(--primary-accent);
+  }
 }
 
 // Ports

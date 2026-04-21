@@ -80,7 +80,7 @@ interface ScanState {
   setAutoStagesEnabled: (enabled: boolean) => void;
   autoStages: AutoStageRecommendation[] | null;
   setAutoStages: (stages: AutoStageRecommendation[] | null) => void;
-  applyAutoStages: (stages: AutoStageRecommendation[]) => void;
+  applyAutoStages: (stages: AutoStageRecommendation[], options?: { force?: boolean }) => void;
   clearAutoStages: () => void;
   fetchAutoStages: (subnet: string) => Promise<void>;
 }
@@ -430,7 +430,10 @@ export const useScanStore = create<ScanState>((set, get) => ({
           scanWarnings: meta.warnings ?? [],
         };
 
-        // Override pipeline config with the scan's config so settings stay in sync
+        // Sync pipelineConfig with the loaded scan's config so the Settings
+        // modal reflects the pipeline that was actually run. The pipeline bar
+        // uses status.stages (isLive mode) for visualization — pipelineConfig
+        // here only drives the Settings modal and the next-scan starting point.
         if (data.config && data.config.stages) {
           stateUpdate.pipelineConfig = data.config;
         }
@@ -470,8 +473,12 @@ export const useScanStore = create<ScanState>((set, get) => ({
   },
   autoStages: null,
   setAutoStages: (stages) => set({ autoStages: stages }),
-  applyAutoStages: (stages) => {
+  applyAutoStages: (stages, options) => {
     const { pipelineConfig } = get();
+    // Don't overwrite if there are already manually-set (non-auto) stages,
+    // unless force is requested (e.g. user explicitly chose Auto Mode).
+    const hasManualStages = pipelineConfig.stages.some((s) => !s.auto);
+    if (hasManualStages && !options?.force) return;
     const autoEntries: StageEntry[] = stages.map((r) => ({
       stage_type: r.stage_type,
       config: r.config,

@@ -224,6 +224,7 @@ export function useStageManager(): StageManagerResult {
       const ws = getWebSocketService();
       if (!ws) return;
       await ws.appendStages(currentScanId, [{ stage_type: stageEntry.stage_type, config: stageEntry.config }]);
+      addStageToStore(stageEntry);
       // Intent is set via live stage list diff detection above
     } else {
       addStageToStore(stageEntry);

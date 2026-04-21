@@ -43,10 +43,11 @@ export function AddStageModal({ isOpen, onClose, scanId }: AddStageModalProps) {
   const handleAdd = async () => {
     if (!selected) return;
     if (scanId) {
-      // Live mode: append to running/completed scan via backend
+      // Live mode: append to running/completed scan via backend, then mirror into pipelineConfig
       const ws = getWebSocketService();
       if (!ws) return;
       await ws.appendStages(scanId, [{ stage_type: selected.type, config }]);
+      addStage({ stage_type: selected.type, config });
     } else {
       // Config mode: add to frontend pipeline config
       addStage({ stage_type: selected.type, config });

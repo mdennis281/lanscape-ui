@@ -262,6 +262,7 @@ export interface DeviceResult {
   services?: Record<string, number[]>;
   service_info?: ServiceInfo[];
   caught_errors?: Array<string | { basic: string; traceback?: string }>;
+  found_with_stages?: number[];
 }
 
 // ── Scan history (context switching) ─────────────────────────────────

@@ -3,6 +3,7 @@ import { Modal } from '../Modal';
 import type { DeviceResult, PortServiceDetail, ServiceResponseGroup } from '../../types';
 import { getWebSocketService } from '../../services/websocket';
 import { useScanStore } from '../../store/scanStore';
+import { STAGE_REGISTRY } from '../Settings/stageRegistry';
 
 interface DeviceModalProps {
   device: DeviceResult | null;
@@ -172,6 +173,8 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   
   const currentScanId = useScanStore(s => s.currentScanId);
+  const pipelineConfig = useScanStore(s => s.pipelineConfig);
+  const scanStatus = useScanStore(s => s.status);
   
   if (!device) return null;
 
@@ -307,6 +310,37 @@ export function DeviceModal({ device, onClose }: DeviceModalProps) {
                 </span>
               </span>
             </div>
+            {device.found_with_stages && device.found_with_stages.length > 0 && (
+              <div className="device-info-row">
+                <span className="device-info-label">Found with</span>
+                <span className="device-info-value">
+                  <span className="device-found-with">
+                    {device.found_with_stages.map((stageIdx) => {
+                      // Prefer status.stages (live, includes appended stages)
+                      // over pipelineConfig (only reflects pre-scan config)
+                      const stageType =
+                        scanStatus?.stages?.[stageIdx]?.stage_type
+                        ?? pipelineConfig?.stages?.[stageIdx]?.stage_type;
+                      const meta = stageType
+                        ? STAGE_REGISTRY.find(s => s.type === stageType)
+                        : null;
+                      const icon = meta?.icon ?? 'fa-solid fa-question';
+                      const label = meta?.label ?? `Stage ${stageIdx + 1}`;
+                      return (
+                        <span
+                          key={stageIdx}
+                          className="device-found-with-icon"
+                          data-tooltip-id="tooltip"
+                          data-tooltip-content={`Stage ${stageIdx + 1}, ${label}`}
+                        >
+                          <i className={icon} />
+                        </span>
+                      );
+                    })}
+                  </span>
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

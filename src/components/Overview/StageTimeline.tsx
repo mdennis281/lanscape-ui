@@ -33,7 +33,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useScanStore, useUIStore } from '../../store';
+import { useScanStore } from '../../store';
 import { getStageMeta } from '../Settings/stageRegistry';
 import { AddStageModal } from './AddStageModal';
 import { StageEditorModal } from './StageEditorModal';
@@ -118,7 +118,11 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
   const removeStage = useScanStore((s) => s.removeStage);
   const reorderStages = useScanStore((s) => s.reorderStages);
   const isTransitioning = useScanStore((s) => s.isTransitioning);
-  const setShowSettings = useUIStore((s) => s.setShowSettings);
+  const clearDevices = useScanStore((s) => s.clearDevices);
+  const clearScanErrors = useScanStore((s) => s.clearScanErrors);
+  const clearScanWarnings = useScanStore((s) => s.clearScanWarnings);
+  const setCurrentScanId = useScanStore((s) => s.setCurrentScanId);
+  const setStatus = useScanStore((s) => s.setStatus);
 
   const stageProgresses = status?.stages;
   const currentStageIndex = status?.current_stage_index;
@@ -217,8 +221,16 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
           const cleanedStages = pipelineConfig.stages.map(
             ({ auto: _a, reason: _r, ...s }) => s,
           );
-          setPipelineConfig({ ...pipelineConfig, stages: cleanedStages });
-          setShowSettings(true);
+          if (currentScanId) {
+            const ws = getWebSocketService();
+            ws?.unsubscribeScan(currentScanId).catch(() => {});
+          }
+          clearDevices();
+          clearScanErrors();
+          clearScanWarnings();
+          setCurrentScanId(null);
+          setStatus(null);
+          setPipelineConfig({ stages: cleanedStages });
         },
       },
     ],
@@ -268,9 +280,12 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
     const { pipelineConfig: current, setPipelineConfig: setConfig, currentScanId } = useScanStore.getState();
     if (editorState?.isDuplicate) {
       if (currentScanId) {
-        // Live scan: append via WebSocket (same as AddStageModal)
+        // Live scan: append via WebSocket then mirror into pipelineConfig
         const ws = getWebSocketService();
-        if (ws) await ws.appendStages(currentScanId, [{ stage_type: cleanEntry.stage_type, config: cleanEntry.config }]);
+        if (ws) {
+          await ws.appendStages(currentScanId, [{ stage_type: cleanEntry.stage_type, config: cleanEntry.config }]);
+          setConfig({ ...current, stages: [...current.stages, cleanEntry] });
+        }
       } else {
         // Config mode: push to end of pipeline
         setConfig({ ...current, stages: [...current.stages, cleanEntry] });
