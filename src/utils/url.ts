@@ -132,9 +132,8 @@ export function hasExplicitWSServer(): boolean {
  * Priority:
  * 1. Explicit ``?ws-server=`` query param or Electron IPC port — use as-is.
  * 2. ``/api/discover`` endpoint:
- *    a. If mDNS peers are present, use the first discovered instance.
- *    b. If the response includes a ``ws_url`` computed by the server
- *       (interface-aware, correct port), use it directly.
+ *    a. ``ws_url`` computed by the server (interface-aware, correct port) — authoritative.
+ *    b. First mDNS-discovered instance — fallback for older backends without ``ws_url``.
  * 3. Fall back to env var ``VITE_WS_URL`` or ``ws://localhost:8766``.
  */
 export async function resolveWebSocketURL(): Promise<string> {
@@ -147,16 +146,10 @@ export async function resolveWebSocketURL(): Promise<string> {
   try {
     const discover = await fetchDiscoverInfo();
 
-    // P2a — mDNS peers: prefer first discovered backend.
-    if (discover.mdns_enabled && discover.instances.length > 0) {
-      const best = discover.instances[0];
-      const server = `${best.host}:${best.ws_port}`;
-      const wsUrl = `ws://${server}`;
-      updateQueryParam('ws-server', server);
-      return wsUrl;
-    }
-
-    // P2b — server-computed ws_url (interface-aware, correct port).
+    // P2a — server-computed ws_url (interface-aware, correct port).
+    // This is always authoritative when present; mDNS instances may include
+    // a self-advertisement which would resolve to the LAN IP instead of the
+    // correct interface address for this client.
     if (discover.ws_url) {
       try {
         const parsed = new URL(discover.ws_url);
@@ -164,8 +157,17 @@ export async function resolveWebSocketURL(): Promise<string> {
         updateQueryParam('ws-server', server);
         return discover.ws_url;
       } catch {
-        // Malformed ws_url — fall through
+        // Malformed ws_url — fall through to mDNS
       }
+    }
+
+    // P2b — mDNS peers (fallback for backends that don't return ws_url).
+    if (discover.mdns_enabled && discover.instances.length > 0) {
+      const best = discover.instances[0];
+      const server = `${best.host}:${best.ws_port}`;
+      const wsUrl = `ws://${server}`;
+      updateQueryParam('ws-server', server);
+      return wsUrl;
     }
   } catch {
     // Discovery unavailable — fall through to default
