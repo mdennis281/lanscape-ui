@@ -26,6 +26,7 @@ export interface DiscoverResponse {
   mdns_enabled: boolean;
   default_route: string;
   instances: DiscoveredBackend[];
+  ws_url?: string;
 }
 
 const FALLBACK_RESPONSE: DiscoverResponse = {

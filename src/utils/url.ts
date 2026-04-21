@@ -129,23 +129,25 @@ export function hasExplicitWSServer(): boolean {
 /**
  * Resolve the best WebSocket URL to connect to.
  *
- * 1. If a ``ws-server`` query param or Electron port exists, use it directly.
- * 2. Otherwise hit ``/api/discover`` — use the ``default_route`` to derive
- *    the WS host, and if mDNS is enabled pick a discovered backend.
- * 3. Fall back to ``ws://localhost:8766``.
+ * Priority:
+ * 1. Explicit ``?ws-server=`` query param or Electron IPC port — use as-is.
+ * 2. ``/api/discover`` endpoint:
+ *    a. If mDNS peers are present, use the first discovered instance.
+ *    b. If the response includes a ``ws_url`` computed by the server
+ *       (interface-aware, correct port), use it directly.
+ * 3. Fall back to env var ``VITE_WS_URL`` or ``ws://localhost:8766``.
  */
 export async function resolveWebSocketURL(): Promise<string> {
-  // If there's an explicit ws-server param or we're in Electron, use the
-  // synchronous resolver — no need for discovery.
+  // P1 — explicit override or Electron: skip discovery entirely.
   if (hasExplicitWSServer() || window.electronAPI) {
     return getWebSocketURL();
   }
 
-  // No explicit server — ask the backend for connection info.
+  // P2 — ask the backend for connection info.
   try {
     const discover = await fetchDiscoverInfo();
 
-    // If mDNS is on and peers were found, prefer the first one.
+    // P2a — mDNS peers: prefer first discovered backend.
     if (discover.mdns_enabled && discover.instances.length > 0) {
       const best = discover.instances[0];
       const server = `${best.host}:${best.ws_port}`;
@@ -154,25 +156,22 @@ export async function resolveWebSocketURL(): Promise<string> {
       return wsUrl;
     }
 
-    // No mDNS peers (or mDNS disabled) — derive WS URL from default_route.
-    if (discover.default_route) {
+    // P2b — server-computed ws_url (interface-aware, correct port).
+    if (discover.ws_url) {
       try {
-        const parsed = new URL(discover.default_route);
-        // The HTTP server and WS server share the same host; WS port
-        // comes from cachedPort or the standard default.
-        const wsPort = cachedPort ?? 8766;
-        const server = `${parsed.hostname}:${wsPort}`;
-        const wsUrl = `ws://${server}`;
+        const parsed = new URL(discover.ws_url);
+        const server = `${parsed.hostname}:${parsed.port}`;
         updateQueryParam('ws-server', server);
-        return wsUrl;
+        return discover.ws_url;
       } catch {
-        // Bad URL — fall through
+        // Malformed ws_url — fall through
       }
     }
   } catch {
     // Discovery unavailable — fall through to default
   }
 
+  // P3 — env var or hardcoded default.
   return getWebSocketURL();
 }
 
