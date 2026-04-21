@@ -2,6 +2,7 @@
  * StageList — Sortable list of StageCards using @dnd-kit.
  */
 
+import { useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -33,8 +34,23 @@ export function StageList({ stages, onRemove, onReorder, onConfigChange, portLis
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // Generate stable IDs for each stage entry
+  // Stable dnd-kit IDs (position-based, used only for collision detection)
   const ids = stages.map((_, i) => `stage-${i}`);
+
+  // Stable React keys that survive reordering — keyed by content fingerprint + nth-occurrence index.
+  // When the array is reordered the same entries get the same keys, so React keeps their DOM nodes.
+  const stableKeyMapRef = useRef<Map<string, string>>(new Map());
+  const fingerprints = stages.map((s) => `${s.stage_type}:${JSON.stringify(s.config)}`);
+  const fingerprintCount: Record<string, number> = {};
+  const stableKeys = fingerprints.map((fp) => {
+    const n = fingerprintCount[fp] ?? 0;
+    fingerprintCount[fp] = n + 1;
+    const mapKey = `${fp}::${n}`;
+    if (!stableKeyMapRef.current.has(mapKey)) {
+      stableKeyMapRef.current.set(mapKey, `sk-${Math.random().toString(36).slice(2)}`);
+    }
+    return stableKeyMapRef.current.get(mapKey)!;
+  });
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -66,7 +82,7 @@ export function StageList({ stages, onRemove, onReorder, onConfigChange, portLis
         <div className="stage-list">
           {stages.map((stage, i) => (
             <StageCard
-              key={ids[i]}
+              key={stableKeys[i]}
               id={ids[i]}
               stage={stage}
               index={i}
