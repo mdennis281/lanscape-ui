@@ -719,11 +719,13 @@ export function StageSettingsForm({
   config,
   onChange,
   portLists,
+  readOnly,
 }: {
   stageType: StageType;
   config: Record<string, unknown>;
   onChange: (config: Record<string, unknown>) => void;
   portLists?: PortListSummary[];
+  readOnly?: boolean;
 }) {
   const [congestion, setCongestion] = useState(10);
   const meta = getStageMeta(stageType);
@@ -752,7 +754,10 @@ export function StageSettingsForm({
   })();
 
   return (
-    <>
+    <fieldset
+      disabled={!!readOnly}
+      style={{ border: 'none', margin: 0, padding: 0, minInlineSize: 'unset', opacity: readOnly ? 0.65 : undefined }}
+    >
       {hasPresets && (
         <div className="preset-selector">
           {PRESET_OPTIONS.map((p) => (
@@ -800,6 +805,6 @@ export function StageSettingsForm({
         </div>
       )}
       {formContent}
-    </>
+    </fieldset>
   );
 }

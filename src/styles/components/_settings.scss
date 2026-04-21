@@ -934,6 +934,11 @@
   background: rgba(var(--warning-accent-rgb, 234, 179, 8), 0.12);
   border-radius: 9999px;
   white-space: nowrap;
+
+  &--inline {
+    margin-left: 8px;
+    vertical-align: middle;
+  }
 }
 
 .settings-auto-stages-toggle {

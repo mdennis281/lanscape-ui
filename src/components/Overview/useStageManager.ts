@@ -106,11 +106,20 @@ export function useStageManager(): StageManagerResult {
   const currentPreviewFingerprints = pipelineConfig.stages.map(stageFingerprint);
   const prevPreview = prevPreviewRef.current;
 
+  // A pure reorder has the same multiset of fingerprints — skip animation diff for it
+  const isReorder =
+    currentPreviewFingerprints.length === prevPreview.length &&
+    currentPreviewFingerprints.length > 0 &&
+    [...currentPreviewFingerprints].sort().join('\x00') === [...prevPreview].sort().join('\x00') &&
+    currentPreviewFingerprints.some((fp, i) => fp !== prevPreview[i]);
+
   // Only auto-diff when not caused by our own operations (intents would already be set)
   if (
-    Object.keys(intentsRef.current).length === 0 &&
-    currentPreviewFingerprints.length !== prevPreview.length ||
-    currentPreviewFingerprints.some((fp, i) => fp !== prevPreview[i])
+    !isReorder && (
+      Object.keys(intentsRef.current).length === 0 &&
+      currentPreviewFingerprints.length !== prevPreview.length ||
+      currentPreviewFingerprints.some((fp, i) => fp !== prevPreview[i])
+    )
   ) {
     const newIntents: Record<string, AnimationIntent> = {};
 
