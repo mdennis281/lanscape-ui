@@ -17,13 +17,9 @@ function getClientPlatform(): string {
 export async function sendLaunchMetric(backendVersion: string): Promise<void> {
   if (metricSent) return;
   metricSent = true;
-  const params = new URLSearchParams({
-    client_kind: window.electronAPI ? 'electron' : 'browser',
-    platform: getClientPlatform(),
-  });
 
   try {
-    await fetch(`${getMetricsUrl()}?${params.toString()}`, {
+    await fetch(getMetricsUrl(), {
       method: 'GET',
       cache: 'no-store',
       credentials: 'omit',
@@ -32,6 +28,8 @@ export async function sendLaunchMetric(backendVersion: string): Promise<void> {
       headers: {
         'ui-version': __APP_VERSION__,
         'backend-version': backendVersion,
+        'x-client-kind': window.electronAPI ? 'electron' : 'browser',
+        'x-platform': getClientPlatform(),
       },
     });
   } catch {
