@@ -295,28 +295,30 @@ export function Header() {
   return (
     <header className="header">
       <div className="header-content">
-        <a 
-          href="/" 
-          className="header-logo"
-          onContextMenu={(e) => logoMenu.handleContextMenu(e, () => [
-            {
-              items: [
-                { label: 'Debug Panel', icon: 'fa-solid fa-bug', onClick: () => setShowDebug(true) },
-              ],
-            },
-            getGlobalSection(),
-          ])}
-        >
-          <span className="logo-text">
-            <span className="logo-accent">LAN</span>scape
-          </span>
-        </a>
-        {logoMenu.visible && (
-          <ContextMenu sections={logoMenu.sections} position={logoMenu.position} onClose={logoMenu.close} />
-        )}
+        <div className="header-left">
+          <a 
+            href="/" 
+            className="header-logo"
+            onContextMenu={(e) => logoMenu.handleContextMenu(e, () => [
+              {
+                items: [
+                  { label: 'Debug Panel', icon: 'fa-solid fa-bug', onClick: () => setShowDebug(true) },
+                ],
+              },
+              getGlobalSection(),
+            ])}
+          >
+            <span className="logo-text">
+              <span className="logo-accent">LAN</span>scape
+            </span>
+          </a>
+          {logoMenu.visible && (
+            <ContextMenu sections={logoMenu.sections} position={logoMenu.position} onClose={logoMenu.close} />
+          )}
+          <ScanHistory onNewScan={handleNewScan} />
+        </div>
 
         <form className="subnet-form" onSubmit={handleSubmit} ref={formRef}>
-          <ScanHistory onNewScan={handleNewScan} />
           <SubnetInput 
             disabled={isLoading} 
             onSettingsClick={() => setShowSettings(true)}

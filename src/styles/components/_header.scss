@@ -19,6 +19,12 @@
   margin: 0 auto;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .header-logo {
   display: flex;
   align-items: center;
