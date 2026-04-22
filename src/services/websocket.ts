@@ -78,18 +78,22 @@ class WebSocketService {
       let settled = false;
 
       try {
-        this.ws = new WebSocket(this.config.url);
-        
+        const ws = new WebSocket(this.config.url);
+        this.ws = ws;
+
         // Add timeout for connection attempt
         const connectTimeout = setTimeout(() => {
-          if (!settled) {
+          if (!settled && this.ws === ws) {
             settled = true;
-            this.ws?.close(); // triggers onclose which handles reconnect
+            ws.close(); // triggers onclose which handles reconnect
             reject(new Error('WebSocket connection timeout'));
           }
         }, 4000); // 4 second timeout
 
-        this.ws.onopen = () => {
+        ws.onopen = () => {
+          // Guard against stale sockets: a previous failed attempt may close
+          // after a newer connection has already succeeded.
+          if (this.ws !== ws) return;
           clearTimeout(connectTimeout);
           if (!settled) {
             settled = true;
@@ -99,7 +103,9 @@ class WebSocketService {
           }
         };
 
-        this.ws.onclose = (event) => {
+        ws.onclose = (event) => {
+          // Ignore close events from sockets that have already been replaced.
+          if (this.ws !== ws) return;
           clearTimeout(connectTimeout);
           // Reject if we haven't resolved yet (connection failed before opening)
           if (!settled) {
@@ -112,12 +118,13 @@ class WebSocketService {
           this.scheduleReconnect();
         };
 
-        this.ws.onerror = () => {
+        ws.onerror = () => {
           // Don't reject here - onerror is always followed by onclose
           // Let onclose handle the rejection
         };
 
-        this.ws.onmessage = (event) => {
+        ws.onmessage = (event) => {
+          if (this.ws !== ws) return;
           this.handleMessage(event.data);
         };
       } catch (error) {
