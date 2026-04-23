@@ -251,7 +251,7 @@
   }
 
   &--skipped {
-    opacity: 0.25;
+    opacity: 0.5;
   }
 
   &--preview {
@@ -281,6 +281,7 @@
   stroke-width: 2;
 
   &--skipped {
+    stroke: rgba(255, 100, 40, 0.55);
     stroke-dasharray: 3 3;
   }
 }
