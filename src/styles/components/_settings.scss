@@ -640,64 +640,335 @@
   }
 }
 
-// ── Stage Palette ───────────────────────────────────────────────────
+// ── Stage pipeline (shared vibe with scan-time StageTimeline) ────────
 
-.stage-palette {
+// ── Pipeline pane (contained, centered) ───────────────────────────
+
+.stage-pipeline-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.stage-palette-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.stage-palette-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-
-.stage-palette-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.stage-palette-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
+.stage-pipeline-pane {
+  position: relative;
   background: var(--input-bg);
   border: 1px solid var(--card-border);
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  transition: all 0.15s ease;
+  border-radius: var(--border-radius-md);
+  padding: 36px 28px 28px;
+  min-height: 140px;
+  overflow: hidden;
+}
 
-  i { font-size: 11px; }
+// SVG layer for connector lines — behind the stages, no pointer events
+.stage-pipeline-edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
 
-  &:hover {
-    color: var(--text-primary);
-    border-color: var(--primary-accent);
-    background: rgba(var(--primary-accent-rgb, 99, 102, 241), 0.08);
+.stage-pipeline-edge {
+  fill: none;
+  stroke: var(--card-border);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.7;
+  transition: stroke 0.15s ease, opacity 0.15s ease, stroke-width 0.15s ease;
+}
+
+.stage-pipeline-edge--active {
+  stroke: var(--primary-accent);
+  stroke-width: 2.5;
+  opacity: 1;
+}
+
+// Stage strip — flex row, centered, gap'd, wraps if narrow
+.stage-pipeline-strip {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 56px;
+  flex-wrap: wrap;
+  min-height: 80px;
+}
+
+// Each stage is a column: circle + label
+.stage-pipeline-stage {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 88px;
+  user-select: none;
+}
+
+.stage-pipeline-stage--dragging {
+  z-index: 10;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18));
+}
+
+// Larger circles inside the pipeline (scoped — does not affect scan-time StageTimeline)
+.stage-pipeline-strip .stage-indicator,
+.stage-pipeline-strip .stage-indicator-ring {
+  width: 44px;
+  height: 44px;
+}
+
+.stage-pipeline-strip .stage-indicator-icon {
+  font-size: 14px;
+}
+
+// Stage-count badge intentionally hidden in the settings pipeline — the dnd
+// reorder UX makes ordinal numbers visual noise. The scan-time StageTimeline
+// keeps its index badges via the unscoped rule below.
+.stage-pipeline-strip .stage-indicator-index {
+  display: none;
+}
+
+// Lift the auto-accent fill so it reads at the same intensity as the
+// "Smart stage selection" toggle. Scoped to the pipeline strip — the
+// scan-time timeline keeps its faded look.
+.stage-pipeline-strip .stage-indicator-bg--auto {
+  fill-opacity: 0.55;
+  stroke: rgba(var(--auto-accent-rgb), 0.6);
+}
+
+.stage-pipeline-strip .stage-indicator--auto {
+  opacity: 1;
+}
+
+.stage-pipeline-strip .stage-indicator--auto .stage-indicator-icon {
+  color: #fff;
+}
+
+// Stage label under circle
+.stage-pipeline-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.25;
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s ease;
+}
+
+.stage-pipeline-label--selected {
+  color: var(--primary-accent);
+  font-weight: 600;
+}
+
+// Add button sits at the end of the strip (no line connects to it)
+.stage-pipeline-add-wrapper {
+  display: inline-flex;
+  align-self: center;
+  margin-top: -22px; // visually align the + with the circles, since stages are taller (circle + label)
+}
+
+// Smaller + button than the stage circles — visually subordinate, just an action.
+.stage-pipeline-strip .stage-indicator-add {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+
+// Extend the scan-time .stage-indicator with a "selected" state.
+// The selected indicator gets full opacity + primary-accent ring + primary-accent icon.
+.stage-indicator--selected {
+  opacity: 1;
+
+  .stage-indicator-bg {
+    stroke: var(--primary-accent);
+    stroke-width: 2;
+  }
+  .stage-indicator-icon {
+    color: var(--primary-accent);
   }
 }
 
-// ── Stage List ──────────────────────────────────────────────────────
-
-.stage-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+// Uniform 2px stroke across the pipeline stage circles (overrides scan-time defaults).
+.stage-pipeline-strip .stage-indicator-bg {
+  stroke-width: 2;
 }
+
+.stage-pipeline-strip .stage-indicator-bg--auto {
+  stroke-width: 2;
+}
+
+// Preview opacity was 0.3 — bump it a bit so unselected items are still readable
+.stage-indicator--preview {
+  opacity: 0.55;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  &.stage-indicator--selected {
+    opacity: 1;
+  }
+}
+
+// Small numbered badge on each indicator so users can see stage order
+.stage-indicator-index {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--primary-accent);
+  background: var(--body-bg);
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.5);
+  border-radius: 999px;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.stage-indicator--selected .stage-indicator-index {
+  background: var(--primary-accent);
+  color: #fff;
+  border-color: var(--primary-accent);
+}
+
+// ── Right-click context menu on indicator ────────────────────────
+
+.stage-pipeline-ctx {
+  min-width: 150px;
+  padding: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-lg);
+}
+
+.stage-pipeline-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover { background: rgba(var(--primary-accent-rgb), 0.1); }
+
+  &--danger {
+    color: var(--error-accent, var(--danger-accent, #ff453a));
+    &:hover { background: rgba(255, 69, 58, 0.12); }
+  }
+
+  i { width: 14px; text-align: center; }
+}
+
+// ── Detail wrapper — the animated height container ────────────────
+
+.stage-detail-wrapper {
+  // Only the height is animated by framer-motion.
+  // overflow: hidden is applied inline to clip content as height changes.
+  // No inner content transforms — it renders at natural size and is clipped.
+}
+
+// ── Stage detail pane ────────────────────────────────────────────────
+
+.stage-detail-pane {
+  margin-top: 12px;
+  background: var(--body-bg);
+  border: 1px solid var(--primary-accent);
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 0 0 2px rgba(var(--primary-accent-rgb), 0.12);
+  overflow: hidden;
+}
+
+.stage-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.stage-detail-index {
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary-accent);
+  background: rgba(var(--primary-accent-rgb, 99, 102, 241), 0.16);
+  border-radius: 50%;
+}
+
+.stage-detail-icon {
+  font-size: 16px;
+  color: var(--primary-accent);
+}
+
+.stage-detail-title-block { flex: 1; min-width: 0; }
+
+.stage-detail-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stage-detail-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.stage-detail-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--input-bg);
+    border-color: var(--card-border);
+  }
+}
+
+.stage-detail-body {
+  padding: 14px;
+}
+
+// ── Stage List empty state ───────────────────────────────────────────
 
 .stage-list-empty {
   display: flex;
@@ -722,108 +993,6 @@
   }
 }
 
-// ── Stage Card ──────────────────────────────────────────────────────
-
-.stage-card {
-  background: var(--body-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--border-radius-sm);
-  transition: border-color 0.15s ease;
-
-  &--expanded {
-    border-color: var(--primary-accent);
-  }
-
-  &--auto {
-    border-left: 3px solid var(--auto-accent);
-  }
-}
-
-.stage-card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  cursor: default;
-}
-
-.stage-card-drag {
-  display: flex;
-  align-items: center;
-  padding: 2px 4px;
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  cursor: grab;
-  font-size: 12px;
-  opacity: 0.5;
-  transition: opacity 0.15s;
-
-  &:hover { opacity: 1; }
-  &:active { cursor: grabbing; }
-}
-
-.stage-card-index {
-  min-width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--primary-accent);
-  background: rgba(var(--primary-accent-rgb, 99, 102, 241), 0.12);
-  border-radius: 50%;
-}
-
-.stage-card-icon {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.stage-card-label {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.stage-card-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.stage-card-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  font-size: 11px;
-  color: var(--text-muted);
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    color: var(--text-primary);
-    background: var(--input-bg);
-    border-color: var(--card-border);
-  }
-
-  &--danger:hover {
-    color: var(--error-accent);
-    border-color: var(--error-accent);
-  }
-}
-
-.stage-card-body {
-  padding: 4px 12px 12px;
-  border-top: 1px solid var(--card-border);
-}
-
 // ── Stage Settings ──────────────────────────────────────────────────
 
 .stage-settings-body {
@@ -841,15 +1010,20 @@
 }
 
 .stage-settings-group-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin-bottom: 8px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.stage-settings-group-summary {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  line-height: 1.45;
 }
 
 .stage-settings-row {
@@ -1107,4 +1281,36 @@
     font-size: 10px;
     opacity: 0.7;
   }
+}
+
+// ── Subnet Estimate Banner ──────────────────────────────────────────
+
+.stage-subnet-estimate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: rgba(var(--primary-accent-rgb, 99, 102, 241), 0.07);
+  border: 1px solid rgba(var(--primary-accent-rgb, 99, 102, 241), 0.2);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 4px;
+}
+
+.stage-subnet-estimate-icon {
+  font-size: 11px;
+  color: var(--primary-accent);
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.stage-subnet-estimate-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-accent);
+  white-space: nowrap;
+}
+
+.stage-subnet-estimate-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
 }

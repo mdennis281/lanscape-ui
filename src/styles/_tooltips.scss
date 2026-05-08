@@ -25,3 +25,11 @@
 .form-checkbox[data-tooltip-id] {
   position: relative;
 }
+
+// While a stage is being dragged in the settings pipeline, suppress every
+// tooltip globally — react-tooltip's single-anchor model can otherwise show
+// a stale tooltip from another anchor (e.g. the scan-history button) as the
+// pointer moves around.
+body.stage-dragging .react-tooltip {
+  display: none !important;
+}

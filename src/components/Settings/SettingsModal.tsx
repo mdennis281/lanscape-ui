@@ -3,8 +3,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Modal } from '../Modal';
 import { PresetBar } from './PresetBar';
 import { SettingsFooter } from './SettingsFooter';
-import { StagePalette } from './StagePalette';
-import { StageList } from './StageList';
+import { StagePipeline } from './StagePipeline';
 import { useScanStore } from '../../store';
 import {
   setActivePresetId,
@@ -42,6 +41,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const setAutoStagesEnabled = useScanStore((s) => s.setAutoStagesEnabled);
 
   const [localConfig, setLocalConfig] = useState<PipelineConfig>(EMPTY_PIPELINE);
+  const [selectedStageIndex, setSelectedStageIndex] = useState<number | null>(null);
 
   // Re-initialise local config each time the modal opens.
   const [prevIsOpen, setPrevIsOpen] = useState(false);
@@ -53,23 +53,28 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           ? structuredClone(pipelineConfig)
           : EMPTY_PIPELINE
       );
+      setSelectedStageIndex(null);
     }
   }
 
   // ── Stage manipulation (local) ────────────────────────────────────
 
   const handleAddStage = useCallback((stage: StageEntry) => {
-    setLocalConfig((prev) => ({
-      ...prev,
-      stages: [...prev.stages, stage],
-    }));
+    setLocalConfig((prev) => {
+      const stages = [...prev.stages, stage];
+      setSelectedStageIndex(stages.length - 1);
+      return { ...prev, stages };
+    });
   }, []);
 
   const handleRemoveStage = useCallback((index: number) => {
-    setLocalConfig((prev) => ({
-      ...prev,
-      stages: prev.stages.filter((_, i) => i !== index),
-    }));
+    setLocalConfig((prev) => ({ ...prev, stages: prev.stages.filter((_, i) => i !== index) }));
+    setSelectedStageIndex((sel) => {
+      if (sel === null) return null;
+      if (sel === index) return null;
+      if (sel > index) return sel - 1;
+      return sel;
+    });
   }, []);
 
   const handleReorderStages = useCallback((from: number, to: number) => {
@@ -79,6 +84,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       stages.splice(to, 0, moved);
       return { ...prev, stages };
     });
+    setSelectedStageIndex((sel) => {
+      if (sel === null) return null;
+      if (sel === from) return to;
+      if (from < sel && sel <= to) return sel - 1;
+      if (to <= sel && sel < from) return sel + 1;
+      return sel;
+    });
   }, []);
 
   const handleStageConfigChange = useCallback((index: number, config: Record<string, unknown>) => {
@@ -86,6 +98,19 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       const stages = [...prev.stages];
       const { auto: _, reason: __, ...rest } = stages[index];
       stages[index] = { ...rest, config };
+      return { ...prev, stages };
+    });
+  }, []);
+
+  const handleDuplicateStage = useCallback((index: number) => {
+    setLocalConfig((prev) => {
+      const source = prev.stages[index];
+      if (!source) return prev;
+      // Drop auto/reason — a duplicated stage is user-authored, not auto-recommended.
+      const { auto: _a, reason: _r, ...clean } = source;
+      const copy: StageEntry = { ...clean, config: { ...clean.config } };
+      const stages = [...prev.stages.slice(0, index + 1), copy, ...prev.stages.slice(index + 1)];
+      setSelectedStageIndex(index + 1);
       return { ...prev, stages };
     });
   }, []);
@@ -111,6 +136,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleApplyPreset = useCallback((cfg: PipelineConfig, _presetId?: string) => {
     setLocalConfig(structuredClone(cfg));
+    setSelectedStageIndex(null);
   }, []);
 
   // ── Footer state logic ────────────────────────────────────────────
@@ -153,6 +179,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         ? structuredClone(pipelineConfig)
         : EMPTY_PIPELINE
     );
+    setSelectedStageIndex(null);
   }, [pipelineConfig]);
 
   const handleSaveClick = useCallback(() => {
@@ -277,31 +304,33 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </label>
       </div>
 
-      {/* Stage Palette — add stages */}
-      <div className="settings-section">
-        <div className="settings-section-title">
-          Add Stages
-          <HelpTip text="Click a stage type to add it to the pipeline. Stages run in order from top to bottom." />
-        </div>
-        <StagePalette onAdd={handleAddStage} />
-      </div>
-
-      {/* Pipeline — ordered list of stages */}
+      {/* Pipeline */}
       <div className="settings-section">
         <div className="settings-section-title">
           Pipeline
-          <HelpTip text="Drag to reorder stages. Expand each stage to configure its settings." />
+          <HelpTip text="Click + to add stages. Drag to reorder. Click a stage to edit its settings." />
           {localConfig.stages.length > 0 && (
             <span className="text-muted stage-count">
               {localConfig.stages.length} stage{localConfig.stages.length !== 1 ? 's' : ''}
             </span>
           )}
         </div>
-        <StageList
+        {localConfig.stages.length === 0 && (
+          <div className="stage-list-empty">
+            <i className="fa-solid fa-layer-group" />
+            <p>No stages yet</p>
+            <p className="text-muted">Click + to add stages to the pipeline</p>
+          </div>
+        )}
+        <StagePipeline
           stages={localConfig.stages}
+          selectedIndex={selectedStageIndex}
+          onSelect={setSelectedStageIndex}
+          onAdd={handleAddStage}
           onRemove={handleRemoveStage}
           onReorder={handleReorderStages}
           onConfigChange={handleStageConfigChange}
+          onDuplicate={handleDuplicateStage}
           portLists={portLists}
         />
       </div>

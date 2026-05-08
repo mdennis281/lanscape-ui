@@ -127,3 +127,35 @@ export function formatEstimate(seconds: number): string {
   const secs = Math.round(seconds % 60);
   return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
 }
+
+/**
+ * Parse an IPv4 CIDR subnet string and return the number of usable host IPs.
+ * Returns null if the string isn't valid IPv4 CIDR.
+ */
+export function parseSubnetIpCount(subnet: string): number | null {
+  const m = subnet.trim().match(/^(\d{1,3}\.){3}\d{1,3}\/(\d+)$/);
+  if (!m) return null;
+  const prefix = parseInt(subnet.split('/')[1]);
+  if (prefix < 0 || prefix > 32) return null;
+  const total = Math.pow(2, 32 - prefix);
+  return prefix >= 31 ? total : Math.max(0, total - 2);
+}
+
+/**
+ * Estimate total scan time for an entire subnet.
+ * Discovery stages: parallelised by t_cnt threads.
+ * IPv6 stages: fixed overhead, not IP-count dependent — returns that fixed value.
+ * Port scan: returns null (depends on device count, not IP count).
+ */
+export function estimateTotalForSubnet(
+  stageType: StageType,
+  config: Record<string, unknown>,
+  ipCount: number,
+  portLists?: PortListSummary[],
+): number | null {
+  if (stageType === 'port_scan') return null;
+  const perUnit = estimateStageTime(stageType, config, portLists);
+  if (stageType.startsWith('ipv6_')) return perUnit;
+  const tCnt = (config.t_cnt as number) ?? 96;
+  return Math.ceil(ipCount / Math.max(1, tCnt)) * perUnit;
+}

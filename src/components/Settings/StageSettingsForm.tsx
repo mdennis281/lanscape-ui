@@ -1,8 +1,21 @@
 /**
- * Per-stage settings forms rendered inside an expanded StageCard.
+ * Per-stage settings forms rendered inside an expanded StageCard or StageConfigPanel.
+ *
+ * Single canonical component for all stage settings — used both inline (pipeline
+ * builder) and in the StageEditorModal. Accepts an optional subnetIpCount to show
+ * a subnet-correlated time estimate at the top of each form.
  */
 
+import { useState } from 'react';
 import type { PortListSummary } from '../../types';
+import type { StageType } from '../../types';
+import { getStageMeta } from './stageRegistry';
+import type { PresetName } from './stageRegistry';
+import {
+  estimateStageTime,
+  estimateTotalForSubnet,
+  formatEstimate,
+} from './stageEstimates';
 
 // ── Shared types ─────────────────────────────────────────────────────
 
@@ -11,6 +24,8 @@ interface StageSettingsProps {
   onChange: (config: Record<string, unknown>) => void;
   portLists?: PortListSummary[];
 }
+
+// ── Helpers ──────────────────────────────────────────────────────────
 
 function HelpTip({ text }: { text: string }) {
   return (
@@ -22,8 +37,6 @@ function HelpTip({ text }: { text: string }) {
   );
 }
 
-// ── Nested config helpers ────────────────────────────────────────────
-
 function nested(config: Record<string, unknown>, key: string): Record<string, unknown> {
   return (config[key] as Record<string, unknown>) ?? {};
 }
@@ -32,40 +45,72 @@ function setNested(
   config: Record<string, unknown>,
   key: string,
   field: string,
-  value: unknown
+  value: unknown,
 ): Record<string, unknown> {
   return { ...config, [key]: { ...nested(config, key), [field]: value } };
 }
 
-// ── Per-stage forms ──────────────────────────────────────────────────
-
-function ThreadCountField({ config, onChange }: StageSettingsProps) {
+function SectionGroup({
+  title,
+  summary,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="form-group">
-      <label className="form-label">
-        Threads <HelpTip text="Concurrent worker threads for this stage" />
-      </label>
-      <input
-        type="number"
-        className="form-input form-input-sm"
-        min="1"
-        max="512"
-        value={(config.t_cnt as number) ?? ''}
-        placeholder="auto"
-        onChange={(e) => {
-          const v = e.target.value;
-          onChange({ ...config, t_cnt: v ? parseInt(v) || undefined : undefined });
-        }}
-      />
+    <div className="stage-settings-group">
+      <div className="stage-settings-group-title">{title}</div>
+      {summary && <p className="stage-settings-group-summary">{summary}</p>}
+      {children}
     </div>
   );
 }
 
+// ── Subnet estimate banner ────────────────────────────────────────────
+
+function SubnetEstimateBanner({
+  stageType,
+  config,
+  subnetIpCount,
+  portLists,
+}: {
+  stageType: StageType;
+  config: Record<string, unknown>;
+  subnetIpCount: number;
+  portLists?: PortListSummary[];
+}) {
+  if (stageType === 'port_scan') return null;
+
+  const total = estimateTotalForSubnet(stageType, config, subnetIpCount, portLists);
+  if (total == null) return null;
+
+  const isFixed = stageType.startsWith('ipv6_');
+  const tCnt = (config.t_cnt as number) ?? 96;
+
+  return (
+    <div className="stage-subnet-estimate">
+      <i className="fa-solid fa-clock stage-subnet-estimate-icon" />
+      <span className="stage-subnet-estimate-time">~{formatEstimate(total)}</span>
+      <span className="stage-subnet-estimate-desc">
+        {isFixed
+          ? 'fixed overhead'
+          : `for ${subnetIpCount.toLocaleString()} IPs at ${tCnt} threads`}
+      </span>
+    </div>
+  );
+}
+
+// ── Shared sub-forms ─────────────────────────────────────────────────
+
 function HostnameFields({ config, onChange }: StageSettingsProps) {
   const hn = nested(config, 'hostname_config');
   return (
-    <div className="stage-settings-group">
-      <div className="stage-settings-group-title">Hostname Resolution</div>
+    <SectionGroup
+      title="Hostname Resolution"
+      summary="Reverse DNS lookups to resolve IP addresses to hostnames after discovery."
+    >
       <div className="stage-settings-row">
         <div className="form-group">
           <label className="form-label">
@@ -102,6 +147,28 @@ function HostnameFields({ config, onChange }: StageSettingsProps) {
           />
         </div>
       </div>
+    </SectionGroup>
+  );
+}
+
+function ThreadCountField({ config, onChange }: StageSettingsProps) {
+  return (
+    <div className="form-group">
+      <label className="form-label">
+        Threads <HelpTip text="Concurrent worker threads for this stage. Leave blank for auto." />
+      </label>
+      <input
+        type="number"
+        className="form-input form-input-sm"
+        min="1"
+        max="512"
+        value={(config.t_cnt as number) ?? ''}
+        placeholder="auto"
+        onChange={(e) => {
+          const v = e.target.value;
+          onChange({ ...config, t_cnt: v ? parseInt(v) || undefined : undefined });
+        }}
+      />
     </div>
   );
 }
@@ -113,8 +180,10 @@ function ICMPDiscoverySettings({ config, onChange }: StageSettingsProps) {
   return (
     <div className="stage-settings-body">
       <ThreadCountField config={config} onChange={onChange} />
-      <div className="stage-settings-group">
-        <div className="stage-settings-group-title">Ping Config</div>
+      <SectionGroup
+        title="Ping Config"
+        summary="ICMP echo requests — more attempts improve accuracy, higher timeout tolerates slow hosts."
+      >
         <div className="calc-row">
           <div className="calc-field">
             <label className="calc-label">
@@ -180,7 +249,7 @@ function ICMPDiscoverySettings({ config, onChange }: StageSettingsProps) {
             />
           </div>
         </div>
-      </div>
+      </SectionGroup>
       <HostnameFields config={config} onChange={onChange} />
     </div>
   );
@@ -193,8 +262,10 @@ function ARPDiscoverySettings({ config, onChange }: StageSettingsProps) {
   return (
     <div className="stage-settings-body">
       <ThreadCountField config={config} onChange={onChange} />
-      <div className="stage-settings-group">
-        <div className="stage-settings-group-title">ARP Config</div>
+      <SectionGroup
+        title="ARP Config"
+        summary="Broadcasts ARP requests on the local subnet — fast and reliable on /24 or smaller networks."
+      >
         <div className="stage-settings-row">
           <div className="form-group">
             <label className="form-label">
@@ -223,13 +294,13 @@ function ARPDiscoverySettings({ config, onChange }: StageSettingsProps) {
             />
           </div>
         </div>
-      </div>
+      </SectionGroup>
       <HostnameFields config={config} onChange={onChange} />
     </div>
   );
 }
 
-// ── Poke + ARP Discovery ────────────────────────────────────────────
+// ── Poke + ARP Discovery ─────────────────────────────────────────────
 
 function PokeARPDiscoverySettings({ config, onChange }: StageSettingsProps) {
   const pk = nested(config, 'poke_config');
@@ -237,8 +308,10 @@ function PokeARPDiscoverySettings({ config, onChange }: StageSettingsProps) {
   return (
     <div className="stage-settings-body">
       <ThreadCountField config={config} onChange={onChange} />
-      <div className="stage-settings-group">
-        <div className="stage-settings-group-title">Poke Config</div>
+      <SectionGroup
+        title="Poke Config"
+        summary="Sends a TCP SYN packet to stimulate the remote host into leaving an ARP cache entry."
+      >
         <div className="stage-settings-row">
           <div className="form-group">
             <label className="form-label">
@@ -267,9 +340,11 @@ function PokeARPDiscoverySettings({ config, onChange }: StageSettingsProps) {
             />
           </div>
         </div>
-      </div>
-      <div className="stage-settings-group">
-        <div className="stage-settings-group-title">ARP Cache Config</div>
+      </SectionGroup>
+      <SectionGroup
+        title="ARP Cache Config"
+        summary="Reads the local ARP cache after poking — finds hosts that responded without a direct reply."
+      >
         <div className="stage-settings-row">
           <div className="form-group">
             <label className="form-label">
@@ -298,7 +373,7 @@ function PokeARPDiscoverySettings({ config, onChange }: StageSettingsProps) {
             />
           </div>
         </div>
-      </div>
+      </SectionGroup>
       <HostnameFields config={config} onChange={onChange} />
     </div>
   );
@@ -312,8 +387,10 @@ function ICMPARPDiscoverySettings({ config, onChange }: StageSettingsProps) {
   return (
     <div className="stage-settings-body">
       <ThreadCountField config={config} onChange={onChange} />
-      <div className="stage-settings-group">
-        <div className="stage-settings-group-title">Ping Config</div>
+      <SectionGroup
+        title="Ping Config"
+        summary="ICMP echo requests — more attempts improve accuracy, higher timeout tolerates slow hosts."
+      >
         <div className="calc-row">
           <div className="calc-field">
             <label className="calc-label">
@@ -379,9 +456,11 @@ function ICMPARPDiscoverySettings({ config, onChange }: StageSettingsProps) {
             />
           </div>
         </div>
-      </div>
-      <div className="stage-settings-group">
-        <div className="stage-settings-group-title">ARP Cache Config</div>
+      </SectionGroup>
+      <SectionGroup
+        title="ARP Cache Config"
+        summary="Reads the local ARP cache after pinging — catches hosts that didn't respond to ICMP."
+      >
         <div className="stage-settings-row">
           <div className="form-group">
             <label className="form-label">
@@ -410,7 +489,7 @@ function ICMPARPDiscoverySettings({ config, onChange }: StageSettingsProps) {
             />
           </div>
         </div>
-      </div>
+      </SectionGroup>
       <HostnameFields config={config} onChange={onChange} />
     </div>
   );
@@ -434,8 +513,10 @@ function IPv6NDPDiscoverySettings({ config, onChange }: StageSettingsProps) {
           onChange={(e) => onChange({ ...config, interface: e.target.value || undefined })}
         />
       </div>
-      <div className="stage-settings-group">
-        <div className="stage-settings-group-title">Neighbor Table Config</div>
+      <SectionGroup
+        title="Neighbor Table Config"
+        summary="Controls how often the IPv6 neighbor discovery table is refreshed during the scan."
+      >
         <div className="stage-settings-row">
           <div className="form-group">
             <label className="form-label">
@@ -464,7 +545,7 @@ function IPv6NDPDiscoverySettings({ config, onChange }: StageSettingsProps) {
             />
           </div>
         </div>
-      </div>
+      </SectionGroup>
       <HostnameFields config={config} onChange={onChange} />
     </div>
   );
@@ -512,10 +593,23 @@ const SERVICE_STRATEGIES = [
   { value: 'AGGRESSIVE', label: 'Aggressive — All probes' },
 ];
 
-function PortScanSettings({ config, onChange, portLists }: StageSettingsProps) {
+function PortScanSettings({
+  config,
+  onChange,
+  portLists,
+  subnetIpCount,
+}: StageSettingsProps & { subnetIpCount?: number }) {
   const psc = nested(config, 'port_scan_config');
   const ssc = nested(config, 'service_scan_config');
   const scanServices = (config.scan_services as boolean) ?? true;
+
+  // Congestion slider: % of IPs that have a device (affects port scan time estimate)
+  const [congestion, setCongestion] = useState(10);
+  const estimate = estimateStageTime('port_scan', config, portLists);
+  const baseIpCount = subnetIpCount ?? 254;
+  const deviceCount = Math.max(1, Math.ceil(baseIpCount * congestion / 100));
+  const tCntDevice = (config.t_cnt_device as number) ?? 4;
+  const totalEstimate = Math.ceil(deviceCount / Math.max(1, tCntDevice)) * estimate;
 
   return (
     <div className="stage-settings-body">
@@ -572,8 +666,39 @@ function PortScanSettings({ config, onChange, portLists }: StageSettingsProps) {
           />
         </div>
       </div>
-      <div className="stage-settings-group">
-        <div className="stage-settings-group-title">Port Scan Config</div>
+
+      {/* Congestion / time estimate */}
+      <div className="congestion-slider">
+        <div className="congestion-slider-header">
+          <label className="form-label">
+            <i className="fa-solid fa-gauge" /> Device Density
+            <HelpTip text="Estimated percentage of IPs that have a live device. Affects time estimate only — does not change scan behavior." />
+          </label>
+          <span className="congestion-slider-value">{congestion}%</span>
+        </div>
+        <input
+          type="range"
+          className="congestion-slider-input"
+          min="1"
+          max="100"
+          value={congestion}
+          onChange={(e) => setCongestion(parseInt(e.target.value))}
+        />
+        <div className="congestion-slider-estimate">
+          <i className="fa-solid fa-clock" />
+          <span>
+            ~{formatEstimate(totalEstimate)} estimated
+            {subnetIpCount != null
+              ? ` for ${subnetIpCount.toLocaleString()} IPs (${deviceCount.toLocaleString()} devices)`
+              : ` for /${Math.round(Math.log2(baseIpCount + 2))} subnet`}
+          </span>
+        </div>
+      </div>
+
+      <SectionGroup
+        title="Port Scan Config"
+        summary="TCP connection attempts per port — controls timeout and retry behavior."
+      >
         <div className="stage-settings-row">
           <div className="form-group">
             <label className="form-label">
@@ -615,19 +740,20 @@ function PortScanSettings({ config, onChange, portLists }: StageSettingsProps) {
             />
           </div>
         </div>
-      </div>
-      <div className="stage-settings-group">
-        <div className="stage-settings-group-title">
-          Service Scanning
-          <label className="form-checkbox form-checkbox--inline">
-            <input
-              type="checkbox"
-              checked={scanServices}
-              onChange={(e) => onChange({ ...config, scan_services: e.target.checked })}
-            />
-            <span>Enabled</span>
-          </label>
-        </div>
+      </SectionGroup>
+
+      <SectionGroup
+        title="Service Scanning"
+        summary="Protocol-specific probes to identify running services and their versions on open ports."
+      >
+        <label className="form-checkbox" style={{ marginBottom: scanServices ? 12 : 0 }}>
+          <input
+            type="checkbox"
+            checked={scanServices}
+            onChange={(e) => onChange({ ...config, scan_services: e.target.checked })}
+          />
+          <span>Enabled</span>
+        </label>
         {scanServices && (
           <div className="stage-settings-row">
             <div className="form-group">
@@ -672,18 +798,12 @@ function PortScanSettings({ config, onChange, portLists }: StageSettingsProps) {
             </div>
           </div>
         )}
-      </div>
+      </SectionGroup>
     </div>
   );
 }
 
-// ── Dispatcher ───────────────────────────────────────────────────────
-
-import { useState } from 'react';
-import type { StageType } from '../../types';
-import { getStageMeta } from './stageRegistry';
-import type { PresetName } from './stageRegistry';
-import { estimateStageTime, formatEstimate } from './stageEstimates';
+// ── Preset detection ─────────────────────────────────────────────────
 
 const PRESET_OPTIONS: { key: PresetName; label: string; icon: string }[] = [
   { key: 'fast', label: 'Fast', icon: 'fa-solid fa-rabbit-running' },
@@ -714,25 +834,26 @@ function detectActivePreset(
   return null;
 }
 
+// ── Main export ──────────────────────────────────────────────────────
+
 export function StageSettingsForm({
   stageType,
   config,
   onChange,
   portLists,
   readOnly,
+  subnetIpCount,
 }: {
   stageType: StageType;
   config: Record<string, unknown>;
   onChange: (config: Record<string, unknown>) => void;
   portLists?: PortListSummary[];
   readOnly?: boolean;
+  subnetIpCount?: number;
 }) {
-  const [congestion, setCongestion] = useState(10);
   const meta = getStageMeta(stageType);
   const hasPresets = meta.presets && Object.keys(meta.presets).length > 0;
   const activePreset = hasPresets ? detectActivePreset(config, meta.presets) : null;
-  const isPortScan = stageType === 'port_scan';
-  const estimate = estimateStageTime(stageType, config, portLists);
 
   const formContent = (() => {
     switch (stageType) {
@@ -749,7 +870,14 @@ export function StageSettingsForm({
       case 'ipv6_mdns_discovery':
         return <IPv6MDNSDiscoverySettings config={config} onChange={onChange} />;
       case 'port_scan':
-        return <PortScanSettings config={config} onChange={onChange} portLists={portLists} />;
+        return (
+          <PortScanSettings
+            config={config}
+            onChange={onChange}
+            portLists={portLists}
+            subnetIpCount={subnetIpCount}
+          />
+        );
     }
   })();
 
@@ -758,6 +886,7 @@ export function StageSettingsForm({
       disabled={!!readOnly}
       style={{ border: 'none', margin: 0, padding: 0, minInlineSize: 'unset', opacity: readOnly ? 0.65 : undefined }}
     >
+      {/* Preset selector */}
       {hasPresets && (
         <div className="preset-selector">
           {PRESET_OPTIONS.map((p) => (
@@ -776,34 +905,17 @@ export function StageSettingsForm({
           )}
         </div>
       )}
-      {isPortScan && (
-        <div className="congestion-slider">
-          <div className="congestion-slider-header">
-            <label className="form-label">
-              <i className="fa-solid fa-gauge" /> Network Congestion
-              <HelpTip text="Estimated percentage of IPs on the subnet with an active device. Affects time estimate only — does not change scan behavior." />
-            </label>
-            <span className="congestion-slider-value">{congestion}%</span>
-          </div>
-          <input
-            type="range"
-            className="congestion-slider-input"
-            min="1"
-            max="100"
-            value={congestion}
-            onChange={(e) => setCongestion(parseInt(e.target.value))}
-          />
-          <div className="congestion-slider-estimate">
-            <i className="fa-solid fa-clock" />
-            <span>
-              ~{formatEstimate(
-                Math.ceil((254 * congestion / 100) / Math.max(1, (config.t_cnt_device as number) ?? 4))
-                * estimate
-              )} estimated for /24 subnet
-            </span>
-          </div>
-        </div>
+
+      {/* Subnet time estimate (discovery stages only) */}
+      {subnetIpCount != null && (
+        <SubnetEstimateBanner
+          stageType={stageType}
+          config={config}
+          subnetIpCount={subnetIpCount}
+          portLists={portLists}
+        />
       )}
+
       {formContent}
     </fieldset>
   );

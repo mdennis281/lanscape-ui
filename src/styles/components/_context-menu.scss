@@ -1,32 +1,82 @@
 // ============================================
-// Context Menu
+// Context Menu (slide-nav style)
 // ============================================
 
 .ctx-menu {
   position: fixed;
   z-index: 2000;
-  min-width: 180px;
-  max-width: 280px;
+  min-width: 220px;
+  max-width: 320px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-sm);
   box-shadow: var(--shadow-lg);
-  padding: 4px 0;
-  animation: ctxMenuFadeIn 0.1s ease;
   user-select: none;
+  overflow: hidden;            // clips slide-out content during transitions
+}
 
-  &--sub {
-    position: absolute;
-    animation: ctxMenuFadeIn 0.08s ease;
+// One nav level (root or submenu). Each is a flex column so the back button
+// stays pinned and the body fills + scrolls.
+.ctx-menu-view {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+// Scrollable items area — JS sets max-height ('auto' clamps to viewport).
+.ctx-menu-body {
+  overflow-y: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--card-border) transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--card-border);
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
   }
 }
 
-@keyframes ctxMenuFadeIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1); }
+// ── Back button (only visible inside nested levels) ─────────────────────
+
+.ctx-menu-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  text-align: left;
+
+  &:hover {
+    color: var(--text-primary);
+    background: rgba(var(--primary-accent-rgb), 0.06);
+  }
 }
 
-// ── Section label ────────────────────────────────────────────────────
+.ctx-menu-back-icon {
+  font-size: 10px;
+  width: 12px;
+}
+
+.ctx-menu-back-label {
+  flex: 1;
+}
+
+// ── Section label / divider ─────────────────────────────────────────────
 
 .ctx-menu-section-label {
   padding: 6px 12px 2px;
@@ -37,61 +87,93 @@
   letter-spacing: 0.5px;
 }
 
-// ── Divider ──────────────────────────────────────────────────────────
-
 .ctx-menu-divider {
   height: 1px;
   margin: 4px 0;
   background: var(--card-border);
 }
 
-// ── Menu item ────────────────────────────────────────────────────────
+// ── Menu item ───────────────────────────────────────────────────────────
 
 .ctx-menu-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
   font-size: 13px;
   color: var(--text-primary);
+  background: none;
+  border: none;
+  text-align: left;
   cursor: pointer;
   transition: background var(--transition-fast);
   white-space: nowrap;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: rgba(var(--primary-accent-rgb), 0.1);
   }
 
-  &--disabled {
+  &--disabled,
+  &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-
-    &:hover {
-      background: none;
-    }
   }
 
   &--submenu {
-    padding-right: 24px;
+    padding-right: 28px;
   }
 }
 
 .ctx-menu-item-icon {
   width: 16px;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   flex-shrink: 0;
+
+  .ctx-menu-item:hover:not(:disabled) & {
+    color: var(--primary-accent);
+  }
+}
+
+.ctx-menu-item-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .ctx-menu-item-label {
-  flex: 1;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ctx-menu-item-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
+}
+
+// Detailed items (with description) get a touch more breathing room.
+.ctx-menu-item--detailed {
+  padding-top: 9px;
+  padding-bottom: 9px;
 }
 
 .ctx-menu-chevron {
   position: absolute;
-  right: 8px;
-  font-size: 9px;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
   color: var(--text-muted);
 }

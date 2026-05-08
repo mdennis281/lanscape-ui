@@ -8,7 +8,8 @@
 
 import { getStageMeta } from './stageRegistry';
 import { StageSettingsForm } from './StageSettingsForm';
-import { estimateStageTime, estimateUnit, formatEstimate } from './stageEstimates';
+import { estimateStageTime, estimateUnit, formatEstimate, parseSubnetIpCount } from './stageEstimates';
+import { useUIStore } from '../../store';
 import type { StageEntry, PortListSummary } from '../../types';
 
 interface StageConfigPanelProps {
@@ -23,9 +24,11 @@ export function StageConfigPanel({ stage, onChange, readOnly, portLists }: Stage
   const estimate = estimateStageTime(stage.stage_type, stage.config, portLists);
   const unit = estimateUnit(stage.stage_type);
 
+  const subnetInput = useUIStore((s) => s.subnetInput);
+  const subnetIpCount = parseSubnetIpCount(subnetInput) ?? undefined;
+
   const handleConfigChange = (config: Record<string, unknown>) => {
     if (!onChange) return;
-    // Clear auto flag whenever the user edits any setting
     const { auto: _auto, reason: _reason, ...rest } = stage;
     onChange({ ...rest, config });
   };
@@ -63,6 +66,7 @@ export function StageConfigPanel({ stage, onChange, readOnly, portLists }: Stage
           onChange={handleConfigChange}
           portLists={portLists}
           readOnly={readOnly}
+          subnetIpCount={subnetIpCount}
         />
       </div>
     </div>
