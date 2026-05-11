@@ -78,4 +78,31 @@ $bp-calc-labels: 751px;
 // Gutters
 --vertical-gutter: clamp(5px, calc(100vh / 35), 30px);
 --horizontal-gutter: clamp(5px, calc(100vw / 60), 30px);
+
+// ============================================
+// Z-index scale — central elevation tokens.
+//
+// Always reference these instead of writing magic numbers. The scale leaves
+// gaps so a one-off can slot in (e.g. a sticky badge inside a layer) without
+// pushing the whole stack. Higher number = paints on top.
+//
+// Stacking contexts elsewhere in the app can otherwise *trap* descendants
+// (a portaled modal with z-index: 1000 still loses to the app header at 100
+// if its parent is in a context-1 stacking root). Two rules to keep this
+// honest:
+//   1. Modals, drag overlays, context menus, and tooltips MUST be portaled
+//      to document.body so they escape every parent stacking context.
+//   2. Don't add `z-index` to a layout container "just in case" — it
+//      creates a stacking context that traps everything inside it.
+// ============================================
+--z-base:           0;     // default flow content
+--z-sticky:         1;     // intra-scroll sticky elements (e.g. <th>)
+--z-app-header:     100;   // app top bar
+--z-dropdown:       200;   // app-level menus (scan history, presets)
+--z-modal:          1000;  // primary modal portal
+--z-modal-nested:   1100;  // modal that opens on top of another modal
+--z-context-menu:   2000;  // right-click menus (must clear modals)
+--z-drag-overlay:   2500;  // dnd-kit DragOverlay (must clear modals)
+--z-startup:        9000;  // electron startup screen
+--z-tooltip:        10000; // react-tooltip (always on top)
 }

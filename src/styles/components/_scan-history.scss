@@ -105,7 +105,7 @@
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-lg);
-  z-index: 200;
+  z-index: var(--z-dropdown);
 
   // Animate in/out
   opacity: 0;

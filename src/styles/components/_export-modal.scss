@@ -3,7 +3,8 @@
 // ============================================
 
 .export-modal-backdrop {
-  z-index: 1100;
+  // Sits on top of any other modal it might be opened from (e.g. Settings).
+  z-index: var(--z-modal-nested);
 }
 
 .export-modal {

@@ -4,7 +4,7 @@
 
 .ctx-menu {
   position: fixed;
-  z-index: 2000;
+  z-index: var(--z-context-menu);
   min-width: 220px;
   max-width: 320px;
   background: var(--card-bg);

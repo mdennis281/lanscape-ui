@@ -38,6 +38,16 @@
 - `npm run electron` — build electron and run it.
 - `npm run dist[:win|:mac|:linux]` — full packaged distribution.
 
+## Stacking, modals, and drag overlays
+
+Z-index bugs in this app come from one root cause: **a parent stacking context traps its descendants no matter how high their z-index goes.** Follow these rules whenever you add a modal, popup, drag overlay, or any "floats above everything" UI.
+
+1. **Always use the centralized z-index scale** (`--z-*` tokens in `src/styles/_variables.scss`). Never write a magic number. The scale (low → high): `--z-sticky` → `--z-app-header` → `--z-dropdown` → `--z-modal` → `--z-modal-nested` → `--z-context-menu` → `--z-drag-overlay` → `--z-startup` → `--z-tooltip`.
+2. **Modals MUST `createPortal(...)` to `document.body`.** The shared `Modal` component (`src/components/Modal/Modal.tsx`) already does this — prefer it. If you hand-roll a modal (e.g. one that wraps Monaco), still portal to body. Without the portal, the modal renders inside whatever stacking context its caller sits in (e.g. `.scan-stats-content`'s `z-index: 1`) and gets painted under the app header.
+3. **`@dnd-kit/core`'s `<DragOverlay>` does NOT portal by default.** Wrap it in `createPortal(<DragOverlay …/>, document.body)` and pass `style={{ zIndex: 'var(--z-drag-overlay)' }}` so the floating ghost clears modals and the app header. See `StageTimeline.tsx` and `Settings/StagePipeline.tsx` for the pattern.
+4. **While a DnD is active, set `body.classList.add('stage-dragging')`** in the DragStart effect (and clean up in the cleanup). This globally suppresses `react-tooltip` so a passing cursor doesn't pop the scan-history (or any other) tooltip mid-drag. Both StageTimeline and StagePipeline do this.
+5. **Don't add `z-index` to a layout container "just in case".** A non-positioned flex/grid item gets a stacking context the moment you give it `z-index`, and everything inside it then competes only within that context. The `.table-header` rule learned this the hard way: a stale `z-index: 2` (added to keep it above scrolling rows) was instead trapping drag overlays. Sticky `<th>` elements get `--z-sticky` and that's enough.
+
 ## Definition of done
 
 Every change should:

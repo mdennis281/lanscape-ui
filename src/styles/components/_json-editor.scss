@@ -3,7 +3,8 @@
 // ============================================
 
 .json-editor-backdrop {
-  z-index: 1100; // above the settings modal
+  // Opens on top of the Settings modal — needs the nested-modal layer.
+  z-index: var(--z-modal-nested);
 }
 
 .json-editor-modal {

@@ -10,7 +10,7 @@
   font-size: 13px !important;
   padding: 8px 12px !important;
   box-shadow: var(--shadow-md) !important;
-  z-index: 10000 !important;
+  z-index: var(--z-tooltip) !important;
   max-width: 350px !important;
   white-space: normal !important;
   line-height: 1.4 !important;

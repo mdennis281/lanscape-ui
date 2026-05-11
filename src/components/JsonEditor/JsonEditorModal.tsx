@@ -11,6 +11,7 @@
  */
 
 import { useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
@@ -82,7 +83,8 @@ export function JsonEditorModal({
 
   const canSave = !readOnly && !!onSave;
 
-  return (
+  // Portal to <body> so the modal escapes any parent stacking context.
+  return createPortal(
     <div className="modal-backdrop json-editor-backdrop" onMouseDown={(e: ReactMouseEvent) => {
       mouseDownTarget.current = e.target;
     }} onMouseUp={(e: ReactMouseEvent) => {
@@ -170,6 +172,7 @@ export function JsonEditorModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -3,6 +3,9 @@
 // ============================================
 
 .table-container {
+  // Intentionally NOT a stacking context — `position: relative` + `z-index`
+  // here would trap any portaled drag-overlay or modal that visually overlays
+  // this region. The container only needs to clip its rounded corners.
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--border-radius-md);
@@ -13,6 +16,9 @@
 }
 
 .table-header {
+  // Plain flex item — sits above the scroll body in document order, no
+  // z-index needed. (The sticky <th> below is what holds the row when the
+  // table-scroll body is scrolled.)
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -20,7 +26,6 @@
   border-bottom: 1px solid var(--card-border);
   background: var(--table-header-bg);
   flex-shrink: 0;
-  z-index: 2;
 }
 
 .table-scroll {
@@ -65,9 +70,12 @@
     background: var(--table-header-bg);
     border-bottom: 1px solid var(--card-border);
     vertical-align: middle;
+    // Stays pinned above table rows during scroll — but only WITHIN the
+    // .table-scroll stacking root. It does NOT compete with overlays/modals
+    // outside the table; those live on much higher layers (see _variables.scss).
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: var(--z-sticky);
   }
 
   td {

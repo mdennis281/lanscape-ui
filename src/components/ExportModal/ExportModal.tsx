@@ -6,6 +6,7 @@
  */
 
 import { useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
@@ -71,7 +72,9 @@ export function ExportModal({
 
   if (!isOpen) return null;
 
-  return (
+  // Portal to <body> so the modal escapes any stacking context the caller
+  // sits inside (e.g. .scan-stats-content's z-index: 1, or another modal).
+  return createPortal(
     <div
       className="modal-backdrop export-modal-backdrop"
       onMouseDown={(e: ReactMouseEvent) => { mouseDownTarget.current = e.target; }}
@@ -136,6 +139,7 @@ export function ExportModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

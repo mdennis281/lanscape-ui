@@ -12,7 +12,8 @@
  * It emits the active stage's counter data upward via onActiveStageChange.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import {
   DndContext,
@@ -130,6 +131,16 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
 
   // DnD sensors — only active in preview mode
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Tag <body> while dragging so global tooltips (react-tooltip) and any
+  // hover-only popovers can suppress themselves — without this, the cursor
+  // travelling through other anchors (e.g. the scan-history button) opens
+  // their tooltips mid-drag. Mirrors StagePipeline's behavior.
+  useEffect(() => {
+    if (!activeId) return;
+    document.body.classList.add('stage-dragging');
+    return () => document.body.classList.remove('stage-dragging');
+  }, [activeId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -339,11 +350,23 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
                 />
               ))}
             </SortableContext>
-            <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
-              {activeDragEntry ? (
-                <StageDragOverlay entry={activeDragEntry} />
-              ) : null}
-            </DragOverlay>
+            {/* Portal the overlay to <body> so it's not trapped by the
+                .scan-stats-content stacking context (z-index: 1) — without
+                this, the dragged stage paints behind the app/table headers.
+                The explicit z-index sits on the central scale (above modals,
+                below tooltips). */}
+            {createPortal(
+              <DragOverlay
+                dropAnimation={null}
+                modifiers={[snapCenterToCursor]}
+                style={{ zIndex: 'var(--z-drag-overlay)' as unknown as number }}
+              >
+                {activeDragEntry ? (
+                  <StageDragOverlay entry={activeDragEntry} />
+                ) : null}
+              </DragOverlay>,
+              document.body,
+            )}
           </DndContext>
         ) : null}
 

@@ -168,7 +168,7 @@
   box-shadow: var(--shadow-md);
   list-style: none;
   padding: 4px;
-  z-index: 1000;
+  z-index: var(--z-dropdown);
   max-height: 200px;
   overflow-y: auto;
 }

@@ -10,6 +10,7 @@
  */
 
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
   DndContext,
@@ -339,9 +340,17 @@ export function StagePipeline({
                 />
               ))}
             </SortableContext>
-            <DragOverlay dropAnimation={null}>
-              {activeDragEntry ? <StageDragOverlay entry={activeDragEntry} /> : null}
-            </DragOverlay>
+            {/* Portaled to <body> + bumped onto the central z-scale so the
+                ghost paints above the Settings modal it lives inside. */}
+            {createPortal(
+              <DragOverlay
+                dropAnimation={null}
+                style={{ zIndex: 'var(--z-drag-overlay)' as unknown as number }}
+              >
+                {activeDragEntry ? <StageDragOverlay entry={activeDragEntry} /> : null}
+              </DragOverlay>,
+              document.body,
+            )}
           </DndContext>
 
           <AddStageButton
