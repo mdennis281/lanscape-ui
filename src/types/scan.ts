@@ -306,6 +306,11 @@ export interface SubnetTestResult {
 
 // ── App info ─────────────────────────────────────────────────────────
 
+export interface RuntimeArgMeta {
+  flag: string | null;
+  help: string | null;
+}
+
 export interface AppInfo {
   version: string;
   name: string;
@@ -313,4 +318,5 @@ export interface AppInfo {
   update_available?: boolean;
   latest_version?: string;
   runtime_args?: Record<string, unknown>;
+  runtime_arg_meta?: Record<string, RuntimeArgMeta>;
 }

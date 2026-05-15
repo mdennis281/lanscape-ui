@@ -111,12 +111,14 @@
   transition: background var(--transition-fast);
   white-space: nowrap;
 
-  &:hover:not(:disabled) {
+  // Selectors target the --disabled class (not :disabled) because items
+  // are aria-disabled rather than natively disabled — the change keeps
+  // hover/tooltip events firing on disabled rows.
+  &:hover:not(&--disabled) {
     background: rgba(var(--primary-accent-rgb), 0.1);
   }
 
-  &--disabled,
-  &:disabled {
+  &--disabled {
     opacity: 0.4;
     cursor: not-allowed;
   }
@@ -133,7 +135,7 @@
   color: var(--text-secondary);
   flex-shrink: 0;
 
-  .ctx-menu-item:hover:not(:disabled) & {
+  .ctx-menu-item:hover:not(.ctx-menu-item--disabled) & {
     color: var(--primary-accent);
   }
 }

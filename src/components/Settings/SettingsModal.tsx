@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 
 import { Modal } from '../Modal';
+import { ExportModal } from '../ExportModal';
 import { PresetBar } from './PresetBar';
 import { SettingsFooter } from './SettingsFooter';
 import { StagePipeline } from './StagePipeline';
@@ -42,6 +43,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const [localConfig, setLocalConfig] = useState<PipelineConfig>(EMPTY_PIPELINE);
   const [selectedStageIndex, setSelectedStageIndex] = useState<number | null>(null);
+  const [pipelineExportContent, setPipelineExportContent] = useState<string | null>(null);
 
   // Re-initialise local config each time the modal opens.
   const [prevIsOpen, setPrevIsOpen] = useState(false);
@@ -101,6 +103,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       return { ...prev, stages };
     });
   }, []);
+
+  const handleClearStages = useCallback(() => {
+    setLocalConfig((prev) => ({ ...prev, stages: [] }));
+    setSelectedStageIndex(null);
+  }, []);
+
+  const handleExportPipeline = useCallback(() => {
+    setPipelineExportContent(JSON.stringify(localConfig.stages, null, 2));
+  }, [localConfig.stages]);
 
   const handleDuplicateStage = useCallback((index: number) => {
     setLocalConfig((prev) => {
@@ -331,9 +342,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           onReorder={handleReorderStages}
           onConfigChange={handleStageConfigChange}
           onDuplicate={handleDuplicateStage}
+          onClear={handleClearStages}
+          onExport={handleExportPipeline}
           portLists={portLists}
         />
       </div>
+      {pipelineExportContent !== null && (
+        <ExportModal
+          isOpen
+          onClose={() => setPipelineExportContent(null)}
+          title="Export — Pipeline Config"
+          content={pipelineExportContent}
+          filename="lanscape-pipeline.json"
+        />
+      )}
 
       {/* Global settings — resilience & hostname */}
       <div className="settings-section-group">

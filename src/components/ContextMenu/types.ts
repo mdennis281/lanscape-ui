@@ -3,6 +3,12 @@ export interface ContextMenuItem {
   /** Optional second-line description (used by nested-menu submenu entries) */
   description?: string;
   icon?: string;
+  /**
+   * Hover tooltip text routed through the global react-tooltip instance.
+   * Continues to fire when the item is `disabled` — useful for explaining
+   * why an option is currently unavailable.
+   */
+  tooltip?: string;
   onClick?: () => void;
   disabled?: boolean;
   /**
@@ -39,5 +45,12 @@ export interface ContextMenuProps {
    * so the body scrolls instead of overflowing off-screen.
    */
   maxHeight?: number | 'auto';
+  /**
+   * Whether to append the global section (Reload UI / Browser menu hint).
+   * Defaults to `true` for right-click menus (`position` mode) and `false`
+   * for popover-style menus (`anchor` mode) — popovers are discrete pickers
+   * where the global items are noise.
+   */
+  includeGlobalSection?: boolean;
   onClose: () => void;
 }

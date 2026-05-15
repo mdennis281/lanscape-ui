@@ -49,6 +49,10 @@ $bp-calc-labels: 751px;
   --table-row-hover: rgba(10, 132, 255, 0.1);
   --table-border: #444;
 
+  // Header
+  --header-height: 81px; // see .header-content
+  --header-padding-vertical: 8px; // see .header
+
   // Modal
   --modal-backdrop: rgba(0, 0, 0, 0.7);
   --modal-bg: #2c2c2c;

@@ -3,15 +3,17 @@
 // ============================================
 
 .header {
+  height: var(--header-height);
   background: var(--card-bg);
   border-bottom: 1px solid var(--card-border);
-  padding: 8px var(--horizontal-gutter);
+  padding: var(--header-padding-vertical) var(--horizontal-gutter);
   position: sticky;
   top: 0;
   z-index: var(--z-app-header);
 }
 
 .header-content {
+  height: calc(var(--header-height) - 2 * var(--header-padding-vertical));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -20,16 +22,16 @@
 }
 
 .header-left {
+  height: inherit;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
 }
 
 .header-logo {
+  height: inherit;
   display: flex;
   align-items: center;
-  font-size: 30px;
-  font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
 
@@ -39,12 +41,13 @@
   }
 }
 
-.logo-text {
-  letter-spacing: -0.5px;
-}
-
-.logo-accent {
-  color: var(--primary-accent);
+.header-logo-img {
+  height: inherit;
+  padding: 10px 0;
+  width: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 // Status dot — reusable indicator

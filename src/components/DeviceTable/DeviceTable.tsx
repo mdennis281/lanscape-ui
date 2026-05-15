@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useScanStore } from '../../store';
 import { DeviceStage } from './DeviceStage';
-import { ContextMenu, useContextMenu, getGlobalSection } from '../ContextMenu';
+import { ContextMenu, useContextMenu } from '../ContextMenu';
 import { ExportModal } from '../ExportModal';
 import type { ContextMenuSection } from '../ContextMenu';
 import type { DeviceResult } from '../../types';
@@ -160,7 +160,6 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
     ctxMenu.handleContextMenu(e, () => [
       ...getDeviceSections(device),
       ...getScanSections(),
-      getGlobalSection(),
     ]);
   }, [ctxMenu, getDeviceSections, getScanSections]);
 
@@ -170,7 +169,6 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
     if (target.closest('.device-row')) return;
     ctxMenu.handleContextMenu(e, () => [
       ...getScanSections(),
-      getGlobalSection(),
     ]);
   }, [ctxMenu, getScanSections]);
   

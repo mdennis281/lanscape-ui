@@ -315,51 +315,6 @@
   }
 }
 
-// ── Context menu ────────────────────────────────────────────────────
-
-.preset-context-menu {
-  position: fixed;
-  z-index: 200;
-  min-width: 180px;
-  padding: 4px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--border-radius-sm);
-  box-shadow: var(--shadow-lg);
-}
-
-.preset-context-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 10px;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  transition: all var(--transition-fast);
-
-  &:hover {
-    background: var(--card-bg-hover);
-    color: var(--text-primary);
-  }
-
-  &--danger:hover {
-    background: rgba(255, 69, 58, 0.12);
-    color: var(--danger-accent);
-  }
-}
-
-.preset-context-divider {
-  height: 1px;
-  background: var(--card-border);
-  margin: 4px 0;
-}
-
 // ── Unsaved-changes confirmation overlay ────────────────────────────
 
 .confirm-overlay {
@@ -795,7 +750,14 @@
 }
 
 // Uniform 2px stroke across the pipeline stage circles (overrides scan-time defaults).
-.stage-pipeline-strip .stage-indicator-bg {
+// Non-auto stages get a visible neutral stroke — the scan-time default uses
+// var(--input-bg), which is exactly the pipeline pane's background colour,
+// so the rings vanish into the pane. text-muted reads as "configured but not
+// auto-recommended" without competing visually with the auto-accent ring.
+// The :not() exclusion keeps the auto-stage stroke rule above (purple) from
+// being clobbered by source order.
+.stage-pipeline-strip .stage-indicator-bg:not(.stage-indicator-bg--auto) {
+  stroke: var(--text-muted);
   stroke-width: 2;
 }
 

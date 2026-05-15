@@ -39,7 +39,7 @@ import { getStageMeta } from '../Settings/stageRegistry';
 import { AddStageModal } from './AddStageModal';
 import { StageEditorModal } from './StageEditorModal';
 import { useStageManager, type ActiveStageCounter, type StageItem } from './useStageManager';
-import { ContextMenu, useContextMenu, getGlobalSection } from '../ContextMenu';
+import { ContextMenu, useContextMenu } from '../ContextMenu';
 import { ExportModal } from '../ExportModal';
 import { getWebSocketService } from '../../services';
 import type { StageProgress, StageEntry } from '../../types';
@@ -275,13 +275,12 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
         ],
       },
       getPipelineSection(),
-      getGlobalSection(),
     ]);
   };
 
   // Background (non-stage) right-click on the timeline
   const handleTimelineContextMenu = (e: React.MouseEvent) => {
-    ctxMenu.handleContextMenu(e, () => [getPipelineSection(), getGlobalSection()]);
+    ctxMenu.handleContextMenu(e, () => [getPipelineSection()]);
   };
 
   // Single commit handler — edit in-place or insert (duplicate), always reads

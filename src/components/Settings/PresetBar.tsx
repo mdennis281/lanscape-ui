@@ -14,6 +14,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { PipelineConfig } from '../../types';
 import { JsonEditorModal } from '../JsonEditor';
+import { ContextMenu, useContextMenu } from '../ContextMenu';
+import type { ContextMenuSection } from '../ContextMenu';
 import {
   getAllPresets,
   resolvePresetConfig,
@@ -66,13 +68,10 @@ export function PresetBar({ localConfig, onApplyPreset }: PresetBarProps) {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const saveInputRef = useRef<HTMLInputElement>(null);
 
-  // Context menu for user presets
-  const [contextMenu, setContextMenu] = useState<{
-    presetId: string;
-    x: number;
-    y: number;
-  } | null>(null);
-  const contextRef = useRef<HTMLDivElement>(null);
+  // Right-click menu for presets — uses the shared global ContextMenu so it
+  // matches the look/feel of menus elsewhere in the app (Reload UI footer,
+  // nested submenus, viewport clamping, etc).
+  const ctxMenu = useContextMenu();
 
   // Rename inline
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -97,19 +96,6 @@ export function PresetBar({ localConfig, onApplyPreset }: PresetBarProps) {
     return !configMatchesPreset(localConfig, presetCfg);
   }, [localConfig, activeId, presets]);
 
-  // ── Close context menu on outside click ──────────────────────────
-
-  useEffect(() => {
-    if (!contextMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (contextRef.current && !contextRef.current.contains(e.target as Node)) {
-        setContextMenu(null);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [contextMenu]);
-
   // Focus inputs when they appear
   useEffect(() => {
     if (showSaveForm) saveInputRef.current?.focus();
@@ -126,7 +112,6 @@ export function PresetBar({ localConfig, onApplyPreset }: PresetBarProps) {
     setActiveId(preset.id);
     setActivePresetId(preset.id);
     onApplyPreset(structuredClone(cfg), preset.id);
-    setContextMenu(null);
   };
 
   const handleSaveNew = () => {
@@ -143,21 +128,66 @@ export function PresetBar({ localConfig, onApplyPreset }: PresetBarProps) {
 
   const handleOverwrite = (id: string) => {
     updateUserPreset(id, { config: localConfig });
-    setContextMenu(null);
     refresh();
   };
 
   const handleDelete = (id: string) => {
     deleteUserPreset(id);
     if (activeId === id) setActiveId(null);
-    setContextMenu(null);
     refresh();
   };
 
-  const handleContextMenu = (e: React.MouseEvent, presetId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ presetId, x: e.clientX, y: e.clientY });
+  // Build the right-click menu sections for a given preset. Both built-ins
+  // and user presets share the JSON viewer; user presets get extra mgmt items.
+  const buildPresetMenu = useCallback(
+    (preset: Preset): ContextMenuSection[] => {
+      const sections: ContextMenuSection[] = [
+        {
+          label: preset.name,
+          items: [
+            {
+              label: 'View as JSON',
+              icon: 'fa-solid fa-code',
+              onClick: () => setJsonViewPreset(preset),
+            },
+          ],
+        },
+      ];
+      if (!preset.builtIn) {
+        sections.push({
+          items: [
+            {
+              label: 'Update with current',
+              icon: 'fa-solid fa-floppy-disk',
+              onClick: () => handleOverwrite(preset.id),
+            },
+            {
+              label: 'Rename',
+              icon: 'fa-solid fa-pen',
+              onClick: () => {
+                setRenamingId(preset.id);
+                setRenameValue(preset.name);
+              },
+            },
+            {
+              label: 'Delete',
+              icon: 'fa-solid fa-trash',
+              onClick: () => handleDelete(preset.id),
+            },
+          ],
+        });
+      }
+      return sections;
+    },
+    // handleOverwrite/handleDelete close over localConfig+activeId, but they're
+    // re-created every render; ctxMenu.handleContextMenu invokes the callback
+    // synchronously on right-click, so stale closures aren't a concern here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [localConfig, activeId],
+  );
+
+  const handleContextMenu = (e: React.MouseEvent, preset: Preset) => {
+    ctxMenu.handleContextMenu(e, () => buildPresetMenu(preset));
   };
 
   const handleRenameSubmit = () => {
@@ -166,7 +196,6 @@ export function PresetBar({ localConfig, onApplyPreset }: PresetBarProps) {
       refresh();
     }
     setRenamingId(null);
-    setContextMenu(null);
   };
 
   // ── Render ───────────────────────────────────────────────────────
@@ -189,7 +218,7 @@ export function PresetBar({ localConfig, onApplyPreset }: PresetBarProps) {
                 (isActive ? ' preset-chip--active' : '')
               }
               onClick={() => handleSelect(preset)}
-              onContextMenu={(e) => handleContextMenu(e, preset.id)}
+              onContextMenu={(e) => handleContextMenu(e, preset)}
               data-tooltip-id="tooltip"
               data-tooltip-content={`${preset.description} (right-click to view as JSON)`}
             >
@@ -237,7 +266,7 @@ export function PresetBar({ localConfig, onApplyPreset }: PresetBarProps) {
                   (isActive ? ' preset-chip--active' : '')
                 }
                 onClick={() => handleSelect(preset)}
-                onContextMenu={(e) => handleContextMenu(e, preset.id)}
+                onContextMenu={(e) => handleContextMenu(e, preset)}
                 data-tooltip-id="tooltip"
                 data-tooltip-content={`${preset.description} (right-click to manage)`}
               >
@@ -324,58 +353,15 @@ export function PresetBar({ localConfig, onApplyPreset }: PresetBarProps) {
         )}
       </div>
 
-      {/* Context menu for user presets */}
-      {contextMenu && (() => {
-        const ctxPreset = presets.find((p) => p.id === contextMenu.presetId);
-        const isUserPreset = ctxPreset && !ctxPreset.builtIn;
-        return (
-          <div
-            ref={contextRef}
-            className="preset-context-menu"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-          >
-            <button
-              className="preset-context-item"
-              onClick={() => {
-                if (ctxPreset) setJsonViewPreset(ctxPreset);
-                setContextMenu(null);
-              }}
-            >
-              <i className="fa-solid fa-code" /> View as JSON
-            </button>
-            {isUserPreset && (
-              <>
-                <div className="preset-context-divider" />
-                <button
-                  className="preset-context-item"
-                  onClick={() => handleOverwrite(contextMenu.presetId)}
-                >
-                  <i className="fa-solid fa-floppy-disk" /> Update with current
-                </button>
-                <button
-                  className="preset-context-item"
-                  onClick={() => {
-                    if (ctxPreset) {
-                      setRenamingId(ctxPreset.id);
-                      setRenameValue(ctxPreset.name);
-                    }
-                    setContextMenu(null);
-                  }}
-                >
-                  <i className="fa-solid fa-pen" /> Rename
-                </button>
-                <div className="preset-context-divider" />
-                <button
-                  className="preset-context-item preset-context-item--danger"
-                  onClick={() => handleDelete(contextMenu.presetId)}
-                >
-                  <i className="fa-solid fa-trash" /> Delete
-                </button>
-              </>
-            )}
-          </div>
-        );
-      })()}
+      {/* Right-click menu — shared global ContextMenu (auto-appends Reload UI etc) */}
+      {ctxMenu.visible && (
+        <ContextMenu
+          sections={ctxMenu.sections}
+          position={ctxMenu.position}
+          onClose={ctxMenu.close}
+        />
+      )}
+
       {/* JSON viewer modal */}
       <JsonEditorModal
         isOpen={!!jsonViewPreset}

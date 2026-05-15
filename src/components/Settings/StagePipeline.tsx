@@ -80,6 +80,10 @@ interface StagePipelineProps {
   onReorder: (from: number, to: number) => void;
   onConfigChange: (index: number, config: Record<string, unknown>) => void;
   onDuplicate: (index: number) => void;
+  /** Clear all stages (right-click → Clear queue). Optional. */
+  onClear?: () => void;
+  /** Export current pipeline config (right-click → Export config). Optional. */
+  onExport?: () => void;
   portLists?: PortListSummary[];
 }
 
@@ -94,40 +98,80 @@ export function StagePipeline({
   onReorder,
   onConfigChange,
   onDuplicate,
+  onClear,
+  onExport,
   portLists,
 }: StagePipelineProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const ctxMenu = useContextMenu();
 
+  // Pipeline-level section — mirrors the live StageTimeline so the settings
+  // modal and the running scan offer the same right-click vocabulary. Items
+  // are omitted when no handler is wired (keeps this component reusable for
+  // callers that don't support those actions).
+  const getPipelineSection = useCallback((): ContextMenuSection => {
+    const items = [];
+    if (onExport) items.push({
+      label: 'Export config',
+      icon: 'fa-solid fa-file-export',
+      onClick: onExport,
+    });
+    if (onClear) items.push({
+      label: 'Clear queue',
+      icon: 'fa-solid fa-trash-can',
+      disabled: stages.length === 0,
+      onClick: onClear,
+    });
+    return { items };
+  }, [onClear, onExport, stages.length]);
+
   // Per-stage right-click handler — same shape as the scan-time StageTimeline:
-  // Details / Duplicate / Delete.
+  // Details / Duplicate / Delete, plus pipeline-level section, plus the global
+  // section (auto-appended by <ContextMenu>).
   const handleStageContextMenu = useCallback(
     (e: React.MouseEvent, index: number) => {
-      ctxMenu.handleContextMenu(e, () => [
-        {
-          items: [
-            {
-              label: 'Details',
-              icon: 'fa-solid fa-sliders',
-              onClick: () => onSelect(index),
-            },
-            {
-              label: 'Duplicate',
-              icon: 'fa-regular fa-copy',
-              onClick: () => onDuplicate(index),
-            },
-            {
-              label: 'Delete',
-              icon: 'fa-solid fa-trash',
-              onClick: () => onRemove(index),
-            },
-          ],
-        },
-      ]);
+      ctxMenu.handleContextMenu(e, () => {
+        const sections: ContextMenuSection[] = [
+          {
+            items: [
+              {
+                label: 'Details',
+                icon: 'fa-solid fa-sliders',
+                onClick: () => onSelect(index),
+              },
+              {
+                label: 'Duplicate',
+                icon: 'fa-regular fa-copy',
+                onClick: () => onDuplicate(index),
+              },
+              {
+                label: 'Delete',
+                icon: 'fa-solid fa-trash',
+                onClick: () => onRemove(index),
+              },
+            ],
+          },
+        ];
+        const pipelineSection = getPipelineSection();
+        if (pipelineSection.items.length) sections.push(pipelineSection);
+        return sections;
+      });
     },
-    [ctxMenu, onSelect, onDuplicate, onRemove],
+    [ctxMenu, onSelect, onDuplicate, onRemove, getPipelineSection],
   );
+
+  // Background (non-stage) right-click on the pane — pipeline-level actions
+  // only. Matches StageTimeline.handleTimelineContextMenu.
+  const handlePaneContextMenu = useCallback((e: React.MouseEvent) => {
+    // Don't fire if a stage is the target (stages handle their own).
+    const target = e.target as HTMLElement;
+    if (target.closest('.stage-pipeline-stage')) return;
+    ctxMenu.handleContextMenu(e, () => {
+      const pipelineSection = getPipelineSection();
+      return pipelineSection.items.length ? [pipelineSection] : [];
+    });
+  }, [ctxMenu, getPipelineSection]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -308,7 +352,11 @@ export function StagePipeline({
 
   return (
     <div className="stage-pipeline-wrapper">
-      <div className="stage-pipeline-pane" ref={paneRef}>
+      <div
+        className="stage-pipeline-pane"
+        ref={paneRef}
+        onContextMenu={handlePaneContextMenu}
+      >
         {/* SVG connector layer — behind stages, doesn't intercept clicks */}
         <svg className="stage-pipeline-edges" aria-hidden="true">
           {edgeGeometry.map((g) => (
@@ -594,6 +642,7 @@ function AddStageButton({
         <ContextMenu
           sections={sections}
           anchor={{ rect: anchorRect }}
+          includeGlobalSection={false}
           onClose={() => setOpen(false)}
         />
       )}

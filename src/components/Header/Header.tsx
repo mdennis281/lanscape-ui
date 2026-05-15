@@ -5,7 +5,7 @@ import { SubnetInput } from './SubnetInput';
 import { ScanHistory } from './ScanHistory';
 import { ConfigPromptModal } from './ConfigPromptModal';
 import { ScanModeModal } from './ScanModeModal';
-import { ContextMenu, useContextMenu, getGlobalSection } from '../ContextMenu';
+import { ContextMenu, useContextMenu } from '../ContextMenu';
 import type { SubnetTestResult, AutoStageRecommendation } from '../../types';
 
 export function Header() {
@@ -13,6 +13,13 @@ export function Header() {
   const logoMenu = useContextMenu();
 
   const connectionStatus = useConnectionStore((s) => s.connectionStatus);
+  // Debug Panel is only useful when the backend was launched with --debug.
+  // Without it most debug endpoints either return nothing or are disabled.
+  // The flag itself rides on the same app_info payload that the AboutModal
+  // already displays, so no new wire format is needed.
+  const debugEnabled = useConnectionStore(
+    (s) => s.appInfo?.runtime_args?.debug === true,
+  );
 
   const {
     status,
@@ -296,21 +303,32 @@ export function Header() {
     <header className="header">
       <div className="header-content">
         <div className="header-left">
-          <a 
-            href="/" 
+          <a
+            href="/"
             className="header-logo"
+            aria-label="LANscape"
             onContextMenu={(e) => logoMenu.handleContextMenu(e, () => [
               {
                 items: [
-                  { label: 'Debug Panel', icon: 'fa-solid fa-bug', onClick: () => setShowDebug(true) },
+                  {
+                    label: 'Debug Panel',
+                    icon: 'fa-solid fa-bug',
+                    disabled: !debugEnabled,
+                    tooltip: debugEnabled
+                      ? undefined
+                      : 'Enable by launching with the --debug flag',
+                    onClick: () => setShowDebug(true),
+                  },
                 ],
               },
-              getGlobalSection(),
             ])}
           >
-            <span className="logo-text">
-              <span className="logo-accent">LAN</span>scape
-            </span>
+            <img
+              src="./android-chrome-512x512.png"
+              alt="LANscape"
+              className="header-logo-img"
+              draggable={false}
+            />
           </a>
           {logoMenu.visible && (
             <ContextMenu sections={logoMenu.sections} position={logoMenu.position} onClose={logoMenu.close} />

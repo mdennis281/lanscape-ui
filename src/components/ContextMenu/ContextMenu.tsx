@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import type { ContextMenuProps, ContextMenuItem, ContextMenuSection } from './types';
+import { getGlobalSection } from './globalMenuItems';
 
 const MENU_PADDING = 6;       // distance from viewport edges
 const ANCHOR_GAP = 6;         // distance between anchor and menu
@@ -26,9 +27,19 @@ export function ContextMenu({
   position,
   anchor,
   maxHeight = 'auto',
+  includeGlobalSection,
   onClose,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Popovers (anchor mode) are discrete pickers — global items just add noise.
+  // Right-click menus (position mode) get the global section by default so
+  // every right-click in the app surfaces Reload UI / Browser menu hint.
+  const shouldIncludeGlobal = includeGlobalSection ?? !anchor;
+  const resolvedSections = useMemo(
+    () => (shouldIncludeGlobal ? [...sections, getGlobalSection()] : sections),
+    [sections, shouldIncludeGlobal],
+  );
 
   // Navigation stack — empty = root view; each entry = nested submenu
   const [stack, setStack] = useState<NavEntry[]>([]);
@@ -140,7 +151,7 @@ export function ContextMenu({
           className="ctx-menu-view"
         >
           {isRoot ? (
-            <RootView sections={sections} onClose={onClose} onEnter={navigateTo} />
+            <RootView sections={resolvedSections} onClose={onClose} onEnter={navigateTo} />
           ) : (
             <SubmenuView
               entry={current!}
@@ -234,6 +245,11 @@ function MenuItem({
     }
   };
 
+  // Use aria-disabled rather than the native `disabled` attribute so that
+  // hover events still reach the element — Firefox in particular drops
+  // mouse events on natively-disabled <button>s, which would suppress the
+  // react-tooltip lookup for items that want to explain *why* they're
+  // disabled. The --disabled modifier class carries the visual state.
   return (
     <button
       type="button"
@@ -244,7 +260,9 @@ function MenuItem({
         item.description ? 'ctx-menu-item--detailed' : '',
       ].filter(Boolean).join(' ')}
       onClick={handleClick}
-      disabled={item.disabled}
+      aria-disabled={item.disabled || undefined}
+      data-tooltip-id={item.tooltip ? 'tooltip' : undefined}
+      data-tooltip-content={item.tooltip}
     >
       {item.icon ? (
         <i className={`ctx-menu-item-icon ${item.icon}`} />
