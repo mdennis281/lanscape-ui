@@ -68,6 +68,15 @@
   }
 }
 
+.btn-auto {
+  background: var(--auto-accent);
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: var(--auto-accent-hover);
+  }
+}
+
 .btn-icon {
   padding: 8px;
   min-width: 36px;

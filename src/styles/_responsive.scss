@@ -5,16 +5,35 @@
 // ============================================
 
 @media (max-width: $bp-tablet) {
-  .header-content {
-    flex-wrap: wrap;
-  }
+  // .header-content {
+  //   flex-wrap: wrap;
+  // }
 
   .subnet-form {
-    order: 3;
-    flex: 0 0 100%;
-    margin-top: 12px;
+    flex: 0 0 calc( 100% - 70px - var(--horizontal-gutter) * 2 );
     width: 100%;
     max-width: none;
+    .scan-submit-wrapper {
+      height: var(--header-content-height);
+      .scan-submit-btn {
+        height: 100%;
+        padding: 5px 0;
+        flex-wrap: wrap;
+        i, span {
+          width: 100%;
+          display: block;
+        }
+        i {
+          font-size: 25px;
+          padding: 0;
+        }
+        span {
+          font-size: 12px;
+          margin-top: -4px;
+        }
+      }
+    }
+    
   }
 
   .subnet-input {

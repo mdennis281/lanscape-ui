@@ -7,7 +7,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
-import { PythonManager, LANSCAPE_VERSION } from './pythonManager';
+import { PythonManager, LANSCAPE_VERSION } from './pythonManager.js';
 
 // Single instance lock - prevent multiple app windows
 const gotTheLock = app.requestSingleInstanceLock();

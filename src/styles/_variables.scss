@@ -18,6 +18,7 @@ $bp-calc-labels: 751px;
   --danger-accent: #ff453a;
   --warning-accent: #ffd60a;
   --auto-accent: #bf5af2;
+  --auto-accent-hover: #a13be3;
   --auto-accent-rgb: 191, 90, 242;
 
   // Backgrounds
@@ -52,6 +53,7 @@ $bp-calc-labels: 751px;
   // Header
   --header-height: 81px; // see .header-content
   --header-padding-vertical: 8px; // see .header
+  --header-content-height: calc(var(--header-height) - 2 * var(--header-padding-vertical));
 
   // Modal
   --modal-backdrop: rgba(0, 0, 0, 0.7);

@@ -25,7 +25,7 @@
   height: inherit;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
 }
 
 .header-logo {
@@ -34,11 +34,17 @@
   align-items: center;
   color: var(--text-primary);
   text-decoration: none;
+  
 
   &:hover {
     text-decoration: none;
     color: var(--text-primary);
   }
+}
+
+.header-divider {
+  border-right: 1px solid var(--border-color);
+  height: 70%;
 }
 
 .header-logo-img {

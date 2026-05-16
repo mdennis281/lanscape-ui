@@ -304,9 +304,13 @@ export function Header() {
       <div className="header-content">
         <div className="header-left">
           <a
-            href="/"
+            href="#"
             className="header-logo"
             aria-label="LANscape"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.reload();
+            }}
             onContextMenu={(e) => logoMenu.handleContextMenu(e, () => [
               {
                 items: [
@@ -330,6 +334,7 @@ export function Header() {
               draggable={false}
             />
           </a>
+          <div className="header-divider" />
           {logoMenu.visible && (
             <ContextMenu sections={logoMenu.sections} position={logoMenu.position} onClose={logoMenu.close} />
           )}

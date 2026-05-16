@@ -29,7 +29,7 @@ export function ScanModeModal({
             <i className="fa-solid fa-layer-group" style={{ opacity: 0.7 }} />
             Use Existing Stages
           </button>
-          <button className="btn btn-warning" onClick={onUseAuto}>
+          <button className="btn btn-auto" onClick={onUseAuto}>
             <i className="fa-solid fa-bolt" style={{ opacity: 0.7 }} />
             Auto Mode
           </button>
