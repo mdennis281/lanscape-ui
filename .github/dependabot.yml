@@ -1,0 +1,59 @@
+# Dependabot configuration for lanscape-ui (React + Vite + Electron).
+# Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates
+#
+# Covers:
+#   1. npm            — UI/Electron deps in package.json / package-lock.json
+#   2. github-actions — action versions pinned in .github/workflows/*
+#
+# REQUIRED SECRET: this project pulls @awesome.me / @fortawesome packages from
+# the private FontAwesome registry (see .npmrc). Add FONTAWESOME_TOKEN under
+# Settings → Secrets and variables → Dependabot (this is a SEPARATE store from
+# Actions secrets) or Dependabot can't resolve the lockfile and updates fail.
+version: 2
+
+registries:
+  fontawesome:
+    type: npm-registry
+    url: https://npm.fontawesome.com
+    token: ${{secrets.FONTAWESOME_TOKEN}}
+
+updates:
+  # ── UI: npm dependencies (React 19 / Vite / Electron) ───────────────────
+  - package-ecosystem: npm
+    directory: /
+    registries:
+      - fontawesome
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "build(deps)"
+      prefix-development: "build(deps-dev)"
+    groups:
+      # Runtime deps and dev tooling each collapse to one PR/week for
+      # non-breaking bumps; majors arrive individually for manual review.
+      ui-production:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      ui-development:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+
+  # ── CI: GitHub Actions used across workflows ────────────────────────────
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci(actions)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
