@@ -202,16 +202,20 @@
       border-bottom: none;
     }
 
-    // Row hover/borders belong to the card now, not to each cell.
-    td,
-    tr:hover td {
+    td {
       display: block;
       padding: 0;
       border: none;
-      background: none;
       min-width: 0;
     }
 
+    // The card shows hover/press state, not each cell. Background only:
+    // this selector outranks `.is-empty`, so it must not touch `display`.
+    tr:hover td {
+      background: none;
+    }
+
+    tr.device-row:hover,
     tr.device-row:active {
       background: var(--table-row-hover);
     }
