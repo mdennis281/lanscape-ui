@@ -37,3 +37,6 @@ out
 backend/win/
 backend/mac/
 backend/linux/
+
+# Dispatch worktrees
+.worktrees/
