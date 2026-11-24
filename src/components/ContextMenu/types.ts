@@ -26,6 +26,11 @@ export interface ContextMenuSection {
 export interface ContextMenuPosition {
   x: number;
   y: number;
+  /**
+   * Opened by a finger (touch long-press) rather than a right-click. The menu
+   * then renders as a bottom action sheet instead of a popover at (x, y).
+   */
+  touch?: boolean;
 }
 
 export interface ContextMenuAnchor {

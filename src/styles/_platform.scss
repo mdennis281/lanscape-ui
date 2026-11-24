@@ -1,0 +1,98 @@
+// ============================================
+// Platform: iOS / touch / installed-PWA behaviour
+// ============================================
+// Rules that depend on what the app is running IN, not on its width. Width
+// rules live in _responsive.scss.
+
+// The app is a fixed-height shell that scrolls its own panes. The document
+// never scrolls, so iOS has nothing to rubber-band.
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  // Kills double-tap-to-zoom and the 300ms tap delay. (A pinch has a
+  // cancellable event; see lockPageZoom() in src/platform/ios.ts.)
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+// The canvas colour only shows OUTSIDE the shell. In the installed iOS app
+// that is the status-bar band above the window, so it matches the header.
+html {
+  background-color: var(--card-bg);
+}
+
+// ── Touch-primary devices (phones, tablets without a pointer) ───────────
+
+@media (hover: none) and (pointer: coarse) {
+  // iOS zooms the page into any focused field under 16px.
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+
+  // A long-press opens our action sheet (src/platform/longPress.ts), so the
+  // system callout and text selection must not start under the same finger.
+  .app-container {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  // ...but text the user may genuinely want to copy stays selectable.
+  input,
+  textarea,
+  .modal-body {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  // Hover tooltips have no hover to hang off. On touch they either stick open
+  // after a tap or steal the first tap, so they are off entirely.
+  .react-tooltip {
+    display: none !important;
+  }
+
+  // Icon-only controls get a full-size hit area.
+  .modal-close,
+  .footer-icon-btn,
+  .stage-indicator-add {
+    min-width: var(--tap-target);
+    min-height: var(--tap-target);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+// ── Window Controls Overlay (installed desktop PWA) ─────────────────────
+// With `display_override: ["window-controls-overlay"]` the installed window
+// has no title bar: the OS paints its min/max/close buttons straight over the
+// top of the page. The header becomes the title bar: it is the drag region,
+// and it is inset so nothing sits under the buttons. The buttons are
+// top-right on Windows and top-left on macOS; `--titlebar-x/-w` describe the
+// free strip between them, so this covers both.
+
+@media (display-mode: window-controls-overlay) {
+  .header {
+    -webkit-app-region: drag;
+    app-region: drag;
+    padding-left: max(var(--horizontal-gutter), var(--titlebar-x));
+    padding-right: max(
+      var(--horizontal-gutter),
+      calc(100vw - var(--titlebar-x) - var(--titlebar-w))
+    );
+  }
+
+  // A drag region swallows the pointer before the page sees it, so every
+  // control in the header is carved back out. By element, so the next control
+  // anyone adds is pressable without knowing this rule exists. The history
+  // dropdown hangs out of the header and must stay scrollable too.
+  .header :where(button, a, input, select, textarea, [role='button'], .scan-history-dropdown) {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+}

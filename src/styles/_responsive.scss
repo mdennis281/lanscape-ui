@@ -63,6 +63,269 @@
   }
 }
 
+// ============================================
+// Compact (phone) layout
+// ============================================
+// Same components, rearranged for a narrow, touch-first screen:
+//   header     → two rows (logo + history / subnet + scan)
+//   stats bar  → counters on one row, stage pipeline scrolling under them
+//   device table → one card per device (still the same <table> markup)
+//   modals     → bottom sheets
+
+@media (max-width: $bp-compact) {
+  // ── Header ──────────────────────────────────────────────
+  .header {
+    height: auto;
+    padding: 6px 12px 10px;
+  }
+
+  .header-content {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .header-left {
+    height: 40px;
+  }
+
+  .header-logo-img {
+    padding: 6px 0;
+  }
+
+  // Undo the tablet layout's stacked icon-over-label button: there is room
+  // for a normal one now that the form has the whole row.
+  .subnet-form {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+
+    .scan-submit-wrapper {
+      height: auto;
+
+      .scan-submit-btn {
+        height: 40px;
+        padding: 0 16px;
+        flex-wrap: nowrap;
+
+        i,
+        span {
+          width: auto;
+          display: inline;
+        }
+
+        i {
+          font-size: inherit;
+        }
+
+        span {
+          font-size: inherit;
+          margin-top: 0;
+        }
+      }
+    }
+  }
+
+  // ── Scan stats ──────────────────────────────────────────
+  .scan-stats-content {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    gap: 8px 12px;
+  }
+
+  .scan-stat {
+    white-space: nowrap;
+  }
+
+  // One spacer is enough when the stages wrap to their own row: it pushes
+  // the timer (and any error/warning badges) to the right edge.
+  .scan-stat-spacer ~ .scan-stat-spacer {
+    display: none;
+  }
+
+  .scan-stat-value {
+    font-size: 18px;
+  }
+
+  .stage-indicators {
+    flex: 1 1 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 2px 0;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  // ── Device table → cards ────────────────────────────────
+  .table-header {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .table-filter {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .device-table {
+    display: block;
+
+    thead {
+      display: none;
+    }
+
+    tbody {
+      display: block;
+    }
+
+    tr.device-row {
+      display: grid;
+      // Column 2 sizes to the IP / MAC (never truncated); column 3 takes the
+      // rest, so a long vendor name is what gets the ellipsis.
+      grid-template-columns: 24px auto minmax(0, 1fr);
+      grid-template-areas:
+        'stage ip     ports'
+        'stage host   host'
+        'stage mac    vendor';
+      column-gap: 10px;
+      row-gap: 2px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--card-border);
+      cursor: pointer;
+    }
+
+    tr.device-row:last-child {
+      border-bottom: none;
+    }
+
+    td {
+      display: block;
+      padding: 0;
+      border: none;
+      min-width: 0;
+    }
+
+    // The card shows hover/press state, not each cell. Background only:
+    // this selector outranks `.is-empty`, so it must not touch `display`.
+    tr:hover td {
+      background: none;
+    }
+
+    tr.device-row:hover,
+    tr.device-row:active {
+      background: var(--table-row-hover);
+    }
+
+    .stage-cell {
+      grid-area: stage;
+      align-self: start;
+      padding-top: 2px;
+    }
+
+    .ip-cell {
+      grid-area: ip;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    // Re-shown: the tablet layout hides these columns, the card has room.
+    .hostname-cell,
+    .vendor-cell {
+      display: block;
+    }
+
+    .hostname-cell {
+      grid-area: host;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .mac-cell {
+      grid-area: mac;
+      font-size: 11px;
+    }
+
+    .vendor-cell {
+      grid-area: vendor;
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-align: right;
+    }
+
+    .hostname-cell,
+    .mac-cell,
+    .vendor-cell {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .is-empty {
+      display: none;
+    }
+
+    .ports-col {
+      grid-area: ports;
+      justify-self: end;
+      font-size: 13px;
+    }
+
+    .ports-expanded {
+      grid-column: 2 / -1;
+      grid-row: auto;
+      justify-self: start;
+    }
+  }
+
+  // ── Modals → bottom sheets ──────────────────────────────
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 24px 0 0;
+  }
+
+  .modal,
+  .modal-small,
+  .modal-medium,
+  .modal-large {
+    max-width: none;
+    max-height: calc(100dvh - 24px);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    border-bottom: none;
+    animation: sheet-up 0.25s ease;
+  }
+
+  // The last thing in the sheet sits clear of the home indicator.
+  .modal > :last-child {
+    padding-bottom: calc(16px + var(--safe-bottom));
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+    overscroll-behavior: contain;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+  }
+
+  .device-info-label {
+    min-width: 88px;
+  }
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
 @media (max-width: $bp-mobile) {
   .overview-section {
     grid-template-columns: 1fr;
@@ -91,10 +354,5 @@
 
   .settings-section-group {
     grid-template-columns: 1fr;
-  }
-
-  .modal {
-    max-height: 100vh;
-    border-radius: var(--border-radius-md);
   }
 }

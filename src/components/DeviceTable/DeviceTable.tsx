@@ -31,6 +31,14 @@ function devicesToCSV(devices: DeviceResult[]): string {
   return [headers.join(','), ...rows].join('\n');
 }
 
+/**
+ * Class for an optional text cell. `is-empty` lets the compact (card) layout
+ * drop the line entirely instead of showing a lone dash.
+ */
+function cellClass(base: string, value: string | null | undefined): string {
+  return value ? base : `${base} is-empty`;
+}
+
 // Simple animation delay calculator - just assigns stagger based on position in batch
 const ANIMATION_DURATION = 500; // ms - how long before we remove the "new" class
 const STAGGER_DELAY = 30; // ms between each row
@@ -316,7 +324,7 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
                   onClick={() => onDeviceClick?.(device)}
                   onContextMenu={(e) => handleRowContextMenu(e, device)}
                 >
-                  <td>
+                  <td className="stage-cell">
                     <DeviceStage device={device} />
                   </td>
                   <td 
@@ -331,10 +339,10 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
                       </span>
                     )}
                   </td>
-                  <td className="hostname-cell">{device.hostname || '—'}</td>
-                  <td className="mac-cell">{device.mac_addr || '—'}</td>
-                  <td className="vendor-cell">{device.manufacturer || '—'}</td>
-                  <td className={portsExpanded ? 'ports-expanded' : ''}>
+                  <td className={cellClass('hostname-cell', device.hostname)}>{device.hostname || '—'}</td>
+                  <td className={cellClass('mac-cell', device.mac_addr)}>{device.mac_addr || '—'}</td>
+                  <td className={cellClass('vendor-cell', device.manufacturer)}>{device.manufacturer || '—'}</td>
+                  <td className={`ports-col${portsExpanded ? ' ports-expanded' : ''}`}>
                     {/* Show dash only if no port scan has touched this device yet */}
                     {portsSorted.length === 0 &&
                      !scanStage.toLowerCase().includes('port') && 

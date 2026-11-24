@@ -16,10 +16,6 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragMoveEvent,
   type DragStartEvent,
@@ -27,12 +23,12 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { STAGE_REGISTRY, getStageMeta, type StageMeta } from './stageRegistry';
+import { useDragSensors } from '../../platform/useDragSensors';
 import { StageDetailPane } from './StageDetailPane';
 import { ContextMenu, useContextMenu } from '../ContextMenu';
 import type { ContextMenuItem, ContextMenuSection } from '../ContextMenu';
@@ -173,10 +169,7 @@ export function StagePipeline({
     });
   }, [ctxMenu, getPipelineSection]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const sensors = useDragSensors();
   const ids = useMemo(() => stages.map((_, i) => `stage-${i}`), [stages]);
 
   // Tracked overlay center (viewport coords). Refs not state — we only need it

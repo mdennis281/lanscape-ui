@@ -6,6 +6,9 @@
 $bp-mobile: 480px;
 $bp-tablet: 768px;
 $bp-calc-labels: 751px;
+// Below this the app switches to its phone layout: two-row header, device
+// cards, bottom-sheet modals. Above it, nothing changes.
+$bp-compact: 600px;
 
 :root {
   // Brand
@@ -82,8 +85,25 @@ $bp-calc-labels: 751px;
   --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', monospace;
 
 // Gutters
---vertical-gutter: clamp(5px, calc(100vh / 35), 30px);
+--vertical-gutter: clamp(5px, calc(100dvh / 35), 30px);
 --horizontal-gutter: clamp(5px, calc(100vw / 60), 30px);
+
+// Bottom safe area. index.html deliberately omits `viewport-fit=cover` (see the
+// comment there), so iOS keeps the window clear of the notch and status bar
+// itself and every `env(safe-area-inset-*)` reads 0. The home indicator still
+// overlaps the bottom of the installed app's window, so `--home-indicator` is
+// measured by src/platform/ios.ts and folded in here. `env()` stays in the
+// max() for any browser that does report an inset.
+--safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--home-indicator, 0px));
+
+// Window Controls Overlay (installed desktop PWA). The strip the title bar
+// would have occupied, next to the OS window buttons. The fallbacks are the
+// no-overlay case: full width, no indent. See _platform.scss.
+--titlebar-x: env(titlebar-area-x, 0px);
+--titlebar-w: env(titlebar-area-width, 100vw);
+
+// Minimum touch target on coarse pointers (Apple HIG: 44pt).
+--tap-target: 44px;
 
 // ============================================
 // Z-index scale — central elevation tokens.

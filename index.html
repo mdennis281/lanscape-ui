@@ -2,17 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      No `viewport-fit=cover`, on purpose. With it, an installed iOS web app's
+      window shrinks by the status bar (e.g. 932 -> 873) on the first keyboard
+      raise and never recovers, and nothing below the short edge is painted
+      (WebKit #237961). Without it iOS lays the window out BELOW the status bar
+      and down to the bottom of the glass. Every `env(safe-area-inset-*)` is 0
+      in that layout, so the home-indicator clearance is measured instead
+      (`--home-indicator`, see src/platform/ios.ts).
+
+      `maximum-scale=1, user-scalable=no`: this is an app shell, not a document.
+      A pinch magnifies a fixed box and strands the header off-screen with no
+      document scroll to bring it back. The installed app honours these keys; a
+      Safari tab ignores them, which is what `lockPageZoom()` is for.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="LANscape - Local Network Scanner" />
+    <!-- Matches the header, so the WCO title-bar buttons and mobile browser
+         chrome blend into it. Keep in sync with `theme_color` in vite.config.ts. -->
+    <meta name="theme-color" content="#2c2c2c" />
+
     <!-- Favicons -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+
+    <!-- iOS ignores most of the web manifest: the home-screen icon, the
+         standalone flag and the status-bar style all come from these. The
+         manifest itself is generated and linked by vite-plugin-pwa. -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0a84ff" />
-    <meta name="description" content="LANscape - Local Network Scanner" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="LANscape" />
+
     <title>LANscape</title>
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/site.webmanifest" />
   </head>
   <body>
     <div id="root"></div>

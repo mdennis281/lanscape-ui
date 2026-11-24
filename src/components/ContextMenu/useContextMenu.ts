@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
+import { isTouchContextMenu } from '../../platform';
 import type { ContextMenuPosition, ContextMenuSection } from './types';
 
 interface ContextMenuState {
@@ -46,7 +47,10 @@ export function useContextMenu(): UseContextMenuReturn {
       e.preventDefault();
       e.stopPropagation();
       setSections(getSections());
-      setState({ visible: true, position: { x: e.clientX, y: e.clientY } });
+      setState({
+        visible: true,
+        position: { x: e.clientX, y: e.clientY, touch: isTouchContextMenu(e.nativeEvent) },
+      });
     },
     [],
   );

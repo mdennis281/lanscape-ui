@@ -19,22 +19,18 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragStartEvent,
   type Modifier,
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useScanStore } from '../../store';
+import { useDragSensors } from '../../platform/useDragSensors';
 import { getStageMeta } from '../Settings/stageRegistry';
 import { AddStageModal } from './AddStageModal';
 import { StageEditorModal } from './StageEditorModal';
@@ -142,10 +138,7 @@ export function StageTimeline({ onActiveStageChange }: StageTimelineProps) {
     return () => document.body.classList.remove('stage-dragging');
   }, [activeId]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const sensors = useDragSensors();
   const previewIds = pipelineConfig.stages.map((_, i) => `stage-${i}`);
 
   const handleDragStart = (event: DragStartEvent) => {
