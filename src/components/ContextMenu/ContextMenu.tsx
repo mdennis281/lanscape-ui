@@ -7,6 +7,7 @@ import { getGlobalSection } from './globalMenuItems';
 const MENU_PADDING = 6;       // distance from viewport edges
 const ANCHOR_GAP = 6;         // distance between anchor and menu
 const MIN_AUTO_HEIGHT = 160;  // floor for 'auto' max-height — keeps menus usable on tiny viewports
+const SHEET_DISMISS_SLOP = 12; // px a held finger may drift before an open sheet dismisses
 
 interface NavEntry {
   /** Title shown in the back-button header */
@@ -32,13 +33,17 @@ export function ContextMenu({
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Opened by a finger: render as a bottom action sheet instead of a popover
+  // at the press point, where it would sit under the finger that opened it.
+  const sheet = !!position?.touch;
+
   // Popovers (anchor mode) are discrete pickers — global items just add noise.
   // Right-click menus (position mode) get the global section by default so
   // every right-click in the app surfaces Reload UI / Browser menu hint.
   const shouldIncludeGlobal = includeGlobalSection ?? !anchor;
   const resolvedSections = useMemo(
-    () => (shouldIncludeGlobal ? [...sections, getGlobalSection()] : sections),
-    [sections, shouldIncludeGlobal],
+    () => (shouldIncludeGlobal ? [...sections, getGlobalSection(sheet)] : sections),
+    [sections, shouldIncludeGlobal, sheet],
   );
 
   // Navigation stack — empty = root view; each entry = nested submenu
@@ -61,9 +66,10 @@ export function ContextMenu({
 
   // Position + size clamp. Runs whenever position/anchor changes or stack
   // depth changes (nested view may have different intrinsic height).
+  // The sheet is laid out entirely by CSS (pinned to the bottom edge).
   useLayoutEffect(() => {
     const el = menuRef.current;
-    if (!el) return;
+    if (!el || sheet) return;
 
     let x = 0;
     let y = 0;
@@ -105,7 +111,7 @@ export function ContextMenu({
     if (y < MENU_PADDING) y = MENU_PADDING;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
-  }, [position, anchor, maxHeight, stack.length]);
+  }, [position, anchor, maxHeight, stack.length, sheet]);
 
   // Close on outside click / Escape / outside-scroll / blur. Scrolls inside
   // the menu must NOT close it (the body is scrollable when content overflows).
@@ -137,32 +143,57 @@ export function ContextMenu({
     };
   }, [onClose]);
 
+  // Sheet mode: the finger that long-pressed is usually still down when the
+  // sheet appears. If it then moves, the user is dragging the thing they
+  // pressed (e.g. reordering a stage), not choosing from the menu, so the
+  // menu gets out of the way. That's how iOS behaves too. A small slop
+  // absorbs the jitter of a held finger.
+  useEffect(() => {
+    if (!sheet) return;
+    let start: { x: number; y: number } | null = null;
+    const handleMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch' || menuRef.current?.contains(e.target as Node)) return;
+      start ??= { x: e.clientX, y: e.clientY };
+      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > SHEET_DISMISS_SLOP) onClose();
+    };
+    document.addEventListener('pointermove', handleMove, { passive: true });
+    return () => document.removeEventListener('pointermove', handleMove);
+  }, [sheet, onClose]);
+
   return createPortal(
-    <div ref={menuRef} className="ctx-menu">
-      <AnimatePresence mode="wait" custom={direction} initial={false}>
-        <motion.div
-          key={isRoot ? 'root' : `level-${stack.length}-${current!.label}`}
-          custom={direction}
-          variants={slideVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={slideTransition}
-          className="ctx-menu-view"
-        >
-          {isRoot ? (
-            <RootView sections={resolvedSections} onClose={onClose} onEnter={navigateTo} />
-          ) : (
-            <SubmenuView
-              entry={current!}
-              onBack={goBack}
-              onClose={onClose}
-              onEnter={navigateTo}
-            />
-          )}
-        </motion.div>
-      </AnimatePresence>
-    </div>,
+    <>
+      {sheet && <div className="ctx-menu-backdrop" />}
+      <div ref={menuRef} className={`ctx-menu${sheet ? ' ctx-menu--sheet' : ''}`}>
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
+          <motion.div
+            key={isRoot ? 'root' : `level-${stack.length}-${current!.label}`}
+            custom={direction}
+            variants={slideVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={slideTransition}
+            className="ctx-menu-view"
+          >
+            {isRoot ? (
+              <RootView sections={resolvedSections} onClose={onClose} onEnter={navigateTo} />
+            ) : (
+              <SubmenuView
+                entry={current!}
+                onBack={goBack}
+                onClose={onClose}
+                onEnter={navigateTo}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+        {sheet && (
+          <button type="button" className="ctx-menu-cancel" onClick={onClose}>
+            Cancel
+          </button>
+        )}
+      </div>
+    </>,
     document.body,
   );
 }

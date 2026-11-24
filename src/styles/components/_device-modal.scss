@@ -47,6 +47,9 @@
   font-size: 14px;
   color: var(--text-primary);
   font-weight: 500;
+  // Lets the row shrink and long IPv6 lists wrap instead of overflowing.
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 // Found-with stage icons

@@ -34,5 +34,10 @@
 @use 'components/context-menu';
 @use 'components/export-modal';
 
-// --- Responsive overrides (must come last) ---
+// --- Responsive overrides ---
 @use 'responsive';
+
+// --- Platform overrides (must come last) ---
+// Installed-app / touch rules (WCO title bar, iOS input sizing, tap targets)
+// that have to win over both the component and the width rules.
+@use 'platform';

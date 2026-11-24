@@ -35,7 +35,7 @@ export default defineConfig({
     versionFilePlugin(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.png', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
 
       // Force the new service worker to take control immediately on update
       // rather than waiting for all tabs to close.
@@ -75,26 +75,41 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
       },
 
+      // The ONE web manifest. vite-plugin-pwa emits it as
+      // `manifest.webmanifest` and injects the <link> into index.html.
       manifest: {
+        id: './',
         name: 'LANscape',
         short_name: 'LANscape',
         description: 'Local Network Scanner',
-        theme_color: '#0a84ff',
-        background_color: '#262626',
-        display: 'minimal-ui',
+        start_url: './',
+        scope: './',
+        // Installed desktop Chromium gets the window-controls overlay (no title
+        // bar; the header is the drag region — see _wco.scss). Everything else
+        // falls back to a plain standalone window.
+        display: 'standalone',
+        display_override: ['window-controls-overlay', 'standalone'],
+        // The header colour, so the WCO buttons blend into it.
+        // Keep in sync with <meta name="theme-color"> in index.html.
+        theme_color: '#2c2c2c',
+        background_color: '#1b1b1b',
+        orientation: 'any',
+        categories: ['utilities', 'productivity'],
         icons: [
           {
-            src: 'icon-192.png',
+            src: 'android-chrome-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any',
           },
           {
-            src: 'icon-512.png',
+            src: 'android-chrome-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
+            type: 'image/png',
+            purpose: 'any',
+          },
+        ],
+      },
     })
   ],
   // Base path - use relative for Electron file:// protocol compatibility

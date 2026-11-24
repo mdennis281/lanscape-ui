@@ -3,15 +3,24 @@
 // ============================================
 
 .footer {
+  --footer-row: 35px;
+
   background: var(--card-bg);
   border-top: 1px solid var(--card-border);
-  padding: 8px 2%;
+  padding: 0 2% var(--safe-bottom);
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
   color: var(--text-muted);
-  height: 35px;
+  // The row itself, plus the home-indicator band under it on installed iOS.
+  height: calc(var(--footer-row) + var(--safe-bottom));
+  flex-shrink: 0;
+
+  // Room for full-size tap targets on the icon buttons.
+  @media (hover: none) and (pointer: coarse) {
+    --footer-row: var(--tap-target);
+  }
 
   a:not(.footer-icon-btn) {
     color: var(--primary-accent);
