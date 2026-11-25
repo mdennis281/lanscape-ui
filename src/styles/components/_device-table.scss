@@ -1,3 +1,5 @@
+@use '../variables' as *;
+
 // ============================================
 // Device table & stage indicators
 // ============================================
@@ -31,6 +33,9 @@
 .table-scroll {
   flex: 1;
   overflow-y: auto;
+  // Only reached below the table's own min-width (see .device-table), i.e.
+  // genuinely narrow windows that aren't yet in the compact card layout.
+  overflow-x: auto;
   min-height: 0;
 }
 
@@ -58,6 +63,34 @@
 .device-table {
   width: 100%;
   border-collapse: collapse;
+
+  // Column sizing: stage / IP / MAC / ports are short, fixed-format values
+  // and size to their content on one line. Hostname and vendor are the only
+  // free-text columns — they split whatever width is left and truncate with
+  // an ellipsis (full text on hover), instead of wrapping or pushing the
+  // table wider than its container.
+  th,
+  td {
+    white-space: nowrap;
+  }
+
+  .hostname-cell,
+  .vendor-cell {
+    // `max-width: 0` stops the cell's text from contributing to the auto
+    // table layout, so the column only gets the leftover space; the
+    // percentage widths decide how that space is shared.
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hostname-cell {
+    width: 55%;
+  }
+
+  .vendor-cell {
+    width: 45%;
+  }
 
   th {
     text-align: left;
@@ -113,8 +146,12 @@
     color: var(--text-secondary);
   }
 
-  .ports-header {
-    white-space: nowrap;
+  // Expanded ports may be a long list: let it wrap in a bounded column
+  // rather than stretching the row.
+  .ports-expanded .ports-list {
+    display: block;
+    max-width: 16rem;
+    white-space: normal;
   }
 
   // Legacy status badge
@@ -136,6 +173,26 @@
       background: rgba(255, 69, 58, 0.15);
       color: var(--danger-accent);
     }
+  }
+}
+
+// Below this width hostname/vendor would be squeezed to a few characters, so
+// the table stops shrinking and .table-scroll scrolls sideways instead. The
+// tablet layout hides those two columns and the compact layout turns rows
+// into cards, so neither needs a floor.
+@media (min-width: #{$bp-tablet + 1}) {
+  .device-table {
+    min-width: 680px;
+  }
+}
+
+// Mid-size windows (e.g. a laptop-sized desktop app window): trim cell
+// padding so more of the width goes to hostname / vendor text.
+@media (min-width: #{$bp-tablet + 1}) and (max-width: 1100px) {
+  .device-table th,
+  .device-table td {
+    padding-left: 10px;
+    padding-right: 10px;
   }
 }
 
