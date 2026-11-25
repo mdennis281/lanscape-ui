@@ -262,6 +262,9 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      // Undo the desktop table's leftover-space column sizing.
+      width: auto;
+      max-width: none;
     }
 
     .is-empty {
@@ -278,6 +281,10 @@
       grid-column: 2 / -1;
       grid-row: auto;
       justify-self: start;
+
+      .ports-list {
+        max-width: none;
+      }
     }
   }
 

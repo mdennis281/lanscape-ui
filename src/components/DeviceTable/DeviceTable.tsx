@@ -39,6 +39,27 @@ function cellClass(base: string, value: string | null | undefined): string {
   return value ? base : `${base} is-empty`;
 }
 
+/**
+ * Hostname / vendor cells truncate with an ellipsis. Only offer the full text
+ * as a tooltip when it is actually cut off, so short values don't pop one.
+ */
+function syncTruncationTooltip(e: React.MouseEvent<HTMLElement>): void {
+  const el = e.currentTarget;
+  el.dataset.tooltipHidden = String(el.scrollWidth <= el.clientWidth);
+}
+
+/** Props for a truncating text cell; empty values get no tooltip hook. */
+function truncatedCellProps(value: string | null | undefined) {
+  return value
+    ? {
+        'data-tooltip-id': 'tooltip',
+        'data-tooltip-content': value,
+        'data-tooltip-hidden': true,
+        onMouseEnter: syncTruncationTooltip,
+      }
+    : {};
+}
+
 // Simple animation delay calculator - just assigns stagger based on position in batch
 const ANIMATION_DURATION = 500; // ms - how long before we remove the "new" class
 const STAGGER_DELAY = 30; // ms between each row
@@ -339,9 +360,13 @@ export function DeviceTable({ onDeviceClick }: DeviceTableProps) {
                       </span>
                     )}
                   </td>
-                  <td className={cellClass('hostname-cell', device.hostname)}>{device.hostname || '—'}</td>
+                  <td className={cellClass('hostname-cell', device.hostname)} {...truncatedCellProps(device.hostname)}>
+                    {device.hostname || '—'}
+                  </td>
                   <td className={cellClass('mac-cell', device.mac_addr)}>{device.mac_addr || '—'}</td>
-                  <td className={cellClass('vendor-cell', device.manufacturer)}>{device.manufacturer || '—'}</td>
+                  <td className={cellClass('vendor-cell', device.manufacturer)} {...truncatedCellProps(device.manufacturer)}>
+                    {device.manufacturer || '—'}
+                  </td>
                   <td className={`ports-col${portsExpanded ? ' ports-expanded' : ''}`}>
                     {/* Show dash only if no port scan has touched this device yet */}
                     {portsSorted.length === 0 &&
